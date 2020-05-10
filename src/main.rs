@@ -1,60 +1,55 @@
-use iced::{
-    button, scrollable, slider, text_input, Align, Button, Checkbox, Column,
-    Container, Element, Length, ProgressBar, Radio, Row, Sandbox, Scrollable,
-    Settings, Slider, Space, Text, TextInput,
-};
+use std::env;
+use std::path::Path;
 
-#[derive(Default)]
-struct Styling {
-    //theme: style::Theme,
-    scroll: scrollable::State,
-    input: text_input::State,
-    input_value: String,
-    button: button::State,
-    slider: slider::State,
-    slider_value: f32,
-    toggle_value: bool,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Message {
-    IncrementPressed,
-    DecrementPressed,
-}
-
-impl Sandbox for Styling {
-    type Message = Message; // type Message = ();
-
-    fn new() -> Self {
-        Styling::default()
-    }
-
-    fn title(&self) -> String {
-        String::from("Default Window")
-    }
-
-    fn update(&mut self, _message: Message) {
-        // This application has no interactions
-    }
-
-    fn view(&mut self) -> Element<Message> {
-        Column::new()
-            .padding(20)
-            .align_items(Align::Center)
-            .push(
-                Text::new("Hello, world!")
-            )
-            .push(
-                Button::new(&mut self.button, Text::new("Click Me!"))
-                    .on_press(Message::DecrementPressed)
-                    //.on_press(Message::DecrementPressed),
-            )
-            .into()
-    }
-}
+mod grim;
+use grim::*;
 
 fn main() {
-    let settings = Settings::default();
+    let args: Vec<String> = env::args().collect();
+    println!("Input args: {:?}", args);
 
-    Styling::run(settings);
+    let file_path_str;
+
+    match args.get(1) {
+        Some(arg) => {
+            file_path_str = arg
+        },
+        None => {
+            println!("Missing input file path");
+            return;
+        }
+    };
+
+    println!("Opening file...");
+    let file_path = Path::new(file_path_str);
+
+    let reader_result = grim::FileReader::new(file_path);
+    let mut reader_box: Box<StreamReader>;
+
+    match reader_result {
+        Ok(fr) => {
+            reader_box = Box::new(fr);
+
+            println!("Successfully opened \"{}\"", file_path_str);
+        },
+        Err(err) => {
+            println!("{:?}", err);
+            return;
+        }
+    }
+
+    let seekRes = reader_box.as_mut().seek(12);
+    match seekRes {
+        Ok(_) => {
+            println!("Successfully seeked file");
+        },
+        Err(err) => {
+            println!("{:?}", err);
+            return;
+        }
+    }
+
+    let pos = reader_box.as_mut().position();
+
+    println!("Current position: {}", pos);
 }
