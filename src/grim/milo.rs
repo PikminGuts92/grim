@@ -19,7 +19,7 @@ pub trait StreamReader {
     // TODO: Read floating points
 
     // Read strings
-    fn read_prefixed_string(&mut self) -> Result<String, Box<std::error::Error>>;
+    fn read_prefixed_string(&mut self) -> Result<String, Box<dyn std::error::Error>>;
 
     // Read bytes
     fn read_bytes(&mut self, length: usize) -> Result<Box<[u8]>, std::io::Error>;
@@ -84,7 +84,7 @@ impl StreamReader for  FileReader{
         }
     }
 
-    fn read_prefixed_string(&mut self) -> Result<String, Box<std::error::Error>> {
+    fn read_prefixed_string(&mut self) -> Result<String, Box<dyn std::error::Error>> {
         let length = self.read_int32()?;
         let mut raw_bytes = self.read_bytes(length as usize)?;
 
