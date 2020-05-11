@@ -38,10 +38,13 @@ fn main() {
         }
     }
 
-    let seekRes = reader_box.as_mut().seek(12);
-    match seekRes {
+    let seek_res = reader_box.as_mut().seek(4);
+    match seek_res {
         Ok(_) => {
             println!("Successfully seeked file");
+
+            let pos = reader_box.as_mut().position();
+            println!("Current position: {}", pos);
         },
         Err(err) => {
             println!("{:?}", err);
@@ -49,7 +52,36 @@ fn main() {
         }
     }
 
-    let pos = reader_box.as_mut().position();
+    let block_offset_res = reader_box.as_mut().read_int32();
+    match block_offset_res {
+        Ok(block_offset) => {
+            println!("Block offset: {}", block_offset);
+        },
+        Err(err) => {
+            println!("{:?}", err);
+            return;
+        }
+    }
 
-    println!("Current position: {}", pos);
+    let seek_res = reader_box.as_mut().seek(4);
+    match seek_res {
+        Ok(_) => {
+            println!("Successfully seeked file");
+
+            let str_value_res = reader_box.as_mut().read_prefixed_string();
+
+            match str_value_res {
+                Ok(str_value) => {
+                    println!("String value: {}", str_value);
+                },
+                Err(err) => {
+                    println!("{:?}", err.as_ref());
+                }
+            }
+        },
+        Err(err) => {
+            println!("{:?}", err);
+            return;
+        }
+    }
 }
