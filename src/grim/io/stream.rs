@@ -53,7 +53,7 @@ impl FileReader {
     }
 }
 
-impl StreamReader for  FileReader{
+impl StreamReader for FileReader{
     fn read_int8(&mut self) -> Result<i8, std::io::Error> {
         let mut buffer: [u8; 1] = [0];
         self.file.read_exact(&mut buffer)?;
