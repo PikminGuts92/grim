@@ -8,3 +8,6 @@ edition = "2018"
 codegen-units = 1
 lto = true
 opt-level = 'z'  # Optimize for size
+
+[dependencies]
+flate2 = "1.0.14"
