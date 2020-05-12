@@ -2,7 +2,7 @@ use std::env;
 use std::path::Path;
 
 mod grim;
-use grim::*;
+use grim::io::*;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -23,7 +23,7 @@ fn main() {
     println!("Opening file...");
     let file_path = Path::new(file_path_str);
 
-    let reader_result = grim::FileReader::new(file_path);
+    let reader_result = FileReader::new(file_path);
     let mut reader_box: Box<StreamReader>;
 
     match reader_result {
