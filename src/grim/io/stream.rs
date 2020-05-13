@@ -7,7 +7,7 @@ use std::path::Path;
 #[derive(Copy, Clone, Debug)]
 pub enum IOEndian {
     Little,
-    Big
+    Big,
 }
 
 pub trait StreamReader {
@@ -38,7 +38,7 @@ pub trait StreamReader {
 pub struct FileReader {
     endian: IOEndian,
     position: u64,
-    file: File
+    file: File,
 }
 
 impl FileReader {
@@ -48,19 +48,19 @@ impl FileReader {
         Ok(FileReader {
             endian: IOEndian::Little, // TODO: Get from optional params
             position: 0,
-            file
+            file,
         })
     }
 }
 
-impl StreamReader for FileReader{
+impl StreamReader for FileReader {
     fn read_int8(&mut self) -> Result<i8, std::io::Error> {
         let mut buffer: [u8; 1] = [0];
         self.file.read_exact(&mut buffer)?;
 
         match self.endian {
             IOEndian::Little => Ok(i8::from_le_bytes(buffer)),
-            IOEndian::Big => Ok(i8::from_be_bytes(buffer))
+            IOEndian::Big => Ok(i8::from_be_bytes(buffer)),
         }
     }
 
@@ -70,7 +70,7 @@ impl StreamReader for FileReader{
 
         match self.endian {
             IOEndian::Little => Ok(i16::from_le_bytes(buffer)),
-            IOEndian::Big => Ok(i16::from_be_bytes(buffer))
+            IOEndian::Big => Ok(i16::from_be_bytes(buffer)),
         }
     }
 
@@ -80,7 +80,7 @@ impl StreamReader for FileReader{
 
         match self.endian {
             IOEndian::Little => Ok(i32::from_le_bytes(buffer)),
-            IOEndian::Big => Ok(i32::from_be_bytes(buffer))
+            IOEndian::Big => Ok(i32::from_be_bytes(buffer)),
         }
     }
 
