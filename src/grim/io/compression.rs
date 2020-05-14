@@ -3,7 +3,7 @@ use flate2::read::{ZlibDecoder, ZlibEncoder};
 use std::error::Error;
 use std::io::Read;
 
-fn inflate_zlib_block(data: &Box<[u8]>, buffer_size: usize) -> Result<Box<[u8]>, Box<dyn Error>> {
+pub fn inflate_zlib_block(data: &Box<[u8]>, buffer_size: usize) -> Result<Box<[u8]>, Box<dyn Error>> {
     // Create decoder
     let mut decoder = match buffer_size {
         0 => ZlibDecoder::new(data.as_ref()),

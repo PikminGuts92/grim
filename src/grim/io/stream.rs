@@ -43,7 +43,11 @@ pub struct FileReader {
 
 impl FileReader {
     pub fn new(path: &Path) -> Result<FileReader, std::io::Error> {
-        let file = File::open(path)?;
+        let file = File::with_options()
+            .read(true)
+            .write(false)
+            .create(false)
+            .open(path)?;
 
         Ok(FileReader {
             endian: IOEndian::Little, // TODO: Get from optional params

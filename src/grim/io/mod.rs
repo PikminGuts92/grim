@@ -3,5 +3,5 @@ mod compression;
 mod stream;
 
 pub use self::archive::*;
-pub use self::compression::*;
+pub(crate) use self::compression::*;
 pub use self::stream::*;

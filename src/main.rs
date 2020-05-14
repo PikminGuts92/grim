@@ -1,3 +1,4 @@
+#![feature(with_options)] // TODO: Move to seperate lib file
 use std::env;
 use std::path::Path;
 
