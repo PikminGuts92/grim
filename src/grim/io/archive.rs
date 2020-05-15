@@ -25,7 +25,7 @@ struct MiloBlockStructureError {
 
 impl Display for MiloBlockStructureError {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "")//self.message.as_str())
+        write!(f, "")//self.message.as_str()) // TODO: Refactor
     }
 }
 
@@ -53,16 +53,13 @@ impl MiloArchive {
         let block_count = reader.read_int32()?;
         let max_inflate_size = reader.read_int32()?;
 
-        let block_sizes: Vec<i32> = vec![0; block_count as usize]
-            .into_iter()
-            .enumerate()
-            .map(|(_, _)| reader.read_int32().unwrap())
-            .collect();
+        let mut block_sizes: Vec<i32> = vec![0; block_count as usize];
 
-        /*
-        for (_, size) in block_sizes.iter_mut().enumerate() {
-            *size = 1;
-        }*/
+        for (_, size) in block_sizes
+            .iter_mut()
+            .enumerate() {
+            *size = reader.read_int32()?;
+        }
 
         let offset = match magic {
             BlockStructure::TypeA(offset) => offset,
@@ -75,12 +72,31 @@ impl MiloArchive {
         // Advances to first block
         reader.seek(offset as u64)?;
 
+        let mut total_size: usize = 0;
+
         for block_size in block_sizes.iter() {
             let bytes = reader.read_bytes(*block_size as usize)?;
 
-            let uncompressed = inflate_zlib_block(&bytes, max_inflate_size as usize)?;
+            //let uncompressed = inflate_zlib_block(&bytes, max_inflate_size as usize)?;
+
+            let uncompressed;
+
+            match inflate_zlib_block(&bytes, max_inflate_size as usize) {
+                Ok(data) => {
+                    uncompressed = data;
+                },
+                Err(err) => {
+                    println!("{:?}", err);
+                    continue;
+                }
+            };
+
+
             println!("Uncompressed block is {} bytes in length", uncompressed.len());
+            total_size += uncompressed.len();
         }
+
+        println!("Total uncompressed size is {} bytes in length", total_size);
 
 
         Ok(MiloArchive {

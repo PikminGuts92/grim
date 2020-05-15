@@ -1,20 +1,27 @@
 //use flate2::{Compress, Decompress};
 use flate2::read::{ZlibDecoder, ZlibEncoder};
+use flate2::{Decompress, FlushDecompress, Status};
 use std::error::Error;
 use std::io::Read;
 
 pub fn inflate_zlib_block(data: &Box<[u8]>, buffer_size: usize) -> Result<Box<[u8]>, Box<dyn Error>> {
-    // Create decoder
-    let mut decoder = match buffer_size {
-        0 => ZlibDecoder::new(data.as_ref()),
-        _ => {
-            let buffer = vec![0u8; buffer_size];
-            ZlibDecoder::new_with_buf(data.as_ref(), buffer)
-        }
-    };
+    let mut test = vec![0u8; buffer_size];
+    let buffer = test.as_mut_slice();
 
-    // Inflate block
-    let mut inflated_data: Vec<u8> = Vec::new();
-    decoder.read_to_end(&mut inflated_data)?;
-    Ok(inflated_data.into_boxed_slice())
+    let mut decoder = Decompress::new(false);
+    let status = decoder.decompress(data.as_ref(), buffer, FlushDecompress::Finish)?;
+
+    match status {
+        Status::StreamEnd => {
+            let inflate_size = decoder.total_out();
+            let mut inflated_data = vec![0u8; inflate_size as usize];
+
+            //inflated_data.clone_from_slice(&buffer[..5]);
+
+            Ok(inflated_data.into_boxed_slice())
+        },
+        _ => {
+            Ok(vec![0u8; 0].into_boxed_slice())
+        }
+    }
 }
