@@ -15,8 +15,7 @@ pub fn inflate_zlib_block(data: &Box<[u8]>, buffer_size: usize) -> Result<Box<[u
         Status::StreamEnd => {
             let inflate_size = decoder.total_out();
             let mut inflated_data = vec![0u8; inflate_size as usize];
-
-            //inflated_data.clone_from_slice(&buffer[..5]);
+            inflated_data.clone_from_slice(&buffer[..inflate_size as usize]);
 
             Ok(inflated_data.into_boxed_slice())
         },

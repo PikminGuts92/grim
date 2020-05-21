@@ -15,7 +15,8 @@ pub enum BlockStructure {
 
 #[derive(Debug)]
 pub struct MiloArchive {
-
+    structure: BlockStructure,
+    data: Vec<u8>
 }
 
 #[derive(Debug, Error)]
@@ -54,35 +55,18 @@ impl MiloArchive {
         // Advances to first block
         reader.seek(offset as u64)?;
 
-        let mut total_size: usize = 0;
+        let mut uncompressed: Vec<u8> = Vec::new();
 
         for block_size in block_sizes.iter() {
             let bytes = reader.read_bytes(*block_size as usize)?;
 
-            //let uncompressed = inflate_zlib_block(&bytes, max_inflate_size as usize)?;
-
-            let uncompressed;
-
-            match inflate_zlib_block(&bytes, max_inflate_size as usize) {
-                Ok(data) => {
-                    uncompressed = data;
-                },
-                Err(err) => {
-                    println!("{:?}", err);
-                    continue;
-                }
-            };
-
-
-            println!("Uncompressed block is {} bytes in length", uncompressed.len());
-            total_size += uncompressed.len();
+            let data = inflate_zlib_block(&bytes, max_inflate_size as usize)?;
+            uncompressed.append(&mut data.as_ref().to_vec());
         }
 
-        println!("Total uncompressed size is {} bytes in length", total_size);
-
-
         Ok(MiloArchive {
-            
+            structure: magic,
+            data: uncompressed
         })
     }
 
