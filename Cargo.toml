@@ -11,3 +11,4 @@ opt-level = 'z'  # Optimize for size
 
 [dependencies]
 flate2 = "1.0.14"
+thiserror = "1.0.18"

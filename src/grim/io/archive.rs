@@ -1,8 +1,8 @@
 use crate::grim::io::compression::*;
 use crate::grim::io::stream::StreamReader;
-use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::path::Path;
+use thiserror::Error;
 
 #[derive(Copy, Clone, Debug)]
 pub enum BlockStructure {
@@ -18,34 +18,17 @@ pub struct MiloArchive {
 
 }
 
-#[derive(Debug, Clone)]
-struct MiloBlockStructureError {
-    message: String,
-}
-
-impl Display for MiloBlockStructureError {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "")//self.message.as_str()) // TODO: Refactor
-    }
-}
-
-impl Error for MiloBlockStructureError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
-}
-
-impl MiloBlockStructureError {
-    fn new(msg: String) -> MiloBlockStructureError {
-        MiloBlockStructureError {
-            message: msg,
-        }
+#[derive(Error, Debug)]
+pub enum MiloBlockStructureError {
+    #[error("Unsupported compression with magic of 0x{magic:X}")]
+    UnsupportedCompression {
+        magic: u32
     }
 }
 
 
 impl MiloArchive {
-    pub fn from_stream(stream: &mut Box<dyn StreamReader>) -> Result<MiloArchive, Box<dyn Error>> {
+    pub fn from_stream(stream: &mut Box<dyn StreamReader>) -> Result<MiloArchive, Box<dyn std::error::Error>> {
         let magic = MiloArchive::read_magic_and_offset(stream)?;
 
         let reader = stream.as_mut();
@@ -104,7 +87,7 @@ impl MiloArchive {
         })
     }
 
-    fn read_magic_and_offset(stream: &mut Box<dyn StreamReader>) -> Result<BlockStructure, Box<dyn Error>> {
+    fn read_magic_and_offset(stream: &mut Box<dyn StreamReader>) -> Result<BlockStructure, Box<dyn std::error::Error>> {
         let reader = stream.as_mut();
 
         // TODO: Read as u32
@@ -116,7 +99,7 @@ impl MiloArchive {
             0xCBBEDEAF => Ok(BlockStructure::TypeB(block_offset)),
             0xCCBEDEAF => Ok(BlockStructure::TypeC(block_offset)),
             0xCDBEDEAF => Ok(BlockStructure::TypeD(block_offset)),
-            _ => Err(Box::new(MiloBlockStructureError::new(String::from("Unsupported magic"))))
+            _ => Err(Box::new(MiloBlockStructureError::UnsupportedCompression { magic }))
         }
     }
 }
