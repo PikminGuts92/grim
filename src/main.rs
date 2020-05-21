@@ -1,11 +1,18 @@
 #![feature(with_options)] // TODO: Move to seperate lib file
 use std::env;
 use std::path::Path;
+use thiserror::Error;
 
 mod grim;
 use grim::io::*;
 
-fn main() {
+#[derive(Error, Debug)]
+pub enum ArgError {
+    #[error("Missing input file path")]
+    NoInputPath
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     println!("Input args: {:?}", args);
 
@@ -16,8 +23,7 @@ fn main() {
             file_path_str = arg
         },
         None => {
-            println!("Missing input file path");
-            return;
+            return Err(Box::new(ArgError::NoInputPath));
         }
     };
 
@@ -34,10 +40,11 @@ fn main() {
             println!("Successfully opened \"{}\"", file_path_str);
         },
         Err(err) => {
-            println!("{:?}", err);
-            return;
+            return Err(Box::new(err));
         }
     }
 
-    let milo = MiloArchive::from_stream(&mut reader_box);
+    let milo = MiloArchive::from_stream(&mut reader_box)?;
+
+    Ok(())
 }

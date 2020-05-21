@@ -18,14 +18,13 @@ pub struct MiloArchive {
 
 }
 
-#[derive(Error, Debug)]
+#[derive(Debug, Error)]
 pub enum MiloBlockStructureError {
     #[error("Unsupported compression with magic of 0x{magic:X}")]
     UnsupportedCompression {
         magic: u32
     }
 }
-
 
 impl MiloArchive {
     pub fn from_stream(stream: &mut Box<dyn StreamReader>) -> Result<MiloArchive, Box<dyn std::error::Error>> {
