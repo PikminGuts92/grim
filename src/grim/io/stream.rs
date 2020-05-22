@@ -22,7 +22,7 @@ pub trait StreamReader {
     fn read_prefixed_string(&mut self) -> Result<String, Box<dyn std::error::Error>>;
 
     // Read bytes
-    fn read_bytes(&mut self, length: usize) -> Result<Box<[u8]>, std::io::Error>;
+    fn read_bytes(&mut self, length: usize) -> Result<Vec<u8>, std::io::Error>;
 
     // Setters
     fn set_endian(&mut self, endian: IOEndian);
@@ -93,14 +93,14 @@ impl StreamReader for FileReader {
         let mut raw_bytes = self.read_bytes(length as usize)?;
 
         // TODO: Replace with better one (FromUtf8Error message is awful)
-        Ok(String::from_utf8(raw_bytes.as_mut().to_vec())?)
+        Ok(String::from_utf8(raw_bytes)?)
     }
 
-    fn read_bytes(&mut self, length: usize) -> Result<Box<[u8]>, std::io::Error> {
+    fn read_bytes(&mut self, length: usize) -> Result<Vec<u8>, std::io::Error> {
         let mut buffer_vec = vec![0u8; length];
         self.file.read_exact(&mut buffer_vec)?;
 
-        Ok(buffer_vec.into_boxed_slice())
+        Ok(buffer_vec)
     }
 
     fn set_endian(&mut self, endian: IOEndian) {

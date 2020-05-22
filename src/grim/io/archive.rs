@@ -60,8 +60,8 @@ impl MiloArchive {
         for block_size in block_sizes.iter() {
             let bytes = reader.read_bytes(*block_size as usize)?;
 
-            let data = inflate_zlib_block(&bytes, max_inflate_size as usize)?;
-            uncompressed.append(&mut data.as_ref().to_vec());
+            let mut data = inflate_zlib_block(&bytes, max_inflate_size as usize)?;
+            uncompressed.append(&mut data);
         }
 
         Ok(MiloArchive {

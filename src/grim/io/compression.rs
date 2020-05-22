@@ -4,7 +4,7 @@ use flate2::{Decompress, FlushDecompress, Status};
 use std::error::Error;
 use std::io::Read;
 
-pub fn inflate_zlib_block(data: &Box<[u8]>, buffer_size: usize) -> Result<Box<[u8]>, Box<dyn Error>> {
+pub fn inflate_zlib_block(data: &Vec<u8>, buffer_size: usize) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut test = vec![0u8; buffer_size];
     let buffer = test.as_mut_slice();
 
@@ -17,10 +17,11 @@ pub fn inflate_zlib_block(data: &Box<[u8]>, buffer_size: usize) -> Result<Box<[u
             let mut inflated_data = vec![0u8; inflate_size as usize];
             inflated_data.clone_from_slice(&buffer[..inflate_size as usize]);
 
-            Ok(inflated_data.into_boxed_slice())
+            Ok(inflated_data)
         },
         _ => {
-            Ok(vec![0u8; 0].into_boxed_slice())
+            // TODO: Return custom error
+            Ok(vec![0u8; 0])
         }
     }
 }
