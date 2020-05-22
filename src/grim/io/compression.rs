@@ -4,12 +4,12 @@ use flate2::{Decompress, FlushDecompress, Status};
 use std::error::Error;
 use std::io::Read;
 
-pub fn inflate_zlib_block(data: &Vec<u8>, buffer_size: usize) -> Result<Vec<u8>, Box<dyn Error>> {
+pub fn inflate_zlib_block(data: &[u8], buffer_size: usize) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut test = vec![0u8; buffer_size];
     let buffer = test.as_mut_slice();
 
     let mut decoder = Decompress::new(false);
-    let status = decoder.decompress(data.as_ref(), buffer, FlushDecompress::Finish)?;
+    let status = decoder.decompress(data, buffer, FlushDecompress::Finish)?;
 
     match status {
         Status::StreamEnd => {

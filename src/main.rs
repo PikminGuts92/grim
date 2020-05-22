@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file_path = Path::new(file_path_str);
 
     let reader_result = FileReader::new(file_path);
-    let mut reader_box: Box<StreamReader>;
+    let mut reader_box: Box<dyn StreamReader>;
 
     match reader_result {
         Ok(fr) => {
