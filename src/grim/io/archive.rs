@@ -38,9 +38,8 @@ impl MiloArchive {
 
         let mut block_sizes: Vec<i32> = vec![0; block_count as usize];
 
-        for (_, size) in block_sizes
-            .iter_mut()
-            .enumerate() {
+        for size in block_sizes
+            .iter_mut() {
             *size = reader.read_int32()?;
         }
 
