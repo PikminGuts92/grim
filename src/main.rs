@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     println!("Input args: {:?}", args);
 
-    let file_path_str;
+    let file_path_str: &String;
 
     match args.get(1) {
         Some(arg) => {
@@ -30,21 +30,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Opening file...");
     let file_path = Path::new(file_path_str);
 
-    let reader_result = FileReader::new(file_path);
-    let mut reader_box: Box<dyn StreamReader>;
-
-    match reader_result {
-        Ok(fr) => {
-            reader_box = Box::new(fr);
-
-            println!("Successfully opened \"{}\"", file_path_str);
-        },
-        Err(err) => {
-            return Err(Box::new(err));
-        }
-    }
-
-    let milo = MiloArchive::from_stream(&mut reader_box)?;
+    let mut reader: Box<dyn StreamReader> = Box::new(FileReader::new(file_path)?);
+    let milo = MiloArchive::from_stream(&mut reader)?;
 
     Ok(())
 }
