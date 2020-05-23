@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Opening file...");
     let file_path = Path::new(file_path_str);
 
-    let mut reader: Box<dyn StreamReader> = Box::new(FileReader::new(file_path)?);
+    let mut reader: Box<dyn Stream> = Box::new(FileStream::new(file_path)?);
     let milo = MiloArchive::from_stream(&mut reader)?;
 
     Ok(())

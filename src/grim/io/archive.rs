@@ -1,5 +1,5 @@
 use crate::grim::io::compression::*;
-use crate::grim::io::stream::StreamReader;
+use crate::grim::io::stream::Stream;
 use std::fmt::{Display, Formatter};
 use std::path::Path;
 use thiserror::Error;
@@ -28,7 +28,7 @@ pub enum MiloBlockStructureError {
 }
 
 impl MiloArchive {
-    pub fn from_stream(stream: &mut Box<dyn StreamReader>) -> Result<MiloArchive, Box<dyn std::error::Error>> {
+    pub fn from_stream(stream: &mut Box<dyn Stream>) -> Result<MiloArchive, Box<dyn std::error::Error>> {
         let magic = MiloArchive::read_magic_and_offset(stream)?;
 
         let reader = stream.as_mut();
@@ -70,7 +70,7 @@ impl MiloArchive {
         })
     }
 
-    fn read_magic_and_offset(stream: &mut Box<dyn StreamReader>) -> Result<BlockStructure, Box<dyn std::error::Error>> {
+    fn read_magic_and_offset(stream: &mut Box<dyn Stream>) -> Result<BlockStructure, Box<dyn std::error::Error>> {
         let reader = stream.as_mut();
 
         // TODO: Read as u32
