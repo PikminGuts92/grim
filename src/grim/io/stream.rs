@@ -165,9 +165,11 @@ impl<'a> MemoryStream<'a> {
     }
 
     fn get_slice(&self, pos: u64, size: usize) -> &'a [u8] {
+        let pos = pos as usize;
+
         match self.data {
             MemoryData::Read(data) => {
-                &data[pos as usize..size]
+                &data[pos..(pos + size)]
             },
             /*MemoryData::ReadWrite(vec) => {
                 &vec[pos as usize..size]
