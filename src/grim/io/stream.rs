@@ -221,7 +221,6 @@ impl<'a> Stream for MemoryStream<'a> {
     fn read_prefixed_string(&mut self) -> Result<String, Box<dyn Error>> {
         let length = self.read_int32()?;
         let raw_bytes = self.read_bytes(length as usize)?;
-        self.position += length as u64;
 
         // TODO: Replace with better one (FromUtf8Error message is awful)
         Ok(String::from_utf8(raw_bytes)?)
