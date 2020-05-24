@@ -33,5 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut reader: Box<dyn Stream> = Box::new(FileStream::new(file_path)?);
     let milo = MiloArchive::from_stream(&mut reader)?;
 
+    let obj_dir = milo.unpack_directory()?;
+
     Ok(())
 }

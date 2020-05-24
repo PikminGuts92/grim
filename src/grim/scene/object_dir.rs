@@ -1,15 +1,8 @@
-#[derive(Debug)]
-pub enum MiloObject {
-    Packed {
-        name: String,
-        r#type: String,
-        data: Vec<u8>
-    }
-}
+use crate::grim::scene::Object;
 
 #[derive(Debug)]
 pub struct ObjectDir {
-    entries: Vec<MiloObject>
+    pub(crate) entries: Vec<Object>
 }
 
 impl ObjectDir {
