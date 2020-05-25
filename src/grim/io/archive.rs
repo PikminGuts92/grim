@@ -1,5 +1,5 @@
 use crate::grim::io::compression::*;
-use crate::grim::io::stream::{MemoryStream, Stream};
+use crate::grim::io::stream::{MemoryStream, SeekFrom, Stream};
 use crate::grim::scene::{Object, ObjectDir, PackedObject};
 use std::fmt::{Display, Formatter};
 use std::path::Path;
@@ -55,7 +55,7 @@ impl MiloArchive {
         };
 
         // Advances to first block
-        reader.seek(offset as u64)?;
+        reader.seek(SeekFrom::Start(offset as u64))?;
 
         let mut uncompressed: Vec<u8> = Vec::new();
 
@@ -132,7 +132,7 @@ impl MiloArchive {
             if let Some(size) = self.guess_entry_size(reader)? {
                 // Read data and skip padding
                 entry_obj.data = reader.read_bytes(size)?;
-                reader.seek(reader.position() + 4)?;
+                reader.seek(SeekFrom::Current(4))?;
             } else {
                 // TODO: Else throw error?
                 break;
@@ -148,27 +148,20 @@ impl MiloArchive {
     }
 
     fn guess_entry_size<'a>(&'a self, reader: &mut dyn Stream) -> Result<Option<usize>, Box<dyn std::error::Error>> {
-        //let reader = stream.as_mut();
-
         let start_pos = reader.position();
         let stream_len = reader.len()?;
 
         let mut magic: i32;
-        let mut size: usize;
 
         loop {
-            match reader.seek_until(&ADDE_PADDING)? {
-                Some(s) => {
-                    // Found padding, skip needle bytes
-                    reader.seek(reader.position() + 4)?;
-                    size = s;
-                },
-                None => {
-                    // End of file reached
-                    reader.seek(start_pos)?;
-                    return Ok(None);
-                }
-            };
+            if let None = reader.seek_until(&ADDE_PADDING)? {
+                // End of file reached
+                reader.seek(SeekFrom::Start(start_pos))?;
+                return Ok(None);
+            }
+
+            // Found padding, skip needle bytes
+            reader.seek(SeekFrom::Current(4))?;
 
             if (reader.position() as usize) >= stream_len {
                 // EOF reached
@@ -178,7 +171,7 @@ impl MiloArchive {
             // Checks magic because ADDE padding can also be found in some Tex files as pixel data
             // This should reduce false positives
             magic = reader.read_int32()?;
-            reader.seek(reader.position() - 4)?;
+            reader.seek(SeekFrom::Current(-4))?;
 
             if magic >= 0 && magic <= 0xFF {
                 break;
@@ -187,7 +180,7 @@ impl MiloArchive {
 
         // Calculates size and returns to start of stream
         let entry_size = (reader.position() - (start_pos + 4)) as usize;
-        reader.seek(start_pos)?;
+        reader.seek(SeekFrom::Start(start_pos))?;
 
         Ok(Some(entry_size))
     }

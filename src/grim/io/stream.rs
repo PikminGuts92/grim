@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::SeekFrom;
+pub use std::io::SeekFrom;
 use std::path::Path;
 
 #[derive(Copy, Clone, Debug)]
@@ -32,7 +32,7 @@ pub trait Stream {
     fn position(&self) -> u64;
     fn len(&mut self) -> Result<usize, Box<dyn Error>>;
 
-    fn seek(&mut self, offset: u64) -> Result<(), Box<dyn Error>>;
+    fn seek(&mut self, pos: SeekFrom) -> Result<(), Box<dyn Error>>;
     fn seek_until(&mut self, needle: &[u8]) -> Result<Option<usize>, Box<dyn Error>>;
 }
 
@@ -126,7 +126,7 @@ impl Stream for FileStream {
         let start_pos = self.position();
         let size_result = self.file.seek(SeekFrom::End(0));
 
-        self.seek(start_pos)?;
+        self.seek(SeekFrom::Start(start_pos))?;
 
         match size_result {
             Ok(size) => {
@@ -138,8 +138,8 @@ impl Stream for FileStream {
         }
     }
 
-    fn seek(&mut self, offset: u64) -> Result<(), Box<dyn Error>> {
-        self.position = self.file.seek(SeekFrom::Start(offset))?;
+    fn seek(&mut self, pos: SeekFrom) -> Result<(), Box<dyn Error>> {
+        self.position = self.file.seek(pos)?;
         Ok(())
     }
 
@@ -278,8 +278,12 @@ impl<'a> Stream for MemoryStream<'a> {
         }
     }
 
-    fn seek(&mut self, offset: u64) -> Result<(), Box<dyn Error>> {
-        self.position = offset;
+    fn seek(&mut self, pos: SeekFrom) -> Result<(), Box<dyn Error>> {
+        self.position = match pos {
+            SeekFrom::Start(rel_str) => rel_str,
+            SeekFrom::End(rel_end) => ((self.len()? as i64) + rel_end) as u64,
+            SeekFrom::Current(rel_cur) => ((self.position as i64) + rel_cur) as u64,
+        };
         Ok(())
     }
 
@@ -296,19 +300,17 @@ fn seek_until<T>(stream: &mut T, needle: &[u8]) -> Result<Option<usize>, Box<dyn
     let search_limit = stream_len - needle_len;
 
     let mut haystack: Vec<u8>;
-    let mut next_pos: u64;
     while stream.position() <= search_limit as u64 {
         haystack = stream.read_bytes(needle_len)?;
 
         if haystack == needle {
             // Data found
-            next_pos = stream.position() - (needle_len as u64);
-            stream.seek(next_pos)?;
+            stream.seek(SeekFrom::Current(-(needle_len as i64)))?;
 
-            return Ok(Some((next_pos - start_pos) as usize));
+            return Ok(Some((stream.position() - start_pos) as usize));
         } else {
-            next_pos = stream.position() - ((needle_len as u64) - 1);
-            stream.seek(next_pos)?;
+            // Still searching
+            stream.seek(SeekFrom::Current(-((needle_len - 1) as i64)))?;
         }
     }
 
