@@ -5,6 +5,8 @@ use std::fmt::{Display, Formatter};
 use std::path::Path;
 use thiserror::Error;
 
+const ADDE_PADDING: [u8; 4] = [0xAD, 0xDE, 0xAD, 0xDE];
+
 #[derive(Copy, Clone, Debug)]
 pub enum BlockStructure {
     TypeA(u32), // Block structure, no compression
@@ -126,9 +128,16 @@ impl MiloArchive {
         }
 
         // Get data for entries
-        /*for entry_obj in entries.iter_mut() {
-            entry_obj.name = reader.read_prefixed_string()?;
-        }*/
+        for entry_obj in packed_entries.iter_mut() {
+            if let Some(size) = self.guess_entry_size(reader)? {
+                // Read data and skip padding
+                entry_obj.data = reader.read_bytes(size)?;
+                reader.seek(reader.position() + 4)?;
+            } else {
+                // TODO: Else throw error?
+                break;
+            }
+        }
 
         Ok(ObjectDir {
             entries: packed_entries
@@ -136,5 +145,50 @@ impl MiloArchive {
                 .map(|p| Object::Packed(p))
                 .collect()
         })
+    }
+
+    fn guess_entry_size<'a>(&'a self, reader: &mut dyn Stream) -> Result<Option<usize>, Box<dyn std::error::Error>> {
+        //let reader = stream.as_mut();
+
+        let start_pos = reader.position();
+        let stream_len = reader.len()?;
+
+        let mut magic: i32;
+        let mut size: usize;
+
+        loop {
+            match reader.seek_until(&ADDE_PADDING)? {
+                Some(s) => {
+                    // Found padding, skip needle bytes
+                    reader.seek(reader.position() + 4)?;
+                    size = s;
+                },
+                None => {
+                    // End of file reached
+                    reader.seek(start_pos)?;
+                    return Ok(None);
+                }
+            };
+
+            if (reader.position() as usize) >= stream_len {
+                // EOF reached
+                break;
+            }
+
+            // Checks magic because ADDE padding can also be found in some Tex files as pixel data
+            // This should reduce false positives
+            magic = reader.read_int32()?;
+            reader.seek(reader.position() - 4)?;
+
+            if magic >= 0 && magic <= 0xFF {
+                break;
+            }
+        }
+
+        // Calculates size and returns to start of stream
+        let entry_size = (reader.position() - (start_pos + 4)) as usize;
+        reader.seek(start_pos)?;
+
+        Ok(Some(entry_size))
     }
 }

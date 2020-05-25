@@ -33,7 +33,7 @@ pub trait Stream {
     fn len(&mut self) -> Result<usize, Box<dyn Error>>;
 
     fn seek(&mut self, offset: u64) -> Result<(), Box<dyn Error>>;
-    fn seek_until(&mut self, needle: &[u8]) -> Result<Option<u64>, Box<dyn Error>>;
+    fn seek_until(&mut self, needle: &[u8]) -> Result<Option<usize>, Box<dyn Error>>;
 }
 
 #[derive(Debug)]
@@ -143,7 +143,7 @@ impl Stream for FileStream {
         Ok(())
     }
 
-    fn seek_until(&mut self, needle: &[u8]) -> Result<Option<u64>, Box<dyn Error>> {
+    fn seek_until(&mut self, needle: &[u8]) -> Result<Option<usize>, Box<dyn Error>> {
         seek_until(self, needle)
     }
 }
@@ -283,12 +283,12 @@ impl<'a> Stream for MemoryStream<'a> {
         Ok(())
     }
 
-    fn seek_until(&mut self, needle: &[u8]) -> Result<Option<u64>, Box<dyn Error>> {
+    fn seek_until(&mut self, needle: &[u8]) -> Result<Option<usize>, Box<dyn Error>> {
         seek_until(self, needle)
     }
 }
 
-fn seek_until<T>(stream: &mut T, needle: &[u8]) -> Result<Option<u64>, Box<dyn Error>> where T: Stream {
+fn seek_until<T>(stream: &mut T, needle: &[u8]) -> Result<Option<usize>, Box<dyn Error>> where T: Stream {
     let start_pos = stream.position();
     let stream_len = stream.len()?;
 
@@ -305,7 +305,7 @@ fn seek_until<T>(stream: &mut T, needle: &[u8]) -> Result<Option<u64>, Box<dyn E
             next_pos = stream.position() - (needle_len as u64);
             stream.seek(next_pos)?;
 
-            return Ok(Some(next_pos - start_pos));
+            return Ok(Some((next_pos - start_pos) as usize));
         } else {
             next_pos = stream.position() - ((needle_len as u64) - 1);
             stream.seek(next_pos)?;
