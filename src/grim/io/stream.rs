@@ -30,8 +30,10 @@ pub trait Stream {
     // Getters
     fn endian(&self) -> IOEndian;
     fn position(&self) -> u64;
+    fn len(&mut self) -> Result<usize, Box<dyn Error>>;
 
     fn seek(&mut self, offset: u64) -> Result<(), Box<dyn Error>>;
+    fn seek_until(&mut self, needle: &[u8]) -> Result<Option<u64>, Box<dyn Error>>;
 }
 
 #[derive(Debug)]
@@ -120,9 +122,29 @@ impl Stream for FileStream {
         self.position
     }
 
+    fn len(&mut self) -> Result<usize, Box<dyn Error>> {
+        let start_pos = self.position();
+        let size_result = self.file.seek(SeekFrom::End(0));
+
+        self.seek(start_pos)?;
+
+        match size_result {
+            Ok(size) => {
+                Ok(size as usize)
+            },
+            Err(err) => {
+                Err(Box::new(err))
+            }
+        }
+    }
+
     fn seek(&mut self, offset: u64) -> Result<(), Box<dyn Error>> {
         self.position = self.file.seek(SeekFrom::Start(offset))?;
         Ok(())
+    }
+
+    fn seek_until(&mut self, needle: &[u8]) -> Result<Option<u64>, Box<dyn Error>> {
+        seek_until(self, needle)
     }
 }
 
@@ -248,8 +270,47 @@ impl<'a> Stream for MemoryStream<'a> {
         self.position
     }
 
+    fn len(&mut self) -> Result<usize, Box<dyn Error>> {
+        match self.data {
+            MemoryData::Read(data) => {
+                Ok(data.len())
+            }
+        }
+    }
+
     fn seek(&mut self, offset: u64) -> Result<(), Box<dyn Error>> {
         self.position = offset;
         Ok(())
     }
+
+    fn seek_until(&mut self, needle: &[u8]) -> Result<Option<u64>, Box<dyn Error>> {
+        seek_until(self, needle)
+    }
+}
+
+fn seek_until<T>(stream: &mut T, needle: &[u8]) -> Result<Option<u64>, Box<dyn Error>> where T: Stream {
+    let start_pos = stream.position();
+    let stream_len = stream.len()?;
+
+    let needle_len = needle.len();
+    let search_limit = stream_len - needle_len;
+
+    let mut haystack: Vec<u8>;
+    let mut next_pos: u64;
+    while stream.position() <= search_limit as u64 {
+        haystack = stream.read_bytes(needle_len)?;
+
+        if haystack == needle {
+            // Data found
+            next_pos = stream.position() - (needle_len as u64);
+            stream.seek(next_pos)?;
+
+            return Ok(Some(next_pos - start_pos));
+        } else {
+            next_pos = stream.position() - ((needle_len as u64) - 1);
+            stream.seek(next_pos)?;
+        }
+    }
+
+    Ok(None)
 }
