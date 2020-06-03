@@ -24,12 +24,16 @@ pub trait Stream {
     // Read bytes
     fn read_bytes(&mut self, length: usize) -> Result<Vec<u8>, Box<dyn Error>>;
 
+    // Write integers
+    fn write_int8(&mut self) -> Result<(), Box<dyn Error>>;
+
     // Setters
     fn set_endian(&mut self, endian: IOEndian);
 
     // Getters
     fn endian(&self) -> IOEndian;
     fn position(&self) -> u64;
+    fn can_write(&self) -> bool;
     fn len(&mut self) -> Result<usize, Box<dyn Error>>;
 
     fn seek(&mut self, pos: SeekFrom) -> Result<(), Box<dyn Error>>;
@@ -110,6 +114,10 @@ impl Stream for FileStream {
         Ok(buffer_vec)
     }
 
+    fn write_int8(&mut self) -> Result<(), Box<dyn Error>> {
+        panic!("Not implmented yet") // TODO: Create custom error when can't write
+    }
+
     fn set_endian(&mut self, endian: IOEndian) {
         self.endian = endian
     }
@@ -120,6 +128,10 @@ impl Stream for FileStream {
 
     fn position(&self) -> u64 {
         self.position
+    }
+
+    fn can_write(&self) -> bool {
+        false // TODO: Add support for writing to file
     }
 
     fn len(&mut self) -> Result<usize, Box<dyn Error>> {
@@ -151,7 +163,8 @@ impl Stream for FileStream {
 #[derive(Debug)]
 enum MemoryData<'a> {
     Read(&'a [u8]),
-    //ReadWrite(Vec<u8>), // TODO: Implement read/write stream
+    ReadWrite(&'a mut Vec<u8>), // TODO: Implement read/write stream
+    ReadWriteOwned(Vec<u8>),
 }
 
 #[derive(Debug)]
@@ -161,22 +174,23 @@ pub struct MemoryStream<'a> {
     data: MemoryData<'a>
 }
 
-impl<'a> MemoryStream<'a> {
-    /*pub fn new() -> MemoryStream<'a> {
-        MemoryStream {
-            endian: IOEndian::Little,
-            position: 0,
-            data: MemoryData::ReadWrite(Vec::new())
-        }
-    }*/
 
-    /*pub fn from_vector_as_read_write(data: &'a mut Vec<u8>) -> MemoryStream<'a> {
+impl<'a> MemoryStream<'a> {
+    pub fn new() -> MemoryStream<'a> {
         MemoryStream {
             endian: IOEndian::Little,
             position: 0,
-            data: MemoryData::ReadWrite(data.to_vec())
+            data: MemoryData::ReadWriteOwned(Vec::new())
         }
-    }*/
+    }
+
+    pub fn from_vector_as_read_write(data: &'a mut Vec<u8>) -> MemoryStream<'a> {
+        MemoryStream {
+            endian: IOEndian::Little,
+            position: 0,
+            data: MemoryData::ReadWrite(data)
+        }
+    }
 
     pub fn from_slice_as_read(data: &[u8]) -> MemoryStream {
         MemoryStream {
@@ -186,16 +200,19 @@ impl<'a> MemoryStream<'a> {
         }
     }
 
-    fn get_slice(&self, pos: u64, size: usize) -> &'a [u8] {
+    fn get_slice(&'a self, pos: u64, size: usize) -> &'a [u8] {
         let pos = pos as usize;
 
-        match self.data {
+        match &self.data {
             MemoryData::Read(data) => {
-                &data[pos..(pos + size)]
+                &(*data)[pos..(pos + size)]
             },
-            /*MemoryData::ReadWrite(vec) => {
+            MemoryData::ReadWrite(vec) => {
+                &(*vec)[pos as usize..size]
+            },
+            MemoryData::ReadWriteOwned(vec) => {
                 &vec[pos as usize..size]
-            }*/
+            }
         }
     }
 }
@@ -258,6 +275,34 @@ impl<'a> Stream for MemoryStream<'a> {
         Ok(buffer_vec)
     }
 
+    fn write_int8(&mut self) -> Result<(), Box<dyn Error>> {
+        if !self.can_write() {
+            panic!("Not implmented yet") // TODO: Create custom error when can't write
+        }
+
+        /*let mut vec_data: Vec<u8> = match &mut self.data {
+            /*MemoryData::Read(data) => {
+                Vec::<u8>::new() // Throw error (but it shouldn't reach this part)
+            },
+            MemoryData::ReadWrite(vec) => {
+                // Reference to mutable pointer?
+                //let mut v = (*vec).as_mut();
+                //let mut v = vec.as_mut();
+
+                let mut v = *vec;
+
+                v
+            },*/
+            _ => Vec::<u8>::new(),
+            MemoryData::ReadWriteOwned(vec) => {
+                let v = vec;
+                v
+            }
+        };*/
+
+        Ok(())
+    }
+
     fn set_endian(&mut self, endian: IOEndian) {
         self.endian = endian
     }
@@ -270,10 +315,24 @@ impl<'a> Stream for MemoryStream<'a> {
         self.position
     }
 
+    fn can_write(&self) -> bool {
+        match &self.data {
+            MemoryData::Read(_) => false,
+            MemoryData::ReadWrite(_) => true,
+            MemoryData::ReadWriteOwned(_) => true
+        }
+    }
+
     fn len(&mut self) -> Result<usize, Box<dyn Error>> {
-        match self.data {
+        match &self.data {
             MemoryData::Read(data) => {
-                Ok(data.len())
+                Ok((*data).len())
+            },
+            MemoryData::ReadWrite(vec) => {
+                Ok((*vec).len())
+            },
+            MemoryData::ReadWriteOwned(vec) => {
+                Ok(vec.len())
             }
         }
     }
