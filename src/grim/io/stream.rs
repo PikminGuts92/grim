@@ -48,7 +48,7 @@ pub struct FileStream {
 }
 
 impl FileStream {
-    pub fn new(path: &Path) -> Result<FileStream, std::io::Error> {
+    pub fn new(path: &Path) -> Result<FileStream, Box<dyn Error>> {
         let file = File::with_options()
             .read(true)
             .write(false)
