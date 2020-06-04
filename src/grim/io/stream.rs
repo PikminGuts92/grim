@@ -25,7 +25,7 @@ pub trait Stream {
     fn read_bytes(&mut self, length: usize) -> Result<Vec<u8>, Box<dyn Error>>;
 
     // Write integers
-    fn write_int8(&mut self) -> Result<(), Box<dyn Error>>;
+    fn write_int8(&mut self, value: i8) -> Result<(), Box<dyn Error>>;
 
     // Setters
     fn set_endian(&mut self, endian: IOEndian);
@@ -114,7 +114,7 @@ impl Stream for FileStream {
         Ok(buffer_vec)
     }
 
-    fn write_int8(&mut self) -> Result<(), Box<dyn Error>> {
+    fn write_int8(&mut self, value: i8) -> Result<(), Box<dyn Error>> {
         panic!("Not implmented yet") // TODO: Create custom error when can't write
     }
 
@@ -208,10 +208,10 @@ impl<'a> MemoryStream<'a> {
                 &(*data)[pos..(pos + size)]
             },
             MemoryData::ReadWrite(vec) => {
-                &(*vec)[pos as usize..size]
+                &(*vec)[pos..(pos + size)]
             },
             MemoryData::ReadWriteOwned(vec) => {
-                &vec[pos as usize..size]
+                &vec[pos..(pos + size)]
             }
         }
     }
@@ -220,10 +220,10 @@ impl<'a> MemoryStream<'a> {
 impl<'a> Stream for MemoryStream<'a> {
     fn read_int8(&mut self) -> Result<i8, Box<dyn Error>> {
         let mut buffer: [u8; 1] = [0];
-        let data = self.get_slice(self.position, 1);
+        let data = self.get_slice(self.position, buffer.len());
 
         buffer.clone_from_slice(data);
-        self.position += 1;
+        self.position += buffer.len() as u64;
 
         match self.endian {
             IOEndian::Little => Ok(i8::from_le_bytes(buffer)),
@@ -233,10 +233,10 @@ impl<'a> Stream for MemoryStream<'a> {
 
     fn read_int16(&mut self) -> Result<i16, Box<dyn Error>> {
         let mut buffer: [u8; 2] = [0, 0];
-        let data = self.get_slice(self.position, 2);
+        let data = self.get_slice(self.position, buffer.len());
 
         buffer.clone_from_slice(data);
-        self.position += 2;
+        self.position += buffer.len() as u64;
 
         match self.endian {
             IOEndian::Little => Ok(i16::from_le_bytes(buffer)),
@@ -246,10 +246,10 @@ impl<'a> Stream for MemoryStream<'a> {
 
     fn read_int32(&mut self) -> Result<i32, Box<dyn Error>> {
         let mut buffer: [u8; 4] = [0, 0, 0, 0];
-        let data = self.get_slice(self.position, 4);
+        let data = self.get_slice(self.position, buffer.len());
 
         buffer.clone_from_slice(data);
-        self.position += 4;
+        self.position += buffer.len() as u64;
 
         match self.endian {
             IOEndian::Little => Ok(i32::from_le_bytes(buffer)),
@@ -275,12 +275,12 @@ impl<'a> Stream for MemoryStream<'a> {
         Ok(buffer_vec)
     }
 
-    fn write_int8(&mut self) -> Result<(), Box<dyn Error>> {
+    fn write_int8(&mut self, value: i8) -> Result<(), Box<dyn Error>> {
         if !self.can_write() {
             panic!("Not implmented yet") // TODO: Create custom error when can't write
         }
 
-        /*let mut vec_data: Vec<u8> = match &mut self.data {
+        /*let &mut vec_data = match &mut self.data {
             /*MemoryData::Read(data) => {
                 Vec::<u8>::new() // Throw error (but it shouldn't reach this part)
             },
@@ -293,13 +293,36 @@ impl<'a> Stream for MemoryStream<'a> {
 
                 v
             },*/
-            _ => Vec::<u8>::new(),
             MemoryData::ReadWriteOwned(vec) => {
-                let v = vec;
-                v
+                vec
             }
         };*/
 
+        // TODO: Switch to match expression
+        let &mut vec_data;
+
+        if let MemoryData::ReadWriteOwned(vec) = &mut self.data {
+            vec_data = vec;
+        } else if let MemoryData::ReadWrite(vec) = &mut self.data {
+            vec_data = vec;
+        } else {
+            panic!("Not implmented yet") // Throw error (but it shouldn't reach this part)
+        }
+
+        let data = match self.endian {
+            IOEndian::Little => value.to_le_bytes(),
+            IOEndian::Big => value.to_be_bytes(),
+        };
+        let data_len = data.len();
+
+        if self.position == vec_data.len() as u64 {
+            vec_data.extend_from_slice(&data);
+        } else {
+            let pos = self.position as usize;
+            vec_data[pos..(pos + data_len)].clone_from_slice(&data);
+        }
+
+        self.position += data_len as u64;
         Ok(())
     }
 
