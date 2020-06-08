@@ -1,0 +1,21 @@
+# Grim (Working Title)
+This repo is intended to be a re-write of [Mackiloha](https://github.com/PikminGuts92/Mackiloha).
+
+# Phase 1
+- [ ] Underlying I/O support
+  - [ ] File
+    - [x] Read integers, floats, strings, bytes
+    - [ ] Write integers, floats, strings, bytes
+  - [ ] Memory
+    - [x] Read integers, floats, strings, bytes
+    - [ ] Write integers, floats, strings, bytes
+- [ ] Milo scene support
+  - [x] Decompress zlib block structured archives
+  - [ ] Compress zlib block structured archives
+- [ ] Texture support
+  - [ ] Decode PS2 bitmaps to RGBa
+  - [ ] PNG <-> RGBa conversion
+  - [ ] Encode RGBa to PS2 encoded bitmaps
+- [ ] Command Line Interface
+  - [ ] milo2dir - Extract entries from milo scene to directory
+  - [ ] dir2milo - Create milo scene from directory
