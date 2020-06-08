@@ -27,6 +27,9 @@ pub trait Stream {
     // Write integers
     fn write_int8(&mut self, value: i8) -> Result<(), Box<dyn Error>>;
 
+    // Write bytes
+    fn write_bytes(&mut self, data: &[u8]) -> Result<(), Box<dyn Error>>;
+
     // Setters
     fn set_endian(&mut self, endian: IOEndian);
 
@@ -115,6 +118,10 @@ impl Stream for FileStream {
     }
 
     fn write_int8(&mut self, value: i8) -> Result<(), Box<dyn Error>> {
+        panic!("Not implmented yet") // TODO: Create custom error when can't write
+    }
+
+    fn write_bytes(&mut self, data: &[u8]) -> Result<(), Box<dyn Error>> {
         panic!("Not implmented yet") // TODO: Create custom error when can't write
     }
 
@@ -320,6 +327,39 @@ impl<'a> Stream for MemoryStream<'a> {
         } else {
             let pos = self.position as usize;
             vec_data[pos..(pos + data_len)].clone_from_slice(&data);
+        }
+
+        self.position += data_len as u64;
+        Ok(())
+    }
+
+    fn write_bytes(&mut self, data: &[u8]) -> Result<(), Box<dyn Error>> {
+        // TODO: Switch to match expression
+        let &mut vec_data;
+
+        if let MemoryData::ReadWriteOwned(vec) = &mut self.data {
+            vec_data = vec;
+        } else if let MemoryData::ReadWrite(vec) = &mut self.data {
+            vec_data = vec;
+        } else {
+            panic!("Not implmented yet") // Throw error (but it shouldn't reach this part)
+        }
+
+        let data_len = data.len();
+
+        if self.position == vec_data.len() as u64 {
+            vec_data.extend_from_slice(data);
+        } else {
+            let pos = self.position as usize;
+
+            let bytes_left = vec_data.len() - pos;
+            if bytes_left < data_len {
+                // Add missing bytes
+                let rem_bytes = vec![0u8; data_len - bytes_left];
+                vec_data.extend_from_slice(&rem_bytes);
+            }
+
+            vec_data[pos..(pos + data_len)].clone_from_slice(data);
         }
 
         self.position += data_len as u64;
