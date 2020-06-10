@@ -1,5 +1,5 @@
 use crate::grim::io::compression::*;
-use crate::grim::io::stream::{MemoryStream, SeekFrom, Stream};
+use crate::grim::io::stream::{BinaryStream, MemoryStream, SeekFrom, Stream};
 use crate::grim::scene::{Object, ObjectDir, PackedObject};
 use std::fmt::{Display, Formatter};
 use std::path::Path;
@@ -32,9 +32,10 @@ pub enum MiloBlockStructureError {
 
 impl MiloArchive {
     pub fn from_stream(stream: &mut Box<dyn Stream>) -> Result<MiloArchive, Box<dyn std::error::Error>> {
-        let magic = MiloArchive::read_magic_and_offset(stream)?;
+        let stream = stream.as_mut();
+        let mut reader = BinaryStream::from_stream(stream);
 
-        let reader = stream.as_mut();
+        let magic = MiloArchive::read_magic_and_offset(&mut reader)?;
 
         let block_count = reader.read_int32()?;
         let max_inflate_size = reader.read_int32()?;
@@ -72,9 +73,7 @@ impl MiloArchive {
         })
     }
 
-    fn read_magic_and_offset(stream: &mut Box<dyn Stream>) -> Result<BlockStructure, Box<dyn std::error::Error>> {
-        let reader = stream.as_mut();
-
+    fn read_magic_and_offset(reader: &mut BinaryStream) -> Result<BlockStructure, Box<dyn std::error::Error>> {
         // TODO: Read as u32
         let magic = reader.read_int32()? as u32;
         let block_offset = reader.read_int32()? as u32;
@@ -98,7 +97,8 @@ impl MiloArchive {
         //   For now assume GH1 PS2
 
         let mut stream = self.get_stream();
-        let reader = stream.as_mut();
+        let stream = stream.as_mut();
+        let mut reader = BinaryStream::from_stream(stream);
 
         let version = reader.read_int32()?; // TODO: Evaluate version
         let entry_count = reader.read_int32()?;
@@ -129,7 +129,7 @@ impl MiloArchive {
 
         // Get data for entries
         for entry_obj in packed_entries.iter_mut() {
-            if let Some(size) = self.guess_entry_size(reader)? {
+            if let Some(size) = self.guess_entry_size(&mut reader)? {
                 // Read data and skip padding
                 entry_obj.data = reader.read_bytes(size)?;
                 reader.seek(SeekFrom::Current(4))?;
@@ -147,7 +147,7 @@ impl MiloArchive {
         })
     }
 
-    fn guess_entry_size<'a>(&'a self, reader: &mut dyn Stream) -> Result<Option<usize>, Box<dyn std::error::Error>> {
+    fn guess_entry_size<'a>(&'a self, reader: &mut BinaryStream) -> Result<Option<usize>, Box<dyn std::error::Error>> {
         let start_pos = reader.position();
         let stream_len = reader.len()?;
 
