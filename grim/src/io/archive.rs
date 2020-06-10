@@ -1,6 +1,6 @@
-use crate::grim::io::compression::*;
-use crate::grim::io::stream::{BinaryStream, MemoryStream, SeekFrom, Stream};
-use crate::grim::scene::{Object, ObjectDir, PackedObject};
+use crate::io::compression::*;
+use crate::io::stream::{BinaryStream, MemoryStream, SeekFrom, Stream};
+use crate::scene::{Object, ObjectDir, PackedObject};
 use std::fmt::{Display, Formatter};
 use std::path::Path;
 use thiserror::Error;

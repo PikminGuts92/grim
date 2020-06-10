@@ -1,10 +1,8 @@
-#![feature(with_options)] // TODO: Move to seperate lib file
 use std::cmp::Ordering;
 use std::env;
 use std::path::Path;
 use thiserror::Error;
 
-mod grim;
 use grim::io::*;
 use grim::scene::{Object, ObjectDir};
 
@@ -32,7 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Opening file...");
     let file_path = Path::new(file_path_str);
 
-    let mut reader: Box<dyn Stream> = Box::new(FileStream::new(file_path)?);
+    let mut reader: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(file_path)?);
     let milo = MiloArchive::from_stream(&mut reader)?;
 
     let mut obj_dir = milo.unpack_directory()?;

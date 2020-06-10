@@ -1,14 +1,10 @@
-[package]
-name = "grim"
-version = "0.1.0"
-authors = ["PikminGuts92"]
-edition = "2018"
+[workspace]
+members = [
+    "grim",
+    "scene_tool"
+]
 
 [profile.release]
 codegen-units = 1
 lto = true
 opt-level = 'z'  # Optimize for size
-
-[dependencies]
-flate2 = "1.0.14"
-thiserror = "1.0.18"

@@ -1,8 +1,8 @@
-use crate::grim::scene::Object;
+use crate::scene::Object;
 
 #[derive(Debug)]
 pub struct ObjectDir {
-    pub(crate) entries: Vec<Object>
+    pub entries: Vec<Object>
 }
 
 impl ObjectDir {
