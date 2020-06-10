@@ -360,6 +360,37 @@ impl<'a> BinaryStream<'a> {
         }
     }
 
+    pub fn read_int64(&mut self) -> Result<i64, Box<dyn Error>> {
+        let mut buffer = [0u8; 8];
+        self.read_bytes_into_slice(&mut buffer)?;
+
+        match self.endian {
+            IOEndian::Little => Ok(i64::from_le_bytes(buffer)),
+            IOEndian::Big => Ok(i64::from_be_bytes(buffer)),
+        }
+    }
+
+    // Read floats
+    pub fn read_float32(&mut self) -> Result<f32, Box<dyn Error>> {
+        let mut buffer = [0u8; 4];
+        self.read_bytes_into_slice(&mut buffer)?;
+
+        match self.endian {
+            IOEndian::Little => Ok(f32::from_le_bytes(buffer)),
+            IOEndian::Big => Ok(f32::from_be_bytes(buffer)),
+        }
+    }
+
+    pub fn read_float64(&mut self) -> Result<f64, Box<dyn Error>> {
+        let mut buffer = [0u8; 8];
+        self.read_bytes_into_slice(&mut buffer)?;
+
+        match self.endian {
+            IOEndian::Little => Ok(f64::from_le_bytes(buffer)),
+            IOEndian::Big => Ok(f64::from_be_bytes(buffer)),
+        }
+    }
+
     // Read strings
     pub fn read_prefixed_string(&mut self) -> Result<String, Box<dyn Error>> {
         let length = self.read_int32()?;
