@@ -74,9 +74,8 @@ impl MiloArchive {
     }
 
     fn read_magic_and_offset(reader: &mut BinaryStream) -> Result<BlockStructure, Box<dyn std::error::Error>> {
-        // TODO: Read as u32
-        let magic = reader.read_int32()? as u32;
-        let block_offset = reader.read_int32()? as u32;
+        let magic = reader.read_uint32()?;
+        let block_offset = reader.read_uint32()?;
 
         match magic {
             0xCABEDEAF => Ok(BlockStructure::TypeA(block_offset)),

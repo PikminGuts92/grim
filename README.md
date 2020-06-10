@@ -2,13 +2,13 @@
 This repo is intended to be a re-write of [Mackiloha](https://github.com/PikminGuts92/Mackiloha).
 
 # Phase 1
-- [ ] Underlying I/O support
-  - [ ] File
+- [x] Underlying I/O support
+  - [x] File
     - [x] Read integers, floats, strings, bytes
-    - [ ] Write integers, floats, strings, bytes
-  - [ ] Memory
+    - [x] Write integers, floats, strings, bytes
+  - [x] Memory
     - [x] Read integers, floats, strings, bytes
-    - [ ] Write integers, floats, strings, bytes
+    - [x] Write integers, floats, strings, bytes
 - [ ] Milo scene support
   - [x] Decompress zlib block structured archives
   - [ ] Compress zlib block structured archives

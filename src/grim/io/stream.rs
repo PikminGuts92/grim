@@ -110,7 +110,7 @@ impl<'a> Stream for MemoryStream<'a> {
         } else if let MemoryData::ReadWrite(vec) = &mut self.data {
             vec_data = vec;
         } else {
-            panic!("Not implmented yet") // Throw error (but it shouldn't reach this part)
+            panic!("Not implmented yet") // TODO: Throw error (but it shouldn't reach this part)
         }
 
         let data_len = data.len();
@@ -253,7 +253,12 @@ impl Stream for FileStream {
     }
 
     fn write_bytes(&mut self, data: &[u8]) -> Result<(), Box<dyn Error>> {
-        panic!("Not implmented yet") // TODO: Create custom error when can't write
+        if !self.can_write() {
+            panic!("File stream is read-only"); // TODO: Throw error instead
+        }
+
+        self.file.write(data)?;
+        Ok(())
     }
 
     fn position(&self) -> u64 {
@@ -329,7 +334,40 @@ impl<'a> BinaryStream<'a> {
         }
     }
 
-    // Read integers
+    // Getters
+    pub fn endian(&self) -> IOEndian {
+        self.endian
+    }
+
+    pub fn seek_until(&mut self, needle: &[u8]) -> Result<Option<usize>, Box<dyn Error>> {
+        let start_pos = self.position();
+        let stream_len = self.len()?;
+
+        let needle_len = needle.len();
+        let search_limit = stream_len - needle_len;
+
+        let mut haystack: Vec<u8>;
+        while self.position() <= search_limit as u64 {
+            haystack = self.read_bytes(needle_len)?;
+
+            if haystack == needle {
+                // Data found
+                self.seek(SeekFrom::Current(-(needle_len as i64)))?;
+
+                return Ok(Some((self.position() - start_pos) as usize));
+            } else {
+                // Still searching
+                self.seek(SeekFrom::Current(-((needle_len - 1) as i64)))?;
+            }
+        }
+
+        Ok(None)
+    }
+}
+
+// Reader implementation
+impl<'a> BinaryStream<'a> {
+    // Read signed integers
     pub fn read_int8(&mut self) -> Result<i8, Box<dyn Error>> {
         let mut buffer = [0u8; 1];
         self.read_bytes_into_slice(&mut buffer)?;
@@ -370,6 +408,47 @@ impl<'a> BinaryStream<'a> {
         }
     }
 
+    // Read unsigned integers
+    pub fn read_uint8(&mut self) -> Result<u8, Box<dyn Error>> {
+        let mut buffer = [0u8; 1];
+        self.read_bytes_into_slice(&mut buffer)?;
+
+        match self.endian {
+            IOEndian::Little => Ok(u8::from_le_bytes(buffer)),
+            IOEndian::Big => Ok(u8::from_be_bytes(buffer)),
+        }
+    }
+
+    pub fn read_uint16(&mut self) -> Result<u16, Box<dyn Error>> {
+        let mut buffer = [0u8; 2];
+        self.read_bytes_into_slice(&mut buffer)?;
+
+        match self.endian {
+            IOEndian::Little => Ok(u16::from_le_bytes(buffer)),
+            IOEndian::Big => Ok(u16::from_be_bytes(buffer)),
+        }
+    }
+
+    pub fn read_uint32(&mut self) -> Result<u32, Box<dyn Error>> {
+        let mut buffer = [0u8; 4];
+        self.read_bytes_into_slice(&mut buffer)?;
+
+        match self.endian {
+            IOEndian::Little => Ok(u32::from_le_bytes(buffer)),
+            IOEndian::Big => Ok(u32::from_be_bytes(buffer)),
+        }
+    }
+
+    pub fn read_uint64(&mut self) -> Result<u64, Box<dyn Error>> {
+        let mut buffer = [0u8; 8];
+        self.read_bytes_into_slice(&mut buffer)?;
+
+        match self.endian {
+            IOEndian::Little => Ok(u64::from_le_bytes(buffer)),
+            IOEndian::Big => Ok(u64::from_be_bytes(buffer)),
+        }
+    }
+
     // Read floats
     pub fn read_float32(&mut self) -> Result<f32, Box<dyn Error>> {
         let mut buffer = [0u8; 4];
@@ -399,8 +478,11 @@ impl<'a> BinaryStream<'a> {
         // TODO: Replace with better one (FromUtf8Error message is awful)
         Ok(String::from_utf8(raw_bytes)?)
     }
+}
 
-    // Write integers
+// Writer implementation
+impl<'a> BinaryStream<'a> {
+    // Write signed integers
     pub fn write_int8(&mut self, value: i8) -> Result<(), Box<dyn Error>> {
         let data = match self.endian {
             IOEndian::Little => value.to_le_bytes(),
@@ -410,33 +492,96 @@ impl<'a> BinaryStream<'a> {
         Ok(self.write_bytes(&data)?)
     }
 
-    // Getters
-    pub fn endian(&self) -> IOEndian {
-        self.endian
+    pub fn write_int16(&mut self, value: i16) -> Result<(), Box<dyn Error>> {
+        let data = match self.endian {
+            IOEndian::Little => value.to_le_bytes(),
+            IOEndian::Big => value.to_be_bytes(),
+        };
+
+        Ok(self.write_bytes(&data)?)
     }
 
-    pub fn seek_until(&mut self, needle: &[u8]) -> Result<Option<usize>, Box<dyn Error>> {
-        let start_pos = self.position();
-        let stream_len = self.len()?;
+    pub fn write_int32(&mut self, value: i32) -> Result<(), Box<dyn Error>> {
+        let data = match self.endian {
+            IOEndian::Little => value.to_le_bytes(),
+            IOEndian::Big => value.to_be_bytes(),
+        };
 
-        let needle_len = needle.len();
-        let search_limit = stream_len - needle_len;
+        Ok(self.write_bytes(&data)?)
+    }
 
-        let mut haystack: Vec<u8>;
-        while self.position() <= search_limit as u64 {
-            haystack = self.read_bytes(needle_len)?;
+    pub fn write_int64(&mut self, value: i64) -> Result<(), Box<dyn Error>> {
+        let data = match self.endian {
+            IOEndian::Little => value.to_le_bytes(),
+            IOEndian::Big => value.to_be_bytes(),
+        };
 
-            if haystack == needle {
-                // Data found
-                self.seek(SeekFrom::Current(-(needle_len as i64)))?;
+        Ok(self.write_bytes(&data)?)
+    }
 
-                return Ok(Some((self.position() - start_pos) as usize));
-            } else {
-                // Still searching
-                self.seek(SeekFrom::Current(-((needle_len - 1) as i64)))?;
-            }
-        }
+    // Write unsigned integers
+    pub fn write_uint8(&mut self, value: u8) -> Result<(), Box<dyn Error>> {
+        let data = match self.endian {
+            IOEndian::Little => value.to_le_bytes(),
+            IOEndian::Big => value.to_be_bytes(),
+        };
 
-        Ok(None)
+        Ok(self.write_bytes(&data)?)
+    }
+
+    pub fn write_uint16(&mut self, value: u16) -> Result<(), Box<dyn Error>> {
+        let data = match self.endian {
+            IOEndian::Little => value.to_le_bytes(),
+            IOEndian::Big => value.to_be_bytes(),
+        };
+
+        Ok(self.write_bytes(&data)?)
+    }
+
+    pub fn write_uint32(&mut self, value: u32) -> Result<(), Box<dyn Error>> {
+        let data = match self.endian {
+            IOEndian::Little => value.to_le_bytes(),
+            IOEndian::Big => value.to_be_bytes(),
+        };
+
+        Ok(self.write_bytes(&data)?)
+    }
+
+    pub fn write_uint64(&mut self, value: u64) -> Result<(), Box<dyn Error>> {
+        let data = match self.endian {
+            IOEndian::Little => value.to_le_bytes(),
+            IOEndian::Big => value.to_be_bytes(),
+        };
+
+        Ok(self.write_bytes(&data)?)
+    }
+
+    // Write floats
+    pub fn write_float32(&mut self, value: f32) -> Result<(), Box<dyn Error>> {
+        let data = match self.endian {
+            IOEndian::Little => value.to_le_bytes(),
+            IOEndian::Big => value.to_be_bytes(),
+        };
+
+        Ok(self.write_bytes(&data)?)
+    }
+
+    pub fn write_float64(&mut self, value: f64) -> Result<(), Box<dyn Error>> {
+        let data = match self.endian {
+            IOEndian::Little => value.to_le_bytes(),
+            IOEndian::Big => value.to_be_bytes(),
+        };
+
+        Ok(self.write_bytes(&data)?)
+    }
+
+    // Write strings
+    pub fn write_prefixed_string(&mut self, value: &str) -> Result<(), Box<dyn Error>> {
+        let data = value.as_bytes(); // Assumed to be utf-8
+
+        self.write_int32(data.len() as i32)?;
+        self.write_bytes(data)?;
+
+        Ok(())
     }
 }
