@@ -17,5 +17,5 @@ This repo is intended to be a re-write of [Mackiloha](https://github.com/PikminG
   - [ ] PNG <-> RGBa conversion
   - [ ] Encode RGBa to PS2 encoded bitmaps
 - [ ] Command Line Interface
-  - [ ] milo2dir - Extract entries from milo scene to directory
+  - [x] milo2dir - Extract entries from milo scene to directory
   - [ ] dir2milo - Create milo scene from directory
