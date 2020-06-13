@@ -6,6 +6,7 @@ use std::fs;
 use std::path::Path;
 use thiserror::Error;
 
+use grim::{Platform, SystemInfo};
 use grim::io::*;
 use grim::scene::{Object, ObjectDir};
 
@@ -15,6 +16,13 @@ pub enum ArgError {
     #[error("Missing input file path")]
     NoInputPath
 }
+
+// TODO: Get from args
+const SYSTEM_INFO: SystemInfo = SystemInfo {
+    version: 10,
+    platform: Platform::PS2,
+    endian: IOEndian::Little,
+};
 
 #[derive(Clap, Debug)]
 pub struct Milo2DirApp {
@@ -41,8 +49,10 @@ impl SubApp for Milo2DirApp {
         let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(milo_path)?);
         let milo = MiloArchive::from_stream(&mut stream)?;
 
-        let mut obj_dir = milo.unpack_directory()?;
-        obj_dir.entries.sort_by(compare_entries_by_name);
+        let mut obj_dir = milo.unpack_directory(&SYSTEM_INFO)?;
+        //obj_dir.unpack_entries(&SYSTEM_INFO);
+
+        //obj_dir.entries.sort_by(compare_entries_by_name);
         extract_contents(&obj_dir, dir_path)?;
 
         Ok(())
@@ -51,8 +61,12 @@ impl SubApp for Milo2DirApp {
 
 fn extract_contents(milo_dir: &ObjectDir, output_path: &Path) -> Result<(), Box<dyn Error>> {
     for obj in milo_dir.entries.iter() {
+        // TODO: Parse other types and extract too
         let entry = match obj {
-            Object::Packed(packed) => packed
+            Object::Packed(packed) => packed,
+            _ => {
+                continue;
+            },
         };
 
         let entry_dir = Path::join(output_path, &entry.object_type);
@@ -75,19 +89,21 @@ fn extract_contents(milo_dir: &ObjectDir, output_path: &Path) -> Result<(), Box<
 }
 
 fn compare_entries_by_name(a : &grim::scene::Object, b: &grim::scene::Object) -> Ordering {
-    // Unpack entries
-    let a = match a {
-        Object::Packed(obj) => obj
-    };
+    // Get entry types
+    let a_type = a.get_type();
+    let b_type = b.get_type();
 
-    let b = match b {
-        Object::Packed(obj) => obj
-    };
-
-    // Compare type then name
-    match a.object_type.cmp(&b.object_type) {
+    // First compare type
+    match a_type.cmp(b_type) {
         Ordering::Less => Ordering::Less,
         Ordering::Greater => Ordering::Greater,
-        Ordering::Equal => a.name.cmp(&b.name)
+        Ordering::Equal => {
+            // Get entry names
+            let a_name = a.get_name();
+            let b_name = b.get_name();
+            
+            // Then compare name
+            a_name.cmp(b_name)
+        }
     }
 }

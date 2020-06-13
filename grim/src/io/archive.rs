@@ -1,3 +1,4 @@
+use crate::{SystemInfo};
 use crate::io::compression::*;
 use crate::io::stream::{BinaryStream, MemoryStream, SeekFrom, Stream};
 use crate::scene::{Object, ObjectDir, PackedObject};
@@ -30,10 +31,18 @@ pub enum MiloBlockStructureError {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum MiloUnpackError {
+    #[error("Unsupported milo directory of version of {version}")]
+    UnsupportedDirectoryVersion {
+        version: u32
+    }
+}
+
 impl MiloArchive {
     pub fn from_stream(stream: &mut Box<dyn Stream>) -> Result<MiloArchive, Box<dyn std::error::Error>> {
         let stream = stream.as_mut();
-        let mut reader = BinaryStream::from_stream(stream);
+        let mut reader = BinaryStream::from_stream(stream); // Should always be little endian
 
         let magic = MiloArchive::read_magic_and_offset(&mut reader)?;
 
@@ -91,15 +100,17 @@ impl MiloArchive {
         Box::new(stream)
     }
 
-    pub fn unpack_directory(&self) -> Result<ObjectDir, Box<dyn std::error::Error>> {
-        // TODO: Pass platform info as args
-        //   For now assume GH1 PS2
-
+    pub fn unpack_directory(&self, info: &SystemInfo) -> Result<ObjectDir, Box<dyn std::error::Error>> {
         let mut stream = self.get_stream();
         let stream = stream.as_mut();
-        let mut reader = BinaryStream::from_stream(stream);
+        let mut reader = BinaryStream::from_stream_with_endian(stream, info.endian);
 
-        let version = reader.read_int32()?; // TODO: Evaluate version
+        // Read and verify version
+        let version = reader.read_uint32()?;
+        if info.version != version {
+            return Err(Box::new(MiloUnpackError::UnsupportedDirectoryVersion { version }));
+        }
+
         let entry_count = reader.read_int32()?;
 
         let mut packed_entries: Vec<PackedObject> = Vec::new();
@@ -147,7 +158,7 @@ impl MiloArchive {
     }
 
     fn guess_entry_size<'a>(&'a self, reader: &mut BinaryStream) -> Result<Option<usize>, Box<dyn std::error::Error>> {
-        let start_pos = reader.position();
+        let start_pos = reader.pos();
         let stream_len = reader.len()?;
 
         let mut magic: i32;
@@ -162,7 +173,7 @@ impl MiloArchive {
             // Found padding, skip needle bytes
             reader.seek(SeekFrom::Current(4))?;
 
-            if (reader.position() as usize) >= stream_len {
+            if (reader.pos() as usize) >= stream_len {
                 // EOF reached
                 break;
             }
@@ -178,7 +189,7 @@ impl MiloArchive {
         }
 
         // Calculates size and returns to start of stream
-        let entry_size = (reader.position() - (start_pos + 4)) as usize;
+        let entry_size = (reader.pos() - (start_pos + 4)) as usize;
         reader.seek(SeekFrom::Start(start_pos))?;
 
         Ok(Some(entry_size))

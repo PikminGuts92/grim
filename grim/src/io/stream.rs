@@ -17,7 +17,7 @@ pub trait Stream {
     fn write_bytes(&mut self, data: &[u8]) -> Result<(), Box<dyn Error>>;
 
     // Getters
-    fn position(&self) -> u64;
+    fn pos(&self) -> u64;
     fn can_write(&self) -> bool;
     fn len(&mut self) -> Result<usize, Box<dyn Error>>;
     
@@ -134,7 +134,7 @@ impl<'a> Stream for MemoryStream<'a> {
         Ok(())
     }
 
-    fn position(&self) -> u64 {
+    fn pos(&self) -> u64 {
         self.position
     }
 
@@ -261,7 +261,7 @@ impl Stream for FileStream {
         Ok(())
     }
 
-    fn position(&self) -> u64 {
+    fn pos(&self) -> u64 {
         self.position
     }
 
@@ -270,7 +270,7 @@ impl Stream for FileStream {
     }
 
     fn len(&mut self) -> Result<usize, Box<dyn Error>> {
-        let start_pos = self.position();
+        let start_pos = self.pos();
         let size_result = self.file.seek(SeekFrom::End(0));
 
         self.seek(SeekFrom::Start(start_pos))?;
@@ -309,8 +309,8 @@ impl<'a> Stream for BinaryStream<'a> {
         self.stream.write_bytes(data)
     }
 
-    fn position(&self) -> u64 {
-        self.stream.position()
+    fn pos(&self) -> u64 {
+        self.stream.pos()
     }
 
     fn can_write(&self) -> bool {
@@ -334,27 +334,34 @@ impl<'a> BinaryStream<'a> {
         }
     }
 
+    pub fn from_stream_with_endian(stream: &mut dyn Stream, endian: IOEndian) -> BinaryStream {
+        BinaryStream {
+            endian,
+            stream
+        }
+    }
+
     // Getters
     pub fn endian(&self) -> IOEndian {
         self.endian
     }
 
     pub fn seek_until(&mut self, needle: &[u8]) -> Result<Option<usize>, Box<dyn Error>> {
-        let start_pos = self.position();
+        let start_pos = self.pos();
         let stream_len = self.len()?;
 
         let needle_len = needle.len();
         let search_limit = stream_len - needle_len;
 
         let mut haystack: Vec<u8>;
-        while self.position() <= search_limit as u64 {
+        while self.pos() <= search_limit as u64 {
             haystack = self.read_bytes(needle_len)?;
 
             if haystack == needle {
                 // Data found
                 self.seek(SeekFrom::Current(-(needle_len as i64)))?;
 
-                return Ok(Some((self.position() - start_pos) as usize));
+                return Ok(Some((self.pos() - start_pos) as usize));
             } else {
                 // Still searching
                 self.seek(SeekFrom::Current(-((needle_len - 1) as i64)))?;
@@ -367,6 +374,12 @@ impl<'a> BinaryStream<'a> {
 
 // Reader implementation
 impl<'a> BinaryStream<'a> {
+    // Read boolean
+    pub fn read_boolean(&mut self) -> Result<bool, Box<dyn Error>> {
+        let value = self.read_uint8()?;
+        Ok(value != 0)
+    }
+
     // Read signed integers
     pub fn read_int8(&mut self) -> Result<i8, Box<dyn Error>> {
         let mut buffer = [0u8; 1];
