@@ -1,5 +1,6 @@
 mod io;
 pub use io::*;
+use crate::texture::Bitmap;
 
 #[derive(Debug)]
 pub struct Tex {
@@ -13,6 +14,8 @@ pub struct Tex {
 
     pub ext_path: String,
     pub use_ext_path: bool,
+
+    pub bitmap: Option<Bitmap>
 }
 
 impl Tex {
@@ -28,6 +31,8 @@ impl Tex {
 
             ext_path: String::from(""),
             use_ext_path: false,
+
+            bitmap: None
         }
     }
 }

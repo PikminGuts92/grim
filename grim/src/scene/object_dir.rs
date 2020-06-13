@@ -20,29 +20,26 @@ impl ObjectDir {
         let mut new_entries = Vec::<Object>::new();
 
         while self.entries.len() > 0 {
-            let obj = self.entries.remove(0);
+            let object = self.entries.remove(0);
 
-            if let Object::Packed(packed) = obj {
-                match &packed.object_type[..] {
-                    "Tex" => {
-                        let mut stream = MemoryStream::from_slice_as_read(&packed.data[..]);
+            let new_object = match object {
+                Object::Packed(packed) => {
+                    let mut stream = MemoryStream::from_slice_as_read(&packed.data[..]);
 
-                        match Tex::from_stream(&mut stream, info) {
-                            Ok(tex) => {
-                                new_entries.push(Object::Tex(tex));
-                            },
-                            Err(_) => {
-                                new_entries.push(Object::Packed(packed));
+                    match &packed.object_type[..] {
+                        "Tex" => {
+                            match Tex::from_stream(&mut stream, info) {
+                                Ok(tex) => Object::Tex(tex),
+                                Err(_) => Object::Packed(packed),
                             }
-                        }
-                    },
-                    _ => {
-                        new_entries.push(Object::Packed(packed));
+                        },
+                        _ => Object::Packed(packed)
                     }
-                }
-            } else {
-                new_entries.push(obj);
-            }
+                },
+                _ => object
+            };
+
+            new_entries.push(new_object);
         }
 
         // Assign new entries

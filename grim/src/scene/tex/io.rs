@@ -2,6 +2,7 @@ use std::error::Error;
 use crate::{Platform, SystemInfo};
 use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::scene::Tex;
+use crate::texture::Bitmap;
 
 impl Tex {
     // TODO: Add from_hmx_image() function
@@ -55,6 +56,11 @@ impl Tex {
         if reader.pos() == reader.len()? as u64 {
             return Ok(tex);
         }
+
+        tex.bitmap = match Bitmap::from_stream(&mut reader, info) {
+            Ok(bitmap) => Some(bitmap),
+            Err(_) => None,
+        };
 
         Ok(tex)
     }
