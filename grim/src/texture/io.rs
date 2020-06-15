@@ -1,7 +1,10 @@
-use crate::io::{BinaryStream, SeekFrom, Stream};
+use crate::io::{BinaryStream, FileStream, SeekFrom, Stream};
 use crate::texture::Bitmap;
 use crate::system::{Platform, SystemInfo};
+use image::{ImageBuffer, RgbaImage};
+use image::png::PNGEncoder;
 use std::error::Error;
+use std::path::Path;
 use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError)]
@@ -89,8 +92,8 @@ fn decode_from_bitmap(bitmap: &Bitmap, info: &SystemInfo, rgba: &mut [u8]) -> Re
 
             while i < rgba.len() {
                 // Palette indices
-                p1 = ((encoded[e] & 0x0F) << 2) as usize;
-                p2 = ((encoded[e] & 0xF0) >> 2) as usize;
+                p1 = ((encoded[e] & 0x0F) as usize) << 2;
+                p2 = ((encoded[e] & 0xF0) as usize) >> 2;
 
                 // Copy colors from palette into rgba array
                 rgba[i..(i + 4)].clone_from_slice(&palette[p1..(p1 + 4)]);
@@ -113,7 +116,7 @@ fn decode_from_bitmap(bitmap: &Bitmap, info: &SystemInfo, rgba: &mut [u8]) -> Re
                 // Ex: 0110 1011 -> 0111 0011
                 p1 = (((enc & 0b1110_0111)
                     | ((enc & 0b0000_1000) << 1)
-                    | ((enc & 0b0001_0000) >> 1)) << 2) as usize;
+                    | ((enc & 0b0001_0000) >> 1)) as usize) << 2;
 
                 // Copy color from palette into rgba array
                 rgba[i..(i + 4)].clone_from_slice(&palette[p1..(p1 + 4)]);
@@ -149,4 +152,22 @@ fn update_alpha_channels(data: &mut [u8], reduce: bool) {
             }
         }
     }
+}
+
+pub fn write_rgba_to_file(width: u32, height: u32, rgba: &[u8], path: &Path) -> Result<(), Box<dyn Error>> {
+    let mut image: RgbaImage = ImageBuffer::new(width, height);
+    let mut rgba_idx;
+    let mut rgba_pix: [u8; 4] = Default::default();
+
+    for (i, p) in image.pixels_mut().enumerate() {
+        rgba_idx = i << 2;
+        rgba_pix.clone_from_slice(&rgba[rgba_idx..(rgba_idx + 4)]);
+
+        *p = image::Rgba(rgba_pix);
+    }
+
+    let data = rgba.to_owned();
+
+    image.save(path)?;
+    Ok(())
 }

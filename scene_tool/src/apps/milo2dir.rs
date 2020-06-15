@@ -9,7 +9,7 @@ use thiserror::Error;
 use grim::{Platform, SystemInfo};
 use grim::io::*;
 use grim::scene::{Object, ObjectDir, PackedObject, Tex};
-use grim::texture::Bitmap;
+use grim::texture::{Bitmap, write_rgba_to_file};
 
 // TODO: Use this error somewhere or refactor
 #[derive(Debug, Error)]
@@ -81,8 +81,9 @@ fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, info: &SystemInfo)
             match &unpacked {
                 Object::Tex(tex) => {
                     if let Some(_) = tex.bitmap {
-                        extract_tex_object(tex, &entry_dir, info)?;
-                        continue;
+                        if let Ok(_) = extract_tex_object(tex, &entry_dir, info) {
+                            continue;
+                        }
                     }
                 },
                 _ => {
@@ -136,7 +137,7 @@ fn extract_tex_object(tex: &Tex, entry_dir: &PathBuf, info: &SystemInfo) -> Resu
     };
 
     let rgba = bitmap.unpack_rgba(info)?;
-
+    write_rgba_to_file(bitmap.width as u32, bitmap.height as u32, &rgba[..], &entry_path)?;
 
     if let Some(name) = entry_path.to_str() {
         println!("Wrote {}", name);
