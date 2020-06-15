@@ -13,7 +13,7 @@ This repo is intended to be a re-write of [Mackiloha](https://github.com/PikminG
   - [x] Decompress zlib block structured archives
   - [ ] Compress zlib block structured archives
 - [ ] Texture support
-  - [ ] Decode PS2 bitmaps to RGBa
+  - [x] Decode PS2 bitmaps to RGBa
   - [ ] PNG <-> RGBa conversion
   - [ ] Encode RGBa to PS2 encoded bitmaps
 - [ ] Command Line Interface
