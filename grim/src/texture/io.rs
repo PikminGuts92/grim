@@ -137,7 +137,7 @@ fn decode_from_bitmap(bitmap: &Bitmap, info: &SystemInfo, rgba: &mut [u8]) -> Re
 fn update_alpha_channels(data: &mut [u8], reduce: bool) {
     if reduce {
         // 8-bit -> 7-bit alpha
-        for alpha in data.iter_mut().step_by(4) {
+        for alpha in data.iter_mut().skip(3).step_by(4) {
             *alpha = match *alpha {
                 0xFF => 0x80,
                 _ => *alpha >> 1
@@ -145,7 +145,7 @@ fn update_alpha_channels(data: &mut [u8], reduce: bool) {
         }
     } else {
         // 7-bit -> 8-bit alpha
-        for alpha in data.iter_mut().step_by(4) {
+        for alpha in data.iter_mut().skip(3).step_by(4) {
             *alpha = match *alpha {
                 0x80 ..= 0xFF => 0xFF, // It should max out at 0x80 but just in case
                 _ => (*alpha & 0x7F) << 1
@@ -165,8 +165,6 @@ pub fn write_rgba_to_file(width: u32, height: u32, rgba: &[u8], path: &Path) -> 
 
         *p = image::Rgba(rgba_pix);
     }
-
-    let data = rgba.to_owned();
 
     image.save(path)?;
     Ok(())
