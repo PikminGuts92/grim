@@ -2,9 +2,10 @@ use crate::{SystemInfo};
 use crate::io::compression::*;
 use crate::io::stream::{BinaryStream, MemoryStream, SeekFrom, Stream};
 use crate::scene::{Object, ObjectDir, PackedObject};
+use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::path::Path;
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 const ADDE_PADDING: [u8; 4] = [0xAD, 0xDE, 0xAD, 0xDE];
 
@@ -23,7 +24,7 @@ pub struct MiloArchive {
     data: Vec<u8>
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum MiloBlockStructureError {
     #[error("Unsupported compression with magic of 0x{magic:X}")]
     UnsupportedCompression {
@@ -31,7 +32,7 @@ pub enum MiloBlockStructureError {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum MiloUnpackError {
     #[error("Unsupported milo directory of version of {version}")]
     UnsupportedDirectoryVersion {
@@ -40,7 +41,7 @@ pub enum MiloUnpackError {
 }
 
 impl MiloArchive {
-    pub fn from_stream(stream: &mut Box<dyn Stream>) -> Result<MiloArchive, Box<dyn std::error::Error>> {
+    pub fn from_stream(stream: &mut Box<dyn Stream>) -> Result<MiloArchive, Box<dyn Error>> {
         let stream = stream.as_mut();
         let mut reader = BinaryStream::from_stream(stream); // Should always be little endian
 
@@ -82,7 +83,7 @@ impl MiloArchive {
         })
     }
 
-    fn read_magic_and_offset(reader: &mut BinaryStream) -> Result<BlockStructure, Box<dyn std::error::Error>> {
+    fn read_magic_and_offset(reader: &mut BinaryStream) -> Result<BlockStructure, Box<dyn Error>> {
         let magic = reader.read_uint32()?;
         let block_offset = reader.read_uint32()?;
 
@@ -100,7 +101,7 @@ impl MiloArchive {
         Box::new(stream)
     }
 
-    pub fn unpack_directory(&self, info: &SystemInfo) -> Result<ObjectDir, Box<dyn std::error::Error>> {
+    pub fn unpack_directory(&self, info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
         let mut stream = self.get_stream();
         let stream = stream.as_mut();
         let mut reader = BinaryStream::from_stream_with_endian(stream, info.endian);
@@ -157,7 +158,7 @@ impl MiloArchive {
         })
     }
 
-    fn guess_entry_size<'a>(&'a self, reader: &mut BinaryStream) -> Result<Option<usize>, Box<dyn std::error::Error>> {
+    fn guess_entry_size<'a>(&'a self, reader: &mut BinaryStream) -> Result<Option<usize>, Box<dyn Error>> {
         let start_pos = reader.pos();
         let stream_len = reader.len()?;
 

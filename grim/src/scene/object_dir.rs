@@ -22,21 +22,9 @@ impl ObjectDir {
         while self.entries.len() > 0 {
             let object = self.entries.remove(0);
 
-            let new_object = match object {
-                Object::Packed(packed) => {
-                    let mut stream = MemoryStream::from_slice_as_read(&packed.data[..]);
-
-                    match &packed.object_type[..] {
-                        "Tex" => {
-                            match Tex::from_stream(&mut stream, info) {
-                                Ok(tex) => Object::Tex(tex),
-                                Err(_) => Object::Packed(packed),
-                            }
-                        },
-                        _ => Object::Packed(packed)
-                    }
-                },
-                _ => object
+            let new_object = match object.unpack(info) {
+                Some(obj) => obj,
+                None => object
             };
 
             new_entries.push(new_object);

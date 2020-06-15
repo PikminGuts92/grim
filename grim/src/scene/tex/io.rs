@@ -1,8 +1,8 @@
-use std::error::Error;
 use crate::{Platform, SystemInfo};
 use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::scene::Tex;
 use crate::texture::Bitmap;
+use std::error::Error;
 
 impl Tex {
     // TODO: Add from_hmx_image() function

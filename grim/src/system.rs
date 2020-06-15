@@ -1,6 +1,6 @@
 use crate::io::IOEndian;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Platform {
     PS2,
     X360,
