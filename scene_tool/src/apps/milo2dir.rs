@@ -36,7 +36,9 @@ pub struct Milo2DirApp {
     #[clap(about = "Path to input milo scene", required = true)]
     pub milo_path: String,
     #[clap(about = "Path to output directory", required = true)]
-    pub dir_path: String
+    pub dir_path: String,
+    #[clap(long, about = "Automatically convert textures to PNG")]
+    pub convert_textures: bool
 }
 
 impl SubApp for Milo2DirApp {
@@ -60,13 +62,13 @@ impl SubApp for Milo2DirApp {
         //obj_dir.unpack_entries(&SYSTEM_INFO);
 
         //obj_dir.entries.sort_by(compare_entries_by_name);
-        extract_contents(&obj_dir, dir_path, &SYSTEM_INFO)?;
+        extract_contents(&obj_dir, dir_path, self.convert_textures, &SYSTEM_INFO)?;
 
         Ok(())
     }
 }
 
-fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, convert_texures: bool, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
     for obj in milo_dir.entries.iter() {
         let entry_type = obj.get_type();
 
@@ -77,22 +79,24 @@ fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, info: &SystemInfo)
         }
 
         // First try parsing object
-        if let Some(unpacked) = obj.unpack(info) {
-            match &unpacked {
-                Object::Tex(tex) => {
-                    if let Some(_) = tex.bitmap {
-                        if let Ok(_) = extract_tex_object(tex, &entry_dir, info) {
-                            continue;
+        if convert_texures {
+            if let Some(unpacked) = obj.unpack(info) {
+                match &unpacked {
+                    Object::Tex(tex) => {
+                        if let Some(_) = tex.bitmap {
+                            if let Ok(_) = extract_tex_object(tex, &entry_dir, info) {
+                                continue;
+                            }
                         }
+                    },
+                    _ => {
+                        continue; // Shouldn't be reached
                     }
-                },
-                _ => {
-                    continue; // Shouldn't be reached
                 }
             }
         }
         
-        // Just write raw bytes if can't convert
+        // Just write raw bytes if can't convert or not selected
         if let Object::Packed(packed) = obj {
             if let Err(_) = extract_packed_object(packed, &entry_dir) {
                 println!("There was an error extracting {}", obj.get_name());
