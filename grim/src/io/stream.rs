@@ -353,9 +353,9 @@ impl<'a> BinaryStream<'a> {
         let needle_len = needle.len();
         let search_limit = stream_len - needle_len;
 
-        let mut haystack: Vec<u8>;
+        let mut haystack = vec![0u8; needle_len];
         while self.pos() <= search_limit as u64 {
-            haystack = self.read_bytes(needle_len)?;
+            self.read_bytes_into_slice(&mut haystack[..])?;
 
             if haystack == needle {
                 // Data found
