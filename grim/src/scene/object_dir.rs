@@ -1,6 +1,9 @@
 use crate::{SystemInfo};
 use crate::io::{BinaryStream, MemoryStream, SeekFrom, Stream};
 use crate::scene::*;
+use std::error::Error;
+use std::fs::read_dir;
+use std::path::Path;
 
 #[derive(Debug)]
 pub struct ObjectDir {
@@ -32,5 +35,14 @@ impl ObjectDir {
 
         // Assign new entries
         self.entries = new_entries;
+    }
+
+    pub fn from_path(path: &Path, info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
+        let mut obj_dir = ObjectDir::new();
+
+        // TODO: Finish file traversal
+        //let res = read_dir(path)?;
+
+        Ok(obj_dir)
     }
 }

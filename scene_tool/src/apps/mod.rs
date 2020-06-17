@@ -1,8 +1,10 @@
 use clap::{App, Arg, Clap};
 use std::error::Error;
 
+mod dir2milo;
 mod milo2dir;
 pub use self::milo2dir::*;
+pub use self::dir2milo::*;
 
 // From Cargo.toml
 const PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
@@ -21,6 +23,8 @@ struct Options {
 
 #[derive(Clap, Debug)]
 enum SubCommand {
+    #[clap(name = "dir2milo", about = "Creates milo scene from input directory")]
+    Dir2Milo(Dir2MiloApp),
     #[clap(name = "milo2dir", about = "Extracts content of milo scene to directory")]
     Milo2Dir(Milo2DirApp),
 }
@@ -39,6 +43,7 @@ impl SceneTool {
 
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         match &mut self.options.commands {
+            SubCommand::Dir2Milo(app) => app.process(),
             SubCommand::Milo2Dir(app) => app.process()
         }
     }
