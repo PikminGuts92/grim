@@ -1,5 +1,5 @@
 use crate::{SystemInfo};
-use crate::io::{BinaryStream, MemoryStream, SeekFrom, Stream};
+use crate::io::{BinaryStream, FileSearchDepth, MemoryStream, PathFinder, SeekFrom, Stream};
 use crate::scene::*;
 use std::error::Error;
 use std::fs::read_dir;
@@ -40,8 +40,7 @@ impl ObjectDir {
     pub fn from_path(path: &Path, info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
         let mut obj_dir = ObjectDir::new();
 
-        // TODO: Finish file traversal
-        //let res = read_dir(path)?;
+        let files = path.find_files_with_depth(FileSearchDepth::Limited(1))?;
 
         Ok(obj_dir)
     }
