@@ -32,6 +32,7 @@ impl SubApp for Dir2MiloApp {
         let milo_path = Path::new(&self.milo_path);
 
         let dir_obj = ObjectDir::from_path(&dir_path, &SYSTEM_INFO)?;
+        let archive = MiloArchive::from_object_dir(&dir_obj, &SYSTEM_INFO)?;
 
         Ok(())
     }

@@ -195,4 +195,47 @@ impl MiloArchive {
 
         Ok(Some(entry_size))
     }
+
+    pub fn from_object_dir(obj_dir: &ObjectDir, info: &SystemInfo) -> Result<MiloArchive, Box<dyn Error>> {
+        // Create stream
+        let mut data = Vec::<u8>::new();
+        let mut stream = MemoryStream::from_vector_as_read_write(&mut data);
+        let mut writer = BinaryStream::from_stream(&mut stream);
+
+        writer.write_uint32(info.version)?;
+        writer.write_uint32(obj_dir.entries.len() as u32)?;
+
+        // Write types + names
+        for entry in obj_dir.entries.iter() {
+            let obj_type = entry.get_type();
+            let obj_name = entry.get_name();
+
+            writer.write_prefixed_string(obj_type)?;
+            writer.write_prefixed_string(obj_name)?;
+        }
+
+        if info.version == 10 {
+            // TODO: Determine external dependencies or get from directory property
+            writer.write_uint32(0)?;
+        }
+
+        // Write data for entries
+        for entry in obj_dir.entries.iter() {
+            let data = match entry {
+                Object::Packed(packed) => &packed.data,
+                _ => {
+                    // TODO: Handle this better
+                    continue;
+                }
+            };
+
+            writer.write_bytes(&data[..])?;
+            writer.write_bytes(&ADDE_PADDING)?;
+        }
+
+        Ok(MiloArchive {
+            structure: BlockStructure::TypeB(2064),
+            data
+        })
+    }
 }
