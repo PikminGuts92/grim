@@ -7,20 +7,44 @@ use std::fmt::{Display, Formatter};
 use std::path::Path;
 use thiserror::Error as ThisError;
 
+const MAX_BLOCK_SIZE: usize = 0x20000;
 const ADDE_PADDING: [u8; 4] = [0xAD, 0xDE, 0xAD, 0xDE];
 
 #[derive(Copy, Clone, Debug)]
-pub enum BlockStructure {
-    TypeA(u32), // Block structure, no compression
-    TypeB(u32), // Block structure, zlib compression
-    TypeC(u32), // Block structure, gzip compression
-    TypeD(u32), // Block structure, zlib compression (with inflate sizes block prefixed)
+pub enum BlockType
+{
+    TypeA, // Block structure, no compression
+    TypeB, // Block structure, zlib compression
+    TypeC, // Block structure, gzip compression
+    TypeD, // Block structure, zlib compression (with inflate sizes block prefixed)
+}
+
+#[derive(Debug)]
+pub struct BlockInfo {
+    block_type: BlockType,
+    start_offset: u32,
+    block_sizes: Vec<usize>,
+}
+
+impl BlockInfo {
+    pub fn new() -> BlockInfo {
+        BlockInfo {
+            block_type: BlockType::TypeB,
+            start_offset: 2064,
+            block_sizes: Vec::new()
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum MiloArchiveStructure {
+    Blocked(BlockInfo),
     Uncompressed,
 }
 
 #[derive(Debug)]
 pub struct MiloArchive {
-    structure: BlockStructure,
+    structure: MiloArchiveStructure,
     data: Vec<u8>
 }
 
@@ -44,54 +68,56 @@ impl MiloArchive {
     pub fn from_stream(stream: &mut Box<dyn Stream>) -> Result<MiloArchive, Box<dyn Error>> {
         let stream = stream.as_mut();
         let mut reader = BinaryStream::from_stream(stream); // Should always be little endian
-
-        let magic = MiloArchive::read_magic_and_offset(&mut reader)?;
-
-        let block_count = reader.read_int32()?;
-        let max_inflate_size = reader.read_int32()?;
-
-        let mut block_sizes: Vec<i32> = vec![0; block_count as usize];
-
-        for size in block_sizes
-            .iter_mut() {
-            *size = reader.read_int32()?;
-        }
-
-        let offset = match magic {
-            BlockStructure::TypeA(offset) => offset,
-            BlockStructure::TypeB(offset) => offset,
-            BlockStructure::TypeC(offset) => offset,
-            BlockStructure::TypeD(offset) => offset,
-            BlockStructure::Uncompressed => 0,
-        };
-
-        // Advances to first block
-        reader.seek(SeekFrom::Start(offset as u64))?;
-
+        
+        let mut structure: MiloArchiveStructure = MiloArchiveStructure::Uncompressed; // TODO: Handle in else case
         let mut uncompressed: Vec<u8> = Vec::new();
 
-        for block_size in block_sizes.iter() {
-            let bytes = reader.read_bytes(*block_size as usize)?;
+        if let Some(block_type) = MiloArchive::get_block_type_or_none(&mut reader)? {
+            let mut block_info = BlockInfo::new();
+            
+            block_info.block_type = block_type;
+            block_info.start_offset = reader.read_uint32()?;
 
-            let mut data = inflate_zlib_block(&bytes, max_inflate_size as usize)?;
-            uncompressed.append(&mut data);
-        }
+            let block_count = reader.read_int32()?;
+            let max_inflate_size = reader.read_int32()?;
 
+            let mut block_sizes: Vec<i32> = vec![0; block_count as usize];
+
+            for size in block_sizes
+                .iter_mut() {
+                *size = reader.read_int32()?;
+            }
+
+            // Advances to first block
+            reader.seek(SeekFrom::Start(block_info.start_offset as u64))?;
+
+            for block_size in block_sizes.iter() {
+                let bytes = reader.read_bytes(*block_size as usize)?;
+
+                let mut data = inflate_zlib_block(&bytes, max_inflate_size as usize)?;
+
+                uncompressed.append(&mut data);
+                block_info.block_sizes.push(data.len());
+            }
+
+            structure = MiloArchiveStructure::Blocked(block_info);
+        } // TODO: Handle else case (should currently return error if not blocked)
+        
         Ok(MiloArchive {
-            structure: magic,
+            structure,
             data: uncompressed
         })
     }
 
-    fn read_magic_and_offset(reader: &mut BinaryStream) -> Result<BlockStructure, Box<dyn Error>> {
+    fn get_block_type_or_none(reader: &mut BinaryStream) -> Result<Option<BlockType>, Box<dyn Error>> {
         let magic = reader.read_uint32()?;
-        let block_offset = reader.read_uint32()?;
 
         match magic {
-            0xCABEDEAF => Ok(BlockStructure::TypeA(block_offset)),
-            0xCBBEDEAF => Ok(BlockStructure::TypeB(block_offset)),
-            0xCCBEDEAF => Ok(BlockStructure::TypeC(block_offset)),
-            0xCDBEDEAF => Ok(BlockStructure::TypeD(block_offset)),
+            0xCABEDEAF => Ok(Some(BlockType::TypeA)),
+            0xCBBEDEAF => Ok(Some(BlockType::TypeB)),
+            0xCCBEDEAF => Ok(Some(BlockType::TypeC)),
+            0xCDBEDEAF => Ok(Some(BlockType::TypeD)),
+            // TODO: Assume uncompressed archive, or gzip then check version
             _ => Err(Box::new(MiloBlockStructureError::UnsupportedCompression { magic }))
         }
     }
@@ -219,8 +245,12 @@ impl MiloArchive {
             writer.write_uint32(0)?;
         }
 
+        let mut block_sizes = Vec::new();
+        let mut current_size = writer.len()?;
+
         // Write data for entries
         for entry in obj_dir.entries.iter() {
+            // Get packed entry
             let data = match entry {
                 Object::Packed(packed) => &packed.data,
                 _ => {
@@ -229,13 +259,72 @@ impl MiloArchive {
                 }
             };
 
+            // Write to stream
             writer.write_bytes(&data[..])?;
             writer.write_bytes(&ADDE_PADDING)?;
+
+            // Update block size
+            current_size += data.len();
+
+
+            if current_size >= MAX_BLOCK_SIZE {
+                block_sizes.push(current_size);
+                current_size = 0;
+            }
+        }
+
+        if current_size > 0 {
+            block_sizes.push(current_size);
         }
 
         Ok(MiloArchive {
-            structure: BlockStructure::TypeB(2064),
+            structure: MiloArchiveStructure::Blocked(BlockInfo {
+                block_type: BlockType::TypeB,
+                start_offset: 2064,
+                block_sizes
+            }),
             data
         })
+    }
+
+    pub fn write_to_stream(&self, stream: &mut dyn Stream) -> Result<(), Box<dyn Error>> {
+        let mut writer = BinaryStream::from_stream(stream);
+
+        match &self.structure {
+            MiloArchiveStructure::Blocked(info) => {
+                // Get and write magic
+                let magic: u32 = match &info.block_type {
+                    BlockType::TypeA => 0xCABEDEAF,
+                    BlockType::TypeB => 0xCBBEDEAF,
+                    BlockType::TypeC => 0xCCBEDEAF,
+                    BlockType::TypeD => 0xCDBEDEAF,
+                };
+
+                // Get max uncompressed size
+                let max_block_size = match info.block_sizes.iter().max() {
+                    Some(max) => *max,
+                    None => 0
+                };
+
+                // Write infos
+                writer.write_uint32(magic)?;
+                writer.write_uint32(info.start_offset)?;
+                writer.write_uint32(info.block_sizes.len() as u32)?;
+                writer.write_uint32(max_block_size as u32)?;
+
+                // TODO: Implement proper seek with insertion of empty bytes
+                // Write empty bytes for now
+                writer.write_bytes(&vec![0u8; (info.start_offset - 16) as usize][..])?;
+
+
+                // Iterate over blocks and compress data
+            },
+            MiloArchiveStructure::Uncompressed  => {
+                // Write uncompressed data
+                writer.write_bytes(&self.data[..])?;
+            }
+        }
+
+        Ok(())
     }
 }
