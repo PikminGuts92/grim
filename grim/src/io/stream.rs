@@ -258,6 +258,7 @@ impl Stream for FileStream {
         }
 
         self.file.write(data)?;
+        self.position += data.len() as u64;
         Ok(())
     }
 
