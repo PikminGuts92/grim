@@ -2,6 +2,7 @@ use crate::{SystemInfo};
 use crate::io::compression::*;
 use crate::io::stream::{BinaryStream, MemoryStream, SeekFrom, Stream};
 use crate::scene::{Object, ObjectDir, PackedObject};
+use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::path::Path;
@@ -91,10 +92,13 @@ impl MiloArchive {
             // Advances to first block
             reader.seek(SeekFrom::Start(block_info.start_offset as u64))?;
 
+            // Create buffer
+            let mut buffer = vec![0u8; max_inflate_size as usize];
+
             for block_size in block_sizes.iter() {
                 let bytes = reader.read_bytes(*block_size as usize)?;
 
-                let mut data = inflate_zlib_block(&bytes, max_inflate_size as usize)?;
+                let mut data = inflate_zlib_block(&bytes, &mut buffer[..])?;
 
                 uncompressed.append(&mut data);
                 block_info.block_sizes.push(data.len());
@@ -222,17 +226,56 @@ impl MiloArchive {
         Ok(Some(entry_size))
     }
 
+    fn get_type_order_value(obj_type: &str) -> i32 {
+        // Same sort order in dta scripts
+        match obj_type {
+            "Tex" => 0,
+            "Mat" => 1,
+            "Font" => 2,
+            "Text" => 3,
+            "Mesh" => 4,
+            "Blur" => 5,
+            "Group" => 6,
+            "View" => 6,
+            "Trans" => 7,
+            _ => 100
+        }
+    }
+
+    fn compare_entries_by_type_and_name<'r, 's>(a: &'r &Object, b: &'s &Object) -> Ordering {
+        // Get entry types
+        let a_type = MiloArchive::get_type_order_value(a.get_type());
+        let b_type = MiloArchive::get_type_order_value(b.get_type());
+
+        // First compare type
+        match a_type.cmp(&b_type) {
+            Ordering::Less => Ordering::Less,
+            Ordering::Greater => Ordering::Greater,
+            Ordering::Equal => {
+                // Get entry names
+                let a_name = a.get_name();
+                let b_name = b.get_name();
+
+                // Then compare name
+                a_name.cmp(b_name)
+            }
+        }
+    }
+
     pub fn from_object_dir(obj_dir: &ObjectDir, info: &SystemInfo) -> Result<MiloArchive, Box<dyn Error>> {
         // Create stream
         let mut data = Vec::<u8>::new();
         let mut stream = MemoryStream::from_vector_as_read_write(&mut data);
         let mut writer = BinaryStream::from_stream(&mut stream);
 
+        let mut entries: Vec<&Object> = obj_dir.entries.iter().collect();
+        entries.sort_by(MiloArchive::compare_entries_by_type_and_name);
+
         writer.write_uint32(info.version)?;
-        writer.write_uint32(obj_dir.entries.len() as u32)?;
+        writer.write_uint32(entries.len() as u32)?;
 
         // Write types + names
-        for entry in obj_dir.entries.iter() {
+        for entry in entries.iter() {
             let obj_type = entry.get_type();
             let obj_name = entry.get_name();
 
@@ -249,7 +292,7 @@ impl MiloArchive {
         let mut current_size = writer.len()?;
 
         // Write data for entries
-        for entry in obj_dir.entries.iter() {
+        for entry in entries.iter() {
             // Get packed entry
             let data = match entry {
                 Object::Packed(packed) => &packed.data,
@@ -264,8 +307,7 @@ impl MiloArchive {
             writer.write_bytes(&ADDE_PADDING)?;
 
             // Update block size
-            current_size += data.len();
-
+            current_size += data.len() + 4;
 
             if current_size >= MAX_BLOCK_SIZE {
                 block_sizes.push(current_size);
@@ -312,12 +354,38 @@ impl MiloArchive {
                 writer.write_uint32(info.block_sizes.len() as u32)?;
                 writer.write_uint32(max_block_size as u32)?;
 
+                // Save current offset
+                let block_sizes_offset = writer.pos();
+
                 // TODO: Implement proper seek with insertion of empty bytes
                 // Write empty bytes for now
                 writer.write_bytes(&vec![0u8; (info.start_offset - 16) as usize][..])?;
 
+                // Create buffer
+                let mut buffer = vec![0u8; max_block_size];
 
                 // Iterate over blocks and compress data
+                let mut block_offset = 0;
+                let mut deflate_sizes = Vec::new();
+                for block_size in info.block_sizes.iter() {
+                    let compressed_data = deflate_zlib_block(&self.data[block_offset..(block_offset + *block_size)], &mut buffer)?;
+
+                    // Write compressed block to stream
+                    writer.write_bytes(&compressed_data[..])?;
+
+                    // Add compressed size
+                    deflate_sizes.push(compressed_data.len());
+
+                    // Update current offset
+                    block_offset += *block_size;
+                }
+
+                // Go back to block sizes offset
+                writer.seek(SeekFrom::Start(block_sizes_offset))?;
+
+                for size in deflate_sizes.iter() {
+                    writer.write_uint32(*size as u32)?;
+                }
             },
             MiloArchiveStructure::Uncompressed  => {
                 // Write uncompressed data

@@ -34,6 +34,10 @@ impl SubApp for Dir2MiloApp {
         let dir_obj = ObjectDir::from_path(&dir_path, &SYSTEM_INFO)?;
         let archive = MiloArchive::from_object_dir(&dir_obj, &SYSTEM_INFO)?;
 
+        // Write to file
+        let mut stream = FileStream::from_path_as_read_write_create(milo_path)?;
+        archive.write_to_stream(&mut stream)?;
+
         Ok(())
     }
 }
