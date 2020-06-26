@@ -18,10 +18,11 @@ pub struct PackedObject {
 // TODO: Use for post GH1 games
 #[derive(Debug)]
 struct ObjectMeta {
+    // TODO: Save i32 version too?
     revision: i32,
-    script_name: String,
+    proj_name: String,
     // script: Script,
-    comments: String,
+    comment: String,
 }
 
 impl Object {
