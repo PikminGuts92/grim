@@ -9,9 +9,9 @@ This repo is intended to be a re-write of [Mackiloha](https://github.com/PikminG
   - [x] Memory
     - [x] Read integers, floats, strings, bytes
     - [x] Write integers, floats, strings, bytes
-- [ ] Milo scene support
+- [x] Milo scene support
   - [x] Decompress zlib block structured archives
-  - [ ] Compress zlib block structured archives
+  - [x] Compress zlib block structured archives
 - [ ] Texture support
   - [x] Decode PS2 bitmaps to RGBa
   - [ ] PNG <-> RGBa conversion
