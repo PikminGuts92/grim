@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "grim",
+    "p9_scene_tool",
     "scene_tool"
 ]
 
