@@ -69,7 +69,7 @@ impl SubApp for Milo2DirApp {
 }
 
 fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, convert_texures: bool, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
-    for obj in milo_dir.entries.iter() {
+    for obj in milo_dir.get_entries().iter() {
         let entry_type = obj.get_type();
 
         let entry_dir = Path::join(output_path, entry_type);

@@ -1,7 +1,7 @@
 use crate::{SystemInfo};
 use crate::io::compression::*;
 use crate::io::stream::{BinaryStream, MemoryStream, SeekFrom, Stream};
-use crate::scene::{Object, ObjectDir, PackedObject};
+use crate::scene::{Object, ObjectDir, ObjectDirBase, PackedObject};
 use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -180,12 +180,12 @@ impl MiloArchive {
             }
         }
 
-        Ok(ObjectDir {
+        Ok(ObjectDir::ObjectDir(ObjectDirBase {
             entries: packed_entries
                 .into_iter()
                 .map(|p| Object::Packed(p))
                 .collect()
-        })
+        }))
     }
 
     fn guess_entry_size<'a>(&'a self, reader: &mut BinaryStream) -> Result<Option<usize>, Box<dyn Error>> {
@@ -268,7 +268,7 @@ impl MiloArchive {
         let mut stream = MemoryStream::from_vector_as_read_write(&mut data);
         let mut writer = BinaryStream::from_stream(&mut stream);
 
-        let mut entries: Vec<&Object> = obj_dir.entries.iter().collect();
+        let mut entries: Vec<&Object> = obj_dir.get_entries().iter().collect();
         entries.sort_by(MiloArchive::compare_entries_by_type_and_name);
 
         writer.write_uint32(info.version)?;
