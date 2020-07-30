@@ -98,7 +98,12 @@ impl MiloArchive {
             for block_size in block_sizes.iter() {
                 let bytes = reader.read_bytes(*block_size as usize)?;
 
-                let mut data = inflate_zlib_block(&bytes, &mut buffer[..])?;
+                let mut data = match block_type {
+                    BlockType::TypeA => bytes, // No compression
+                    BlockType::TypeB => inflate_zlib_block(&bytes, &mut buffer[..])?,
+                    BlockType::TypeC => inflate_zlib_block(&bytes, &mut buffer[..])?, // TODO: Support gzip
+                    BlockType::TypeD => inflate_zlib_block(&bytes[4..], &mut buffer[..])?, // TODO: Determine if block is compressed
+                };
 
                 uncompressed.append(&mut data);
                 block_info.block_sizes.push(data.len());
