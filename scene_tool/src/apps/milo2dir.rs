@@ -33,6 +33,14 @@ const SYSTEM_INFO: SystemInfo = SystemInfo {
 
 #[derive(Clap, Debug)]
 pub struct Milo2DirApp {
+    #[clap(long, default_value = "24", about = "Milo archive version (10, 24, 25)")]
+    pub milo_version: i32,
+    #[clap(long, about = "Use big endian serialization")]
+    pub big_endian: bool,
+    #[clap(long, default_value = "ps2", about = "Platform (ps2, ps3, x360)")]
+    pub platform: String,
+    #[clap(long, about = "Game preset (gh1, gh2, gh80s, gh2_x360)")]
+    pub preset: String,
     #[clap(about = "Path to input milo scene", required = true)]
     pub milo_path: String,
     #[clap(about = "Path to output directory", required = true)]
