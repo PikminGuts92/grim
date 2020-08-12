@@ -48,6 +48,7 @@ impl GameOptions for Milo2DirApp {
             version: self.milo_version,
             platform: match self.platform.to_lowercase().as_str() {
                 "ps2" => Platform::PS2,
+                "ps3" => Platform::PS3,
                 "xbox 360" => Platform::X360,
                 "xbox360" => Platform::X360,
                 "x360" => Platform::X360,
