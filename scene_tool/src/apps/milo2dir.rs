@@ -33,7 +33,7 @@ pub struct Milo2DirApp {
     #[clap(long, default_value = "ps2", about = "Platform (ps2, ps3, x360)")]
     pub platform: String,
     #[clap(long, about = "Game preset (gh1, gh2, gh80s, gh2_x360)")]
-    pub preset: String,
+    pub preset: Option<String>, // Using Option<> because default of "" is unsupported
     #[clap(about = "Path to input milo scene", required = true)]
     pub milo_path: String,
     #[clap(about = "Path to output directory", required = true)]
@@ -52,6 +52,7 @@ impl GameOptions for Milo2DirApp {
                 "xbox 360" => Platform::X360,
                 "xbox360" => Platform::X360,
                 "x360" => Platform::X360,
+                "360" => Platform::X360,
                 _ => Platform::PS2
             },
             endian: match self.big_endian {
