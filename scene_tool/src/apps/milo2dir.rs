@@ -1,4 +1,4 @@
-use crate::apps::{SubApp};
+use crate::apps::{GameOptions, SubApp};
 use clap::{App, Arg, Clap};
 use std::cmp::Ordering;
 use std::error::Error;
@@ -24,17 +24,10 @@ pub enum TexExtractionError {
     TextureContainsNoBitmap
 }
 
-// TODO: Get from args
-const SYSTEM_INFO: SystemInfo = SystemInfo {
-    version: 10,
-    platform: Platform::PS2,
-    endian: IOEndian::Little,
-};
-
 #[derive(Clap, Debug)]
 pub struct Milo2DirApp {
     #[clap(long, default_value = "24", about = "Milo archive version (10, 24, 25)")]
-    pub milo_version: i32,
+    pub milo_version: u32,
     #[clap(long, about = "Use big endian serialization")]
     pub big_endian: bool,
     #[clap(long, default_value = "ps2", about = "Platform (ps2, ps3, x360)")]
@@ -47,6 +40,25 @@ pub struct Milo2DirApp {
     pub dir_path: String,
     #[clap(long, about = "Automatically convert textures to PNG")]
     pub convert_textures: bool
+}
+
+impl GameOptions for Milo2DirApp {
+    fn get_system_info(&self) -> SystemInfo {
+        SystemInfo {
+            version: self.milo_version,
+            platform: match self.platform.to_lowercase().as_str() {
+                "ps2" => Platform::PS2,
+                "xbox 360" => Platform::X360,
+                "xbox360" => Platform::X360,
+                "x360" => Platform::X360,
+                _ => Platform::PS2
+            },
+            endian: match self.big_endian {
+                true => IOEndian::Big,
+                _ => IOEndian::Little
+            }
+        }
+    }
 }
 
 impl SubApp for Milo2DirApp {
@@ -66,11 +78,13 @@ impl SubApp for Milo2DirApp {
         let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(milo_path)?);
         let milo = MiloArchive::from_stream(&mut stream)?;
 
-        let mut obj_dir = milo.unpack_directory(&SYSTEM_INFO)?;
+        let system_info = self.get_system_info();
+
+        let mut obj_dir = milo.unpack_directory(&system_info)?;
         //obj_dir.unpack_entries(&SYSTEM_INFO);
 
         //obj_dir.entries.sort_by(compare_entries_by_name);
-        extract_contents(&obj_dir, dir_path, self.convert_textures, &SYSTEM_INFO)?;
+        extract_contents(&obj_dir, dir_path, self.convert_textures, &system_info)?;
 
         Ok(())
     }

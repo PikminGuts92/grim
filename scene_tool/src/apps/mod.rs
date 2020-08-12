@@ -1,6 +1,8 @@
 use clap::{App, Arg, Clap};
 use std::error::Error;
 
+use grim::SystemInfo;
+
 mod dir2milo;
 mod milo2dir;
 pub use self::milo2dir::*;
@@ -47,4 +49,8 @@ impl SceneTool {
             SubCommand::Milo2Dir(app) => app.process()
         }
     }
+}
+
+pub trait GameOptions {
+    fn get_system_info(&self) -> SystemInfo;
 }
