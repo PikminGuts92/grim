@@ -18,13 +18,19 @@ pub enum ObjectDir {
 
 #[derive(Debug)]
 pub struct ObjectDirBase {
-    pub entries: Vec<Object>
+    pub entries: Vec<Object>,
+    pub name: String,
+    pub dir_type: String,
+    pub sub_dirs: Vec<ObjectDir>,
 }
 
 impl ObjectDirBase {
     pub fn new() -> ObjectDirBase {
         ObjectDirBase {
-            entries: Vec::new()
+            entries: Vec::new(),
+            name: String::new(),
+            dir_type: String::new(),
+            sub_dirs: Vec::new(),
         }
     }
 }

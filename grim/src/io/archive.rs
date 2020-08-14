@@ -147,8 +147,21 @@ impl MiloArchive {
             return Err(Box::new(MiloUnpackError::UnsupportedDirectoryVersion { version }));
         }
 
-        let entry_count = reader.read_int32()?;
+        let dir_type;
+        let dir_name;
 
+        if version >= 24 {
+            // Read object dir name + type
+            dir_type = reader.read_prefixed_string()?;
+            dir_name = reader.read_prefixed_string()?;
+
+            reader.seek(SeekFrom::Current(8))?; // Skip extra nums
+        } else {
+            dir_type = String::new();
+            dir_name = String::new();
+        }
+
+        let entry_count = reader.read_int32()?;
         let mut packed_entries: Vec<PackedObject> = Vec::new();
 
         // Parse entry types + names
@@ -171,6 +184,9 @@ impl MiloArchive {
             for _ in 0..ext_count {
                 reader.read_prefixed_string()?;
             }
+        } else {
+            // Parse directory info (entry)
+
         }
 
         // Get data for entries
@@ -189,7 +205,10 @@ impl MiloArchive {
             entries: packed_entries
                 .into_iter()
                 .map(|p| Object::Packed(p))
-                .collect()
+                .collect(),
+            name: dir_name,
+            dir_type: dir_type,
+            sub_dirs: Vec::new()
         }))
     }
 
