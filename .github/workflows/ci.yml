@@ -33,6 +33,7 @@ jobs:
 
   clippy:
     name: Clippy
+    if: ${{ false }} # Always skip job (for now)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
