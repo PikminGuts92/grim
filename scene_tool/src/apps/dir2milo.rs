@@ -1,15 +1,15 @@
 use crate::apps::{SubApp};
-use clap::{App, Arg, Clap};
-use std::cmp::Ordering;
+use clap::{Clap};
+
 use std::error::Error;
-use std::fs;
-use std::path::{Path, PathBuf};
-use thiserror::Error;
+
+use std::path::{Path};
+
 
 use grim::{Platform, SystemInfo};
 use grim::io::*;
 use grim::scene::{Object, ObjectDir, PackedObject, Tex};
-use grim::texture::{Bitmap, write_rgba_to_file};
+
 
 #[derive(Clap, Debug)]
 pub struct Dir2MiloApp {

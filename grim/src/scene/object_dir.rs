@@ -4,7 +4,7 @@ use crate::scene::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::error::Error;
-use std::fs::read_dir;
+
 use std::path::{Path, PathBuf};
 
 lazy_static! {
@@ -12,39 +12,32 @@ lazy_static! {
 }
 
 #[derive(Debug)]
-pub struct ObjectDir {
-    pub entries: Vec<Object>
+pub enum ObjectDir {
+    ObjectDir(ObjectDirBase)
 }
 
-impl ObjectDir {
-    pub fn new() -> ObjectDir {
-        ObjectDir {
-            entries: Vec::new()
+#[derive(Debug)]
+pub struct ObjectDirBase {
+    pub entries: Vec<Object>,
+    pub name: String,
+    pub dir_type: String,
+    pub sub_dirs: Vec<ObjectDir>,
+}
+
+impl ObjectDirBase {
+    pub fn new() -> ObjectDirBase {
+        ObjectDirBase {
+            entries: Vec::new(),
+            name: String::new(),
+            dir_type: String::new(),
+            sub_dirs: Vec::new(),
         }
     }
 }
 
-impl ObjectDir {
-    pub fn unpack_entries(&mut self, info: &SystemInfo) {
-        let mut new_entries = Vec::<Object>::new();
-
-        while self.entries.len() > 0 {
-            let object = self.entries.remove(0);
-
-            let new_object = match object.unpack(info) {
-                Some(obj) => obj,
-                None => object
-            };
-
-            new_entries.push(new_object);
-        }
-
-        // Assign new entries
-        self.entries = new_entries;
-    }
-
-    pub fn from_path(path: &Path, info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
-        let mut obj_dir = ObjectDir::new();
+impl<'a> ObjectDir {
+    pub fn from_path(path: &Path, _info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
+        let mut obj_dir = ObjectDirBase::new();
 
         let files = path.find_files_with_depth(FileSearchDepth::Limited(1))?
             .into_iter()
@@ -84,6 +77,12 @@ impl ObjectDir {
             }));
         }
 
-        Ok(obj_dir)
+        Ok(ObjectDir::ObjectDir(obj_dir))
+    }
+
+    pub fn get_entries(&'a self) -> &'a Vec<Object> {
+        match self {
+            ObjectDir::ObjectDir(dir) => &dir.entries
+        }
     }
 }

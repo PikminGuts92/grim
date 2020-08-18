@@ -1,8 +1,8 @@
 //use flate2::{Compress, Decompress};
-use flate2::read::{ZlibDecoder, ZlibEncoder};
+
 use flate2::{Compress, Compression, Decompress, FlushCompress, FlushDecompress, Status};
 use std::error::Error;
-use std::io::Read;
+
 
 pub fn inflate_zlib_block(data: &[u8], buffer: &mut [u8]) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut decompressor = Decompress::new(false);

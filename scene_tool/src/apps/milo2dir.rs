@@ -1,5 +1,5 @@
-use crate::apps::{SubApp};
-use clap::{App, Arg, Clap};
+use crate::apps::{GameOptions, SubApp};
+use clap::{Clap};
 use std::cmp::Ordering;
 use std::error::Error;
 use std::fs;
@@ -9,7 +9,7 @@ use thiserror::Error;
 use grim::{Platform, SystemInfo};
 use grim::io::*;
 use grim::scene::{Object, ObjectDir, PackedObject, Tex};
-use grim::texture::{Bitmap, write_rgba_to_file};
+use grim::texture::{write_rgba_to_file};
 
 // TODO: Use this error somewhere or refactor
 #[derive(Debug, Error)]
@@ -24,21 +24,43 @@ pub enum TexExtractionError {
     TextureContainsNoBitmap
 }
 
-// TODO: Get from args
-const SYSTEM_INFO: SystemInfo = SystemInfo {
-    version: 10,
-    platform: Platform::PS2,
-    endian: IOEndian::Little,
-};
-
 #[derive(Clap, Debug)]
 pub struct Milo2DirApp {
+    #[clap(long, default_value = "24", about = "Milo archive version (10, 24, 25)")]
+    pub milo_version: u32,
+    #[clap(long, about = "Use big endian serialization")]
+    pub big_endian: bool,
+    #[clap(long, default_value = "ps2", about = "Platform (ps2, ps3, x360)")]
+    pub platform: String,
+    #[clap(long, about = "Game preset (gh1, gh2, gh80s, gh2_x360)")]
+    pub preset: Option<String>, // Using Option<> because default of "" is unsupported
     #[clap(about = "Path to input milo scene", required = true)]
     pub milo_path: String,
     #[clap(about = "Path to output directory", required = true)]
     pub dir_path: String,
     #[clap(long, about = "Automatically convert textures to PNG")]
     pub convert_textures: bool
+}
+
+impl GameOptions for Milo2DirApp {
+    fn get_system_info(&self) -> SystemInfo {
+        SystemInfo {
+            version: self.milo_version,
+            platform: match self.platform.to_lowercase().as_str() {
+                "ps2" => Platform::PS2,
+                "ps3" => Platform::PS3,
+                "xbox 360" => Platform::X360,
+                "xbox360" => Platform::X360,
+                "x360" => Platform::X360,
+                "360" => Platform::X360,
+                _ => Platform::PS2
+            },
+            endian: match self.big_endian {
+                true => IOEndian::Big,
+                _ => IOEndian::Little
+            }
+        }
+    }
 }
 
 impl SubApp for Milo2DirApp {
@@ -58,18 +80,20 @@ impl SubApp for Milo2DirApp {
         let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(milo_path)?);
         let milo = MiloArchive::from_stream(&mut stream)?;
 
-        let mut obj_dir = milo.unpack_directory(&SYSTEM_INFO)?;
+        let system_info = self.get_system_info();
+
+        let obj_dir = milo.unpack_directory(&system_info)?;
         //obj_dir.unpack_entries(&SYSTEM_INFO);
 
         //obj_dir.entries.sort_by(compare_entries_by_name);
-        extract_contents(&obj_dir, dir_path, self.convert_textures, &SYSTEM_INFO)?;
+        extract_contents(&obj_dir, dir_path, self.convert_textures, &system_info)?;
 
         Ok(())
     }
 }
 
 fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, convert_texures: bool, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
-    for obj in milo_dir.entries.iter() {
+    for obj in milo_dir.get_entries().iter() {
         let entry_type = obj.get_type();
 
         let entry_dir = Path::join(output_path, entry_type);
@@ -83,10 +107,8 @@ fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, convert_texures: b
             if let Some(unpacked) = obj.unpack(info) {
                 match &unpacked {
                     Object::Tex(tex) => {
-                        if let Some(_) = tex.bitmap {
-                            if let Ok(_) = extract_tex_object(tex, &entry_dir, info) {
-                                continue;
-                            }
+                        if tex.bitmap.is_some() && extract_tex_object(tex, &entry_dir, info).is_ok() {
+                            continue;
                         }
                     },
                     _ => {
@@ -98,7 +120,7 @@ fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, convert_texures: b
         
         // Just write raw bytes if can't convert or not selected
         if let Object::Packed(packed) = obj {
-            if let Err(_) = extract_packed_object(packed, &entry_dir) {
+            if extract_packed_object(packed, &entry_dir).is_err() {
                 println!("There was an error extracting {}", obj.get_name());
             }
         }

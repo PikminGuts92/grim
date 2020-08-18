@@ -1,11 +1,11 @@
 use crate::{SystemInfo};
 use crate::io::compression::*;
 use crate::io::stream::{BinaryStream, MemoryStream, SeekFrom, Stream};
-use crate::scene::{Object, ObjectDir, PackedObject};
+use crate::scene::{Object, ObjectDir, ObjectDirBase, PackedObject};
 use std::cmp::Ordering;
 use std::error::Error;
-use std::fmt::{Display, Formatter};
-use std::path::Path;
+
+
 use thiserror::Error as ThisError;
 
 const MAX_BLOCK_SIZE: usize = 0x20000;
@@ -98,7 +98,12 @@ impl MiloArchive {
             for block_size in block_sizes.iter() {
                 let bytes = reader.read_bytes(*block_size as usize)?;
 
-                let mut data = inflate_zlib_block(&bytes, &mut buffer[..])?;
+                let mut data = match block_type {
+                    BlockType::TypeA => bytes, // No compression
+                    BlockType::TypeB => inflate_zlib_block(&bytes, &mut buffer[..])?,
+                    BlockType::TypeC => inflate_zlib_block(&bytes, &mut buffer[..])?, // TODO: Support gzip
+                    BlockType::TypeD => inflate_zlib_block(&bytes[4..], &mut buffer[..])?, // TODO: Determine if block is compressed
+                };
 
                 uncompressed.append(&mut data);
                 block_info.block_sizes.push(data.len());
@@ -142,8 +147,21 @@ impl MiloArchive {
             return Err(Box::new(MiloUnpackError::UnsupportedDirectoryVersion { version }));
         }
 
-        let entry_count = reader.read_int32()?;
+        let dir_type;
+        let dir_name;
 
+        if version >= 24 {
+            // Read object dir name + type
+            dir_type = reader.read_prefixed_string()?;
+            dir_name = reader.read_prefixed_string()?;
+
+            reader.seek(SeekFrom::Current(8))?; // Skip extra nums
+        } else {
+            dir_type = String::new();
+            dir_name = String::new();
+        }
+
+        let entry_count = reader.read_int32()?;
         let mut packed_entries: Vec<PackedObject> = Vec::new();
 
         // Parse entry types + names
@@ -166,6 +184,9 @@ impl MiloArchive {
             for _ in 0..ext_count {
                 reader.read_prefixed_string()?;
             }
+        } else {
+            // Parse directory info (entry)
+
         }
 
         // Get data for entries
@@ -180,12 +201,15 @@ impl MiloArchive {
             }
         }
 
-        Ok(ObjectDir {
+        Ok(ObjectDir::ObjectDir(ObjectDirBase {
             entries: packed_entries
                 .into_iter()
-                .map(|p| Object::Packed(p))
-                .collect()
-        })
+                .map(Object::Packed)
+                .collect(),
+            name: dir_name,
+            dir_type,
+            sub_dirs: Vec::new()
+        }))
     }
 
     fn guess_entry_size<'a>(&'a self, reader: &mut BinaryStream) -> Result<Option<usize>, Box<dyn Error>> {
@@ -195,7 +219,7 @@ impl MiloArchive {
         let mut magic: i32;
 
         loop {
-            if let None = reader.seek_until(&ADDE_PADDING)? {
+            if reader.seek_until(&ADDE_PADDING)?.is_none() {
                 // End of file reached
                 reader.seek(SeekFrom::Start(start_pos))?;
                 return Ok(None);
@@ -268,7 +292,7 @@ impl MiloArchive {
         let mut stream = MemoryStream::from_vector_as_read_write(&mut data);
         let mut writer = BinaryStream::from_stream(&mut stream);
 
-        let mut entries: Vec<&Object> = obj_dir.entries.iter().collect();
+        let mut entries: Vec<&Object> = obj_dir.get_entries().iter().collect();
         entries.sort_by(MiloArchive::compare_entries_by_type_and_name);
 
         writer.write_uint32(info.version)?;
