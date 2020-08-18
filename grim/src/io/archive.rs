@@ -4,8 +4,8 @@ use crate::io::stream::{BinaryStream, MemoryStream, SeekFrom, Stream};
 use crate::scene::{Object, ObjectDir, ObjectDirBase, PackedObject};
 use std::cmp::Ordering;
 use std::error::Error;
-use std::fmt::{Display, Formatter};
-use std::path::Path;
+
+
 use thiserror::Error as ThisError;
 
 const MAX_BLOCK_SIZE: usize = 0x20000;
@@ -204,10 +204,10 @@ impl MiloArchive {
         Ok(ObjectDir::ObjectDir(ObjectDirBase {
             entries: packed_entries
                 .into_iter()
-                .map(|p| Object::Packed(p))
+                .map(Object::Packed)
                 .collect(),
             name: dir_name,
-            dir_type: dir_type,
+            dir_type,
             sub_dirs: Vec::new()
         }))
     }
@@ -219,7 +219,7 @@ impl MiloArchive {
         let mut magic: i32;
 
         loop {
-            if let None = reader.seek_until(&ADDE_PADDING)? {
+            if reader.seek_until(&ADDE_PADDING)?.is_none() {
                 // End of file reached
                 reader.seek(SeekFrom::Start(start_pos))?;
                 return Ok(None);

@@ -18,7 +18,7 @@ impl Milo {
     pub fn unpack_entries(&mut self, info: &SystemInfo) {
         let mut new_entries = Vec::<Object>::new();
 
-        while self.entries.len() > 0 {
+        while !self.entries.is_empty() {
             let object = self.entries.remove(0);
 
             let new_object = match object.unpack(info) {

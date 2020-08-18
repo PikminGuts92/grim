@@ -1,5 +1,5 @@
 use crate::apps::{GameOptions, SubApp};
-use clap::{App, Arg, Clap};
+use clap::{Clap};
 use std::cmp::Ordering;
 use std::error::Error;
 use std::fs;
@@ -9,7 +9,7 @@ use thiserror::Error;
 use grim::{Platform, SystemInfo};
 use grim::io::*;
 use grim::scene::{Object, ObjectDir, PackedObject, Tex};
-use grim::texture::{Bitmap, write_rgba_to_file};
+use grim::texture::{write_rgba_to_file};
 
 // TODO: Use this error somewhere or refactor
 #[derive(Debug, Error)]
@@ -82,7 +82,7 @@ impl SubApp for Milo2DirApp {
 
         let system_info = self.get_system_info();
 
-        let mut obj_dir = milo.unpack_directory(&system_info)?;
+        let obj_dir = milo.unpack_directory(&system_info)?;
         //obj_dir.unpack_entries(&SYSTEM_INFO);
 
         //obj_dir.entries.sort_by(compare_entries_by_name);
@@ -107,10 +107,8 @@ fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, convert_texures: b
             if let Some(unpacked) = obj.unpack(info) {
                 match &unpacked {
                     Object::Tex(tex) => {
-                        if let Some(_) = tex.bitmap {
-                            if let Ok(_) = extract_tex_object(tex, &entry_dir, info) {
-                                continue;
-                            }
+                        if tex.bitmap.is_some() && extract_tex_object(tex, &entry_dir, info).is_ok() {
+                            continue;
                         }
                     },
                     _ => {
@@ -122,7 +120,7 @@ fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, convert_texures: b
         
         // Just write raw bytes if can't convert or not selected
         if let Object::Packed(packed) = obj {
-            if let Err(_) = extract_packed_object(packed, &entry_dir) {
+            if extract_packed_object(packed, &entry_dir).is_err() {
                 println!("There was an error extracting {}", obj.get_name());
             }
         }

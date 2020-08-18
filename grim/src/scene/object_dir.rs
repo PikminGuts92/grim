@@ -4,7 +4,7 @@ use crate::scene::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::error::Error;
-use std::fs::read_dir;
+
 use std::path::{Path, PathBuf};
 
 lazy_static! {
@@ -36,7 +36,7 @@ impl ObjectDirBase {
 }
 
 impl<'a> ObjectDir {
-    pub fn from_path(path: &Path, info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
+    pub fn from_path(path: &Path, _info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
         let mut obj_dir = ObjectDirBase::new();
 
         let files = path.find_files_with_depth(FileSearchDepth::Limited(1))?

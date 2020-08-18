@@ -1,4 +1,4 @@
-use crate::{Platform, SystemInfo};
+use crate::{SystemInfo};
 use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::scene::Tex;
 use crate::texture::Bitmap;
@@ -33,7 +33,7 @@ impl Tex {
         let mut reader = BinaryStream::from_stream_with_endian(stream, info.endian);
 
         let magic = reader.read_int32()?;
-        let is_magic_valid = Tex::is_magic_valid(magic, info);
+        let _is_magic_valid = Tex::is_magic_valid(magic, info);
         // TODO: If not valid, return unsupported error
 
         // Skip meta for now

@@ -1,8 +1,8 @@
-use crate::io::{BinaryStream, FileStream, SeekFrom, Stream};
+use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::texture::Bitmap;
 use crate::system::{Platform, SystemInfo};
 use image::{ImageBuffer, RgbaImage};
-use image::png::PNGEncoder;
+
 use std::error::Error;
 use std::path::Path;
 use thiserror::Error as ThisError;
@@ -22,7 +22,7 @@ impl Bitmap {
         let mut bitmap = Bitmap::new();
         let mut reader = BinaryStream::from_stream_with_endian(stream, info.endian);
 
-        let byte_1 = reader.read_uint8()?; // TODO: Verify always 1
+        let _byte_1 = reader.read_uint8()?; // TODO: Verify always 1
 
         bitmap.bpp = reader.read_uint8()?;
         bitmap.encoding = reader.read_uint32()?;
@@ -74,7 +74,7 @@ fn calc_rgba_size(bitmap: &Bitmap) -> usize {
     size
 }
 
-fn decode_from_bitmap(bitmap: &Bitmap, info: &SystemInfo, rgba: &mut [u8]) -> Result<(), Box<dyn Error>> {
+fn decode_from_bitmap(bitmap: &Bitmap, _info: &SystemInfo, rgba: &mut [u8]) -> Result<(), Box<dyn Error>> {
     let Bitmap { bpp, raw_data: data, .. } = bitmap;
 
     if *bpp == 4 || *bpp == 8 {
