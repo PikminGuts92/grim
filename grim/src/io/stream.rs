@@ -257,7 +257,7 @@ impl Stream for FileStream {
             panic!("File stream is read-only"); // TODO: Throw error instead
         }
 
-        self.file.write(data)?;
+        self.file.write_all(data)?;
         self.position += data.len() as u64;
         Ok(())
     }
