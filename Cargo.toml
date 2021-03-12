@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "grim",
+    "mesh_tool",
     "scene_tool"
 ]
 
