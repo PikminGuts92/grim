@@ -1,6 +1,6 @@
-use russimp::scene::Scene;
+use gltf::{Gltf, Scene};
 use std::error::Error;
 
-pub fn open_model(model_path: &str) -> Result<(), Box<dyn Error>> {
-    let model = Scene::from_file(file_path, flags);
+pub fn open_model<T>(model_path: T) -> Result<(), Box<dyn Error>> where T: AsRef<Path>  {
+    let model = Gltf::open(path)?;
 }
