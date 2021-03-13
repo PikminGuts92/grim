@@ -1,14 +1,20 @@
+mod anim;
+mod draw;
 mod group;
 mod mat;
 mod mesh;
 mod tex;
+mod trans;
 
 use std::{error::Error, path::Path};
 
+pub use self::anim::*;
+pub use self::draw::*;
 pub use self::group::*;
 pub use self::mat::*;
 pub use self::mesh::*;
 pub use self::tex::*;
+pub use self::trans::*;
 
 #[derive(Debug)]
 pub struct Vertex {
@@ -112,9 +118,13 @@ impl AssetManagager {
 
                 // Write mesh
                 let mesh_path = out_dir.as_ref().join(&mesh.name);
+                mesh.write_to_file(&mesh_path)?;
                 println!("Wrote {}", &mesh.name);
             }
 
+            // Write group
+            let group_path = out_dir.as_ref().join(&grp.name);
+            grp.write_to_file(&group_path)?;
             println!("Wrote {}", &grp.name);
         }
 

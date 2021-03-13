@@ -1,3 +1,5 @@
+use crate::io::*;
+use crate::model::{Draw, Trans};
 use gltf::{Gltf, Mesh, Scene};
 use gltf::image::Source;
 use gltf::mesh::*;
@@ -5,7 +7,7 @@ use gltf::mesh::util::*;
 use gltf::json::extensions::scene::*;
 use gltf::json::extensions::mesh::*;
 use itertools::{Itertools, izip};
-use std::{convert::TryInto, error::Error};
+use std::error::Error;
 use std::path::Path;
 
 use crate::model::{AssetManagager, Face, Group, Mat, Tex, Vertex};
@@ -148,4 +150,90 @@ pub struct MiloMesh {
     pub verts: Vec<Vertex>,
     pub faces: Vec<Face>,
     pub mat: String,
+}
+
+impl MiloMesh {
+    pub fn write_to_file<T>(&self, out_path: T) -> Result<(), Box<dyn Error>> where T: AsRef<Path> {
+        // Write to file
+        let mut stream = FileStream::from_path_as_read_write_create(out_path.as_ref())?;
+        let mut writer = BinaryStream::from_stream_with_endian(&mut stream, IOEndian::Big);
+
+        // Write version
+        writer.write_int32(36)?;
+
+        // Write meta
+        writer.write_bytes(&[0u8; 13])?;
+
+        // Write trans
+        let mut trans = Trans::default();
+        trans.transform = self.name.to_owned();
+        trans.write_to_stream(&mut writer)?;
+
+        // Write draw
+        let draw = Draw::default();
+        draw.write_to_stream(&mut writer)?;
+
+        writer.write_prefixed_string(&self.mat)?;
+        writer.write_prefixed_string(&self.name)?;
+
+        writer.write_int32(0)?;
+        writer.write_int32(1)?;
+        writer.write_int8(0)?;
+
+        // Write vertices
+        writer.write_uint32(self.verts.len() as u32)?;
+        writer.write_int8(1)?;
+        writer.write_uint32(36)?; // Size of vertex entry
+        writer.write_uint32(1)?;
+
+        for v in &self.verts {
+            // Write position
+            writer.write_float32(v.x)?;
+            writer.write_float32(v.y)?;
+            writer.write_float32(v.z)?;
+
+            // Write UV
+            // TODO: Support f16
+            writer.write_uint16(0)?;
+            writer.write_uint16(0)?;
+
+            // Write normals
+            // TODO: Support f16
+            writer.write_uint16(0)?;
+            writer.write_uint16(0)?;
+            writer.write_uint16(0)?;
+            writer.write_uint16(0)?;
+
+            // Write color
+            writer.write_uint8(0xFF)?;
+            writer.write_uint8(0xFF)?;
+            writer.write_uint8(0xFF)?;
+            writer.write_uint8(0xFF)?;
+
+            // Write unknown indicies
+            writer.write_uint16(0)?;
+            writer.write_uint16(1)?;
+            writer.write_uint16(2)?;
+            writer.write_uint16(3)?;
+        }
+
+        // Write faces
+        writer.write_uint32(self.faces.len() as u32)?;
+
+        for f in &self.faces {
+            writer.write_uint16(f.v1)?;
+            writer.write_uint16(f.v2)?;
+            writer.write_uint16(f.v3)?;
+        }
+
+        // Write groups
+        writer.write_uint32(1)?;
+        writer.write_uint8(self.faces.len() as u8)?;
+
+        // Write bones
+        writer.write_uint32(0)?;
+        writer.write_uint8(0)?;
+
+        Ok(())
+    }
 }
