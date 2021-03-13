@@ -91,17 +91,27 @@ impl AssetManagager {
     }
 
     pub fn dump_to_directory<T>(&self, out_dir: T) -> Result<(), Box<dyn Error>> where T: AsRef<Path> {
+        // Create output dir
+        create_dir_if_not_exists(&out_dir)?;
+
         let groups = self.get_groups();
 
         for grp in groups {
             let meshes: Vec<&MiloMesh> = (&grp.objects).iter().map(|m| self.get_mesh(&m).unwrap()).collect();
 
             for mesh in meshes {
+                // Write mat
                 let mat = self.get_material(&mesh.mat).unwrap();
-                let diffuse_tex = self.get_texture(&mat.diffuse_tex).unwrap();
-
-                println!("Wrote {}", &diffuse_tex.name);
+                let mat_path = out_dir.as_ref().join(&mat.name);
+                mat.write_to_file(&mat_path)?;
                 println!("Wrote {}", &mat.name);
+
+                // TODO: Write tex
+                //let diffuse_tex = self.get_texture(&mat.diffuse_tex).unwrap();
+                //println!("Wrote {}", &diffuse_tex.name);
+
+                // Write mesh
+                let mesh_path = out_dir.as_ref().join(&mesh.name);
                 println!("Wrote {}", &mesh.name);
             }
 
@@ -110,4 +120,15 @@ impl AssetManagager {
 
         Ok(())
     }
+}
+
+pub(crate) fn create_dir_if_not_exists<T>(dir_path: T) -> Result<(), Box<dyn Error>> where T: AsRef<Path> {
+    let dir_path = dir_path.as_ref();
+
+    if !dir_path.exists() {
+        // Not found, create directory
+        std::fs::create_dir_all(&dir_path)?;
+    }
+
+    Ok(())
 }
