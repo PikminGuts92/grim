@@ -33,7 +33,7 @@ impl Mat {
         const PART_1_SIZE: usize = 105;
         const PART_2_SIZE: usize = 22;
         const PART_3_SIZE: usize = 4;
-        
+
         let mut offset: usize = 0;
         let mut size_buf = [0u8; 4];
 
