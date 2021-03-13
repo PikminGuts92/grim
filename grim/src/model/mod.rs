@@ -3,6 +3,8 @@ mod mat;
 mod mesh;
 mod tex;
 
+use std::{error::Error, path::Path};
+
 pub use self::group::*;
 pub use self::mat::*;
 pub use self::mesh::*;
@@ -86,5 +88,26 @@ impl AssetManagager {
 
     pub fn get_groups(&self) -> &Vec<Group> {
         &self.groups
+    }
+
+    pub fn dump_to_directory<T>(&self, out_dir: T) -> Result<(), Box<dyn Error>> where T: AsRef<Path> {
+        let groups = self.get_groups();
+
+        for grp in groups {
+            let meshes: Vec<&MiloMesh> = (&grp.objects).iter().map(|m| self.get_mesh(&m).unwrap()).collect();
+
+            for mesh in meshes {
+                let mat = self.get_material(&mesh.mat).unwrap();
+                let diffuse_tex = self.get_texture(&mat.diffuse_tex).unwrap();
+
+                println!("Wrote {}", &diffuse_tex.name);
+                println!("Wrote {}", &mat.name);
+                println!("Wrote {}", &mesh.name);
+            }
+
+            println!("Wrote {}", &grp.name);
+        }
+
+        Ok(())
     }
 }

@@ -30,7 +30,9 @@ const SYSTEM_INFO: SystemInfo = SystemInfo {
 
 impl SubApp for Model2GroupApp {
     fn process(&mut self) -> Result<(), Box<dyn Error>> {
-        open_model(&self.model_path, &self.mat_path)?;
+        let asset_man = open_model(&self.model_path, &self.mat_path)?;
+        asset_man.dump_to_directory(&self.output_path)?;
+
         Ok(())
     }
 }

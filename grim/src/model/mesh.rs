@@ -1,16 +1,17 @@
 use gltf::{Gltf, Mesh, Scene};
+use gltf::image::Source;
 use gltf::mesh::*;
 use gltf::mesh::util::*;
 use gltf::json::extensions::scene::*;
 use gltf::json::extensions::mesh::*;
 use itertools::{Itertools, izip};
-use std::error::Error;
+use std::{convert::TryInto, error::Error};
 use std::path::Path;
 
 use crate::model::{AssetManagager, Face, Group, Mat, Tex, Vertex};
 
-pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<dyn Error>> where T: AsRef<Path>  {
-    let (model, buffers, images) = gltf::import(model_path)?;
+pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<dyn Error>> where T: AsRef<Path> {
+    let (model, buffers, images) = gltf::import(&model_path)?;
 
     // Use first mesh for now
     let mesh = model.meshes().nth(0).unwrap();
@@ -86,17 +87,39 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
     for v in &verts {
         println!("{:?}", v);
     }
-    print!("{} verts", verts.len());
+    println!("{} verts", verts.len());
 
     let mat = prim.material();
     let diffuse_tex = mat.pbr_metallic_roughness().base_color_texture().unwrap();
-    let tex = images.get(diffuse_tex.texture().index()).unwrap();
+    //let tex = images.get(diffuse_tex.texture().index()).unwrap();
 
     let mut asset_manager = AssetManagager::new();
 
     let mut mat = Mat::from_mat_file(mat_path)?;
     mat.name = String::from("main.mat");
-    mat.diffuse_tex = String::from("main.tex");
+
+    // For now copy exising png files
+    let tex_source = diffuse_tex.texture().source().source();
+    if let Source::Uri { uri, mime_type: _ } = tex_source {
+        let model_path = model_path.as_ref();
+        let png_path = model_path.parent().unwrap().join(uri);
+
+        let tex_name = format!(
+            "{}.tex",
+            png_path.file_stem().unwrap().to_str().unwrap().to_ascii_lowercase()
+        );
+
+        println!("Png path is {:?}", png_path);
+
+        mat.diffuse_tex = tex_name.to_owned();
+        let tex = Tex {
+            name: tex_name,
+            rgba: Vec::new(),
+            png_path,
+        };
+
+        asset_manager.add_tex(tex);
+    }
 
     let mesh = MiloMesh {
         name: String::from("main.mesh"),
