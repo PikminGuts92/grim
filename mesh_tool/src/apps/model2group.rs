@@ -6,6 +6,7 @@ use std::path::{Path};
 
 
 use grim::{Platform, SystemInfo};
+use grim::model::*;
 use grim::io::*;
 use grim::scene::{Object, ObjectDir, PackedObject, Tex};
 
@@ -27,7 +28,7 @@ const SYSTEM_INFO: SystemInfo = SystemInfo {
 
 impl SubApp for Model2GroupApp {
     fn process(&mut self) -> Result<(), Box<dyn Error>> {
-
+        open_model(&self.model_path)?;
         Ok(())
     }
 }
