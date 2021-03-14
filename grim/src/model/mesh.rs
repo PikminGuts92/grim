@@ -31,7 +31,7 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
 
     let faces: Vec<Face> = faces_chunked
         .map(|f| Face {
-            v1: *f.get(0).unwrap(),
+            v1: *f.get(0).unwrap(), // Clockwise -> Anti
             v2: *f.get(1).unwrap(),
             v3: *f.get(2).unwrap(),
         })
@@ -75,7 +75,15 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
             b: 1.0,
             a: 1.0,
             u: match uv.get(0) {
-                Some(u) => *u,
+                Some(u) => match u {
+                    // TODO: Get fraction value instead
+                    u if *u > 1.0 => match (u.trunc() as i32) % 2 {
+                        1 => 1.0,
+                        _ => 0.0,
+                    },
+                    u if *u < 0.0 => 0.0,
+                    _ => *u,
+                },
                 _ => 0.0,
             },
             v: match uv.get(1) {
@@ -153,16 +161,19 @@ pub struct MiloMesh {
 }
 
 impl MiloMesh {
-    pub fn write_to_file<T>(&self, out_path: T) -> Result<(), Box<dyn Error>> where T: AsRef<Path> {
+    pub fn write_to_file<T>(&self, out_path: T, version: u32) -> Result<(), Box<dyn Error>> where T: AsRef<Path> {
         // Write to file
         let mut stream = FileStream::from_path_as_read_write_create(out_path.as_ref())?;
         let mut writer = BinaryStream::from_stream_with_endian(&mut stream, IOEndian::Big);
 
         // Write version
-        writer.write_int32(36)?;
+        //writer.write_int32(36)?;
+        writer.write_uint32(version)?;
 
         // Write meta
-        writer.write_bytes(&[0u8; 13])?;
+        // TODO: Use struct
+        writer.write_uint32(2)?; // Revision - VERY important
+        writer.write_bytes(&[0u8; 9])?;
 
         // Write trans
         let mut trans = Trans::default();
@@ -182,9 +193,12 @@ impl MiloMesh {
 
         // Write vertices
         writer.write_uint32(self.verts.len() as u32)?;
-        writer.write_int8(1)?;
-        writer.write_uint32(36)?; // Size of vertex entry
-        writer.write_uint32(1)?;
+
+        if version >= 36 {
+            writer.write_int8(1)?;
+            writer.write_uint32(36)?; // Size of vertex entry
+            writer.write_uint32(1)?;
+        }
 
         for v in &self.verts {
             // Write position
@@ -192,7 +206,47 @@ impl MiloMesh {
             writer.write_float32(v.y)?;
             writer.write_float32(v.z)?;
 
+            if version == 34 {
+                writer.write_float32(0.0)?; // w?
+            }
+
+            if version <= 34 {
+                // Write normals
+                writer.write_float32(v.x)?;
+                writer.write_float32(v.y)?;
+                writer.write_float32(v.z)?;
+                if version == 34 {
+                    writer.write_float32(0.0)?; // w?
+                }
+
+                // Write color
+                writer.write_float32(v.r)?;
+                writer.write_float32(v.g)?;
+                writer.write_float32(v.b)?;
+                writer.write_float32(v.a)?;
+
+                // Write UV
+                writer.write_float32(v.u)?;
+                writer.write_float32(v.v)?;
+
+                if version == 34 {
+                    // Write unknown data
+                    writer.write_int16(0)?;
+                    writer.write_int16(1)?;
+                    writer.write_int16(2)?;
+                    writer.write_int16(3)?;
+
+                    writer.write_float32(1.0)?;
+                    writer.write_float32(0.0)?;
+                    writer.write_float32(0.0)?;
+                    writer.write_float32(-1.0)?;
+                }
+
+                continue;
+            }
+
             // Write UV
+            //writer.write_int32(-1)?;
             writer.write_float16(f16::from_f32(v.u))?;
             writer.write_float16(f16::from_f32(v.v))?;
 
@@ -231,7 +285,10 @@ impl MiloMesh {
 
         // Write bones
         writer.write_uint32(0)?;
-        writer.write_uint8(0)?;
+
+        if version >= 36 {
+            writer.write_uint8(0)?;
+        }
 
         Ok(())
     }

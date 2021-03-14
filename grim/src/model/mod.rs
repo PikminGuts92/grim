@@ -118,7 +118,7 @@ impl AssetManagager {
 
                 // Write mesh
                 let mesh_path = out_dir.as_ref().join(&mesh.name);
-                mesh.write_to_file(&mesh_path)?;
+                mesh.write_to_file(&mesh_path, 34)?;
                 println!("Wrote {}", &mesh.name);
             }
 
