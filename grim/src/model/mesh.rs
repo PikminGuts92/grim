@@ -193,9 +193,8 @@ impl MiloMesh {
             writer.write_float32(v.z)?;
 
             // Write UV
-            // TODO: Support f16
-            writer.write_uint16(0)?;
-            writer.write_uint16(0)?;
+            writer.write_float16(f16::from_f32(v.u))?;
+            writer.write_float16(f16::from_f32(v.v))?;
 
             // Write normals
             // TODO: Support f16
