@@ -6,7 +6,7 @@ mod mesh;
 mod tex;
 mod trans;
 
-use std::{error::Error, path::Path};
+use std::{error::Error, fs::copy, path::Path};
 
 pub use self::anim::*;
 pub use self::draw::*;
@@ -112,9 +112,15 @@ impl AssetManagager {
                 mat.write_to_file(&mat_path)?;
                 println!("Wrote {}", &mat.name);
 
-                // TODO: Write tex
-                //let diffuse_tex = self.get_texture(&mat.diffuse_tex).unwrap();
-                //println!("Wrote {}", &diffuse_tex.name);
+                // Write diffuse tex
+                if let Some(tex) = self.get_texture(&mat.diffuse_tex) {
+                    let png_path = &tex.png_path;
+                    let png_name = png_path.file_name().unwrap().to_str().unwrap().to_ascii_lowercase();
+                    let dest_png_path = out_dir.as_ref().join(&png_name);
+
+                    copy(png_path, &dest_png_path)?;
+                    println!("Wrote {}", &png_name);
+                }
 
                 // Write mesh
                 let mesh_path = out_dir.as_ref().join(&mesh.name);
