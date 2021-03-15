@@ -103,11 +103,8 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
         }
         println!("{} verts", verts.len());
 
-        let mat = prim.material();
-        let diffuse_tex = mat.pbr_metallic_roughness().base_color_texture().unwrap();
-        //let tex = images.get(diffuse_tex.texture().index()).unwrap();
-
-        let mat_name = match mat.name() {
+        let prim_mat = prim.material();
+        let mat_name = match prim_mat.name() {
             Some(name) => format!("{}.mat", name),
             None => format!("mat_{}.mat", i),
         };
@@ -117,27 +114,32 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
             let mut mat = Mat::from_mat_file(mat_path.as_ref())?;
             mat.name = mat_name.to_owned();
 
-            // For now copy exising png files
-            let tex_source = diffuse_tex.texture().source().source();
-            if let Source::Uri { uri, mime_type: _ } = tex_source {
-                let model_path = model_path.as_ref();
-                let png_path = model_path.parent().unwrap().join(uri);
+            let base_color_tex = prim_mat.pbr_metallic_roughness().base_color_texture();
+            //let tex = images.get(diffuse_tex.texture().index()).unwrap();
 
-                let tex_name = format!(
-                    "{}.tex",
-                    png_path.file_stem().unwrap().to_str().unwrap().to_ascii_lowercase()
-                );
-                mat.diffuse_tex = tex_name.to_owned();
+            if let Some(diffuse_tex) = base_color_tex {
+                // For now copy exising png files
+                let tex_source = diffuse_tex.texture().source().source();
+                if let Source::Uri { uri, mime_type: _ } = tex_source {
+                    let model_path = model_path.as_ref();
+                    let png_path = model_path.parent().unwrap().join(uri);
 
-                // Existing texture not found, create new one
-                if asset_manager.get_texture(&tex_name).is_none() {
-                    let tex = Tex {
-                        name: tex_name,
-                        rgba: Vec::new(),
-                        png_path,
-                    };
+                    let tex_name = format!(
+                        "{}.tex",
+                        png_path.file_stem().unwrap().to_str().unwrap().to_ascii_lowercase()
+                    );
+                    mat.diffuse_tex = tex_name.to_owned();
 
-                    asset_manager.add_tex(tex);
+                    // Existing texture not found, create new one
+                    if asset_manager.get_texture(&tex_name).is_none() {
+                        let tex = Tex {
+                            name: tex_name,
+                            rgba: Vec::new(),
+                            png_path,
+                        };
+
+                        asset_manager.add_tex(tex);
+                    }
                 }
             }
 
