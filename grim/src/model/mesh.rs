@@ -1,13 +1,13 @@
 use crate::io::*;
 use crate::model::{Draw, Trans};
-use gltf::{Gltf, Mesh, Scene};
+use gltf::{Gltf, Mesh, Primitive, Scene};
 use gltf::image::Source;
 use gltf::mesh::*;
 use gltf::mesh::util::*;
 use gltf::json::extensions::scene::*;
 use gltf::json::extensions::mesh::*;
 use itertools::{Itertools, izip};
-use std::error::Error;
+use std::{borrow::Borrow, error::Error};
 use std::path::Path;
 
 use crate::model::{AssetManagager, Face, Group, Mat, Tex, Vertex};
@@ -18,14 +18,26 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
     let mut asset_manager = AssetManagager::new();
     let mut meshes = Vec::new();
 
-    // Iterate meshes
-    for (i, mesh) in model.meshes().enumerate() {
-        let mesh_name = match mesh.name() {
-            Some(name) => format!("{}.mesh", name),
-            None => format!("mesh_{}.mesh", i),
+    let mut unk_mat_count = 0;
+
+    // Iterate mesh primitives (treat as seperate meshes)
+    for (mesh_idx, mesh_name, prim_idx, prim) in model
+        .meshes()
+        .enumerate()
+        .map(move |(m_idx, m)| m
+            .primitives()
+            .enumerate()
+            .map(move |(p_idx, p)| (m_idx, m.name(), p_idx, p)))
+                .flat_map(|p| p) {
+        let mesh_suffix = match prim_idx {
+            0 => String::default(),
+            _ => format!("_{}", prim_idx),
         };
 
-        let prim = mesh.primitives().next().unwrap();
+        let mesh_name = match mesh_name {
+            Some(name) => format!("{}{}.mesh", name, mesh_suffix),
+            None => format!("mesh_{}{}.mesh", mesh_idx, mesh_suffix),
+        };
 
         let reader = prim.reader(|buffer| Some(&buffers[buffer.index()]));
 
@@ -106,7 +118,11 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
         let prim_mat = prim.material();
         let mat_name = match prim_mat.name() {
             Some(name) => format!("{}.mat", name),
-            None => format!("mat_{}.mat", i),
+            None => {
+                let mat_name = format!("mat_{}.mat", unk_mat_count);
+                unk_mat_count += 1;
+                mat_name
+            },
         };
 
         // Existing material not found, create new one
@@ -166,7 +182,6 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
         name: String::from("main.grp"),
         objects: meshes,
     };
-
 
     asset_manager.add_group(group);
 
