@@ -7,6 +7,7 @@ use gltf::mesh::util::*;
 use gltf::json::extensions::scene::*;
 use gltf::json::extensions::mesh::*;
 use itertools::{Itertools, izip};
+use nalgebra as na;
 use std::{borrow::Borrow, error::Error};
 use std::path::Path;
 
@@ -64,7 +65,7 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
             reader.read_tex_coords(0).unwrap().into_f32(),
         );
 
-        let verts = verts_interleaved
+        let mut verts = verts_interleaved
             .map(|(pos, norm, uv)| Vertex {
                 x: match pos.get(0) {
                     Some(p) => *p,
@@ -108,6 +109,8 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
                 },
             })
             .collect::<Vec<Vertex>>();
+
+        transform_verts(&mut verts);
 
         // Print vert info
         for v in &verts {
@@ -188,6 +191,29 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
     Ok(asset_manager)
 }
 
+fn transform_verts(verts: &mut Vec<Vertex>) {
+    let mat = na::Matrix4::new(
+        1.0,  0.0,  0.0, 0.0,
+        0.0, -1.0,  0.0, 0.0,
+        0.0,  0.0, -1.0, 0.0,
+        0.0,  0.0,  0.0, 1.0,
+    );
+
+    for vert in verts.iter_mut() {
+        // Update position
+        let pos = mat.transform_vector(&na::Vector3::new(vert.x, vert.y, vert.z));
+        vert.x = *pos.get(0).unwrap();
+        vert.y = *pos.get(1).unwrap();
+        vert.z = *pos.get(2).unwrap();
+
+        // Update normal
+        let norm = mat.transform_vector(&na::Vector3::new(vert.nx, vert.ny, vert.nz));
+        vert.nx = *norm.get(0).unwrap();
+        vert.ny = *norm.get(1).unwrap();
+        vert.nz = *norm.get(2).unwrap();
+    }
+}
+
 #[derive(Debug)]
 pub struct MiloMesh {
     pub name: String,
@@ -248,9 +274,9 @@ impl MiloMesh {
 
             if version <= 34 {
                 // Write normals
-                writer.write_float32(v.x)?;
-                writer.write_float32(v.y)?;
-                writer.write_float32(v.z)?;
+                writer.write_float32(v.nx)?;
+                writer.write_float32(v.ny)?;
+                writer.write_float32(v.nz)?;
                 if version == 34 {
                     writer.write_float32(0.0)?; // w?
                 }
