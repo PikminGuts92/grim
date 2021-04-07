@@ -33,10 +33,16 @@ fn ui_example(mut egui_context: ResMut<EguiContext>, mut app_exit_events: ResMut
         // ui.heading("Main");
 
         egui::menu::bar(ui, |ui| {
+            // File dropdown
             egui::menu::menu(ui, "File", |ui| {
                 ui.set_min_width(80.0);
 
                 ui.button("Open");
+                ui.separator();
+                ui.button("Save");
+                ui.button("Save As...");
+                ui.separator();
+                ui.button("Close");
                 ui.separator();
                 if ui.button("Exit").clicked() {
                     // Close app
@@ -44,6 +50,29 @@ fn ui_example(mut egui_context: ResMut<EguiContext>, mut app_exit_events: ResMut
                 }
             });
 
+            // Edit dropdown
+            egui::menu::menu(ui, "Edit", |ui| {
+                ui.set_min_width(80.0);
+
+                ui.button("Undo");
+                ui.button("Redo");
+            });
+
+            // Tools dropdown
+            egui::menu::menu(ui, "Tools", |ui| {
+                ui.set_min_width(80.0);
+
+                ui.button("Options");
+            });
+
+            // Help dropdown
+            egui::menu::menu(ui, "Help", |ui| {
+                ui.set_min_width(120.0);
+
+                ui.button("About");
+                ui.separator();
+                ui.button("Check for Updates");
+            });
         });
     });
 
