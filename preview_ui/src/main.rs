@@ -1,7 +1,8 @@
 // Hide console if release build
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use bevy::prelude::*;
+use bevy::{prelude::*, render::camera::PerspectiveProjection};
+use bevy_4x_camera::{CameraRig, CameraRigBundle, FourXCameraPlugin};
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 
 fn main() {
@@ -17,7 +18,9 @@ fn main() {
         })
         .add_plugins(DefaultPlugins)
         .add_plugin(EguiPlugin)
+        .add_plugin(FourXCameraPlugin)
         .add_system(ui_example.system())
+        .add_system(data_ui.system())
         .add_startup_system(setup.system())
         .run();
 }
@@ -89,10 +92,26 @@ fn setup(
             transform: Transform::from_translation(Vec3::new(4.0, 8.0, 4.0)),
             ..Default::default()
         })
-        // camera
-        .spawn(Camera3dBundle {
-            transform: Transform::from_translation(Vec3::new(-2.0, 2.5, 5.0))
-                .looking_at(Vec3::default(), Vec3::unit_y()),
-            ..Default::default()
+        // camera w/ plugin rig
+        .spawn(CameraRigBundle::default())
+        .with_children(|cb| {
+            cb.spawn(Camera3dBundle {
+                perspective_projection: PerspectiveProjection {
+                    fov: 0.1,
+                    ..Default::default()
+                },
+                transform: Transform::from_translation(Vec3::new(-2.0, 2.5, 5.0))
+                    .looking_at(Vec3::default(), Vec3::unit_y()),
+                ..Default::default()
+            });
         });
+}
+
+fn data_ui(
+    egui: Res<bevy_egui::EguiContext>,
+    mut cameras: Query<&mut CameraRig>,
+) {
+    for mut c in cameras.iter_mut() {
+        c.disable = egui.ctx.wants_pointer_input();
+    }
 }

@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 bevy = "0.4"
+bevy_4x_camera = "0.1.2"
 bevy_egui = "0.3"
 grim = { path = "../grim" }
 thiserror = "1.0.20"
