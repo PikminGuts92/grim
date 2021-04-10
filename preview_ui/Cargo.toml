@@ -5,8 +5,8 @@ authors = ["PikminGuts92"]
 edition = "2018"
 
 [dependencies]
-bevy = "0.4"
-bevy_4x_camera = "0.1.2"
-bevy_egui = "0.3"
+bevy = "0.5"
+bevy_4x_camera = { git = "https://github.com/SarthakSingh31/bevy_4x_camera", rev = "6e74d63" } # Temp until crate update
+bevy_egui = "0.4"
 grim = { path = "../grim" }
 thiserror = "1.0.20"
