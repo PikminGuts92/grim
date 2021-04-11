@@ -2,8 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use bevy::{prelude::*, render::camera::PerspectiveProjection};
-// use bevy_4x_camera::{CameraRig, CameraRigBundle, FourXCameraPlugin};
 use bevy_egui::{egui, EguiContext, EguiPlugin};
+use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 
 fn main() {
     App::build()
@@ -18,9 +18,9 @@ fn main() {
         })
         .add_plugins(DefaultPlugins)
         .add_plugin(EguiPlugin)
-        // .add_plugin(FourXCameraPlugin)
+        .add_plugin(FlyCameraPlugin)
         .add_system(ui_example.system())
-        // .add_system(data_ui.system())
+        .add_system(control_camera.system())
         .add_startup_system(setup.system())
         .run();
 }
@@ -88,7 +88,7 @@ fn ui_example(mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<b
     style.visuals.window_shadow.color = shadow_color.linear_multiply(0.0);
     ctx.set_style(style);
 
-    egui::Window::new("Hello 2").show(ctx, |ui| {
+    egui::Window::new("Hello").show(ctx, |ui| {
         // let mut style = ui.style_mut();
         // style.visuals.code_bg_color = style.visuals.code_bg_color.linear_multiply(0.1);
 
@@ -120,29 +120,19 @@ fn setup(
         ..Default::default()
     });
     // camera
-    commands.spawn_bundle(PerspectiveCameraBundle {
-        transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..Default::default()
-    });
+    let mut camera = PerspectiveCameraBundle::new_3d();
+    camera.transform = Transform::from_xyz(-2.0, 2.5, 5.0)
+        .looking_at(Vec3::ZERO, Vec3::Y);
 
-    /*// add entities to the world
-    commands
-        // camera w/ plugin rig
-        .spawn(CameraRigBundle::default())
-        .with_children(|cb| {
-            cb.spawn(Camera3dBundle {
-                transform: Transform::from_translation(Vec3::new(-2.0, 2.5, 5.0))
-                    .looking_at(Vec3::default(), Vec3::unit_y()),
-                ..Default::default()
-            });
-        });*/
+    commands.spawn_bundle(camera).insert(FlyCamera::default());
 }
 
-/*fn data_ui(
+fn control_camera(
+    mouse_input: Res<Input<MouseButton>>,
     egui_ctx: Res<bevy_egui::EguiContext>,
-    mut cameras: Query<&mut CameraRig>,
+    mut cam_query: Query<&mut FlyCamera>,
 ) {
-    for mut c in cameras.iter_mut() {
-        c.disable = egui_ctx.ctx().wants_pointer_input();
+    for mut cam in cam_query.iter_mut() {
+        cam.enabled = !egui_ctx.ctx().wants_pointer_input() && mouse_input.pressed(MouseButton::Middle);
     }
-}*/
+}
