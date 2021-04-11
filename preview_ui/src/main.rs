@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use bevy::{prelude::*, render::camera::PerspectiveProjection};
-use bevy_egui::{egui, EguiContext, EguiPlugin};
+use bevy_egui::{egui, egui::Pos2, EguiContext, EguiPlugin};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 
 fn main() {
@@ -88,11 +88,35 @@ fn ui_example(mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<b
     style.visuals.window_shadow.color = shadow_color.linear_multiply(0.0);
     ctx.set_style(style);
 
-    egui::Window::new("Hello").show(ctx, |ui| {
+    /*egui::Window::new("Hello").show(ctx, |ui| {
         // let mut style = ui.style_mut();
         // style.visuals.code_bg_color = style.visuals.code_bg_color.linear_multiply(0.1);
 
         ui.label("world");
+    });*/
+
+    let size = ctx.used_size();
+    let size_pos = Pos2::new(size.x, size.y);
+
+    // Camera controls
+    egui::Window::new("Controls").resizable(false).collapsible(false).show(ctx, |ui| {
+        egui::Grid::new("grid_controls").striped(true).show(ui, |ui| {
+            ui.label("Move");
+            ui.label("W/A/S/D");
+            ui.end_row();
+
+            ui.label("Up");
+            ui.label("Space");
+            ui.end_row();
+
+            ui.label("Down");
+            ui.label("LShift");
+            ui.end_row();
+
+            ui.label("View");
+            ui.label("LButton + Mouse Move");
+            ui.end_row();
+        });
     });
 }
 
@@ -128,11 +152,29 @@ fn setup(
 }
 
 fn control_camera(
+    key_input: Res<Input<KeyCode>>,
     mouse_input: Res<Input<MouseButton>>,
     egui_ctx: Res<bevy_egui::EguiContext>,
     mut cam_query: Query<&mut FlyCamera>,
 ) {
+    let key_down = is_camera_button_down(&key_input);
+
     for mut cam in cam_query.iter_mut() {
-        cam.enabled = !egui_ctx.ctx().wants_pointer_input() && mouse_input.pressed(MouseButton::Middle);
+        cam.enabled = !egui_ctx.ctx().wants_pointer_input() && (key_down || mouse_input.pressed(MouseButton::Left));
     }
+}
+
+fn is_camera_button_down(key_input: &Res<Input<KeyCode>>) -> bool {
+    let control_keys = [
+        KeyCode::W,
+        KeyCode::A,
+        KeyCode::S,
+        KeyCode::D,
+        KeyCode::Space,
+        KeyCode::LShift,
+    ];
+
+    control_keys
+        .iter()
+        .any(|k| key_input.pressed(*k))
 }

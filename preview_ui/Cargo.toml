@@ -7,6 +7,6 @@ edition = "2018"
 [dependencies]
 bevy = "0.5"
 bevy_egui = "0.4"
-bevy_fly_camera = { git = "https://github.com/mcpar-land/bevy_fly_camera", rev = "0e8fde8" } # Temp until crate update
+bevy_fly_camera = "0.7.0"
 grim = { path = "../grim" }
 thiserror = "1.0.20"
