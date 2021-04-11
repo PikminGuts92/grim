@@ -5,8 +5,22 @@ use bevy::{prelude::*, render::camera::PerspectiveProjection};
 use bevy_egui::{egui, egui::Pos2, EguiContext, EguiPlugin};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 
+#[derive(Debug)]
+pub struct AppSettings {
+    pub show_controls: bool
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        AppSettings {
+            show_controls: true
+        }
+    }
+}
+
 fn main() {
     App::build()
+        .insert_resource(AppSettings::default())
         .insert_resource(Msaa { samples: 8 })
         .insert_resource(WindowDescriptor {
             title: String::from("Preview"),
@@ -25,7 +39,7 @@ fn main() {
         .run();
 }
 
-fn ui_example(mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<bevy::app::AppExit>) {
+fn ui_example(mut settings: ResMut<AppSettings>, mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<bevy::app::AppExit>) {
     let ctx = &mut egui_ctx.ctx();
 
     // Toolbar
@@ -56,6 +70,13 @@ fn ui_example(mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<b
 
                 ui.button("Undo");
                 ui.button("Redo");
+            });
+
+            // View dropdown
+            egui::menu::menu(ui, "View", |ui| {
+                ui.set_min_width(80.0);
+
+                ui.checkbox(&mut settings.show_controls, "Controls");
             });
 
             // Tools dropdown
@@ -99,25 +120,27 @@ fn ui_example(mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<b
     let size_pos = Pos2::new(size.x, size.y);
 
     // Camera controls
-    egui::Window::new("Controls").resizable(false).collapsible(false).show(ctx, |ui| {
-        egui::Grid::new("grid_controls").striped(true).show(ui, |ui| {
-            ui.label("Move");
-            ui.label("W/A/S/D");
-            ui.end_row();
+    if settings.show_controls {
+        egui::Window::new("Controls").resizable(false).collapsible(false).show(ctx, |ui| {
+            egui::Grid::new("grid_controls").striped(true).show(ui, |ui| {
+                ui.label("Move");
+                ui.label("W/A/S/D");
+                ui.end_row();
 
-            ui.label("Up");
-            ui.label("Space");
-            ui.end_row();
+                ui.label("Up");
+                ui.label("Space");
+                ui.end_row();
 
-            ui.label("Down");
-            ui.label("LShift");
-            ui.end_row();
+                ui.label("Down");
+                ui.label("LShift");
+                ui.end_row();
 
-            ui.label("View");
-            ui.label("LButton + Mouse Move");
-            ui.end_row();
+                ui.label("View");
+                ui.label("LButton + Mouse Move");
+                ui.end_row();
+            });
         });
-    });
+    }
 }
 
 fn setup(
