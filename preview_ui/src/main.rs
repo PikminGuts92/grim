@@ -195,6 +195,8 @@ fn control_camera(
     egui_ctx: Res<bevy_egui::EguiContext>,
     mut cam_query: Query<&mut FlyCamera>,
 ) {
+    let ctx = egui_ctx.ctx();
+
     let key_down = is_camera_button_down(&key_input);
     let mouse_down = mouse_input.pressed(MouseButton::Left);
 
@@ -205,7 +207,9 @@ fn control_camera(
             _ => 0.0
         };
 
-        cam.enabled = !egui_ctx.ctx().wants_pointer_input() && (key_down || mouse_down);
+        cam.enabled = !ctx.wants_pointer_input()
+            && !ctx.is_pointer_over_area()
+            && (key_down || mouse_down);
     }
 }
 
