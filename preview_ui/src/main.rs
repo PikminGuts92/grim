@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use bevy::{prelude::*, render::camera::PerspectiveProjection};
-use bevy_egui::{egui, egui::Pos2, EguiContext, EguiPlugin};
+use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Pos2}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 
 #[derive(Debug)]
@@ -53,11 +53,14 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut egui_ctx: ResMut<EguiContex
 
                 ui.button("Open");
                 ui.separator();
+
                 ui.button("Save");
                 ui.button("Save As...");
                 ui.separator();
+
                 ui.button("Close");
                 ui.separator();
+
                 if ui.button("Exit").clicked() {
                     // Close app
                     event_writer.send(bevy::app::AppExit);
@@ -97,12 +100,20 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut egui_ctx: ResMut<EguiContex
         });
     });
 
-    // Side panel
-    /* egui::SidePanel::left("side_panel", 500.0).show(ctx, |ui| {
-        ui.set_min_width(400.0);
-        ui.heading("Options");
-    });*/
+    //ctx.set_visuals(egui::Visuals::light());
 
+    // Side panel
+    egui::SidePanel::left("side_panel", 500.0).show(ctx, |ui| {
+        let mut style = ui.style_mut();
+        style.visuals.extreme_bg_color = Color32::BLUE;
+
+        ui.set_min_width(300.0);
+        ui.heading("Options");
+    });
+/*
+    let frame = egui::Frame::none().fill(Color32::GREEN).multiply_with_opacity(0.1);
+    egui::CentralPanel::default().frame(frame).show(ctx, |_| {});
+*/
     // Hide menu shadow
     let mut style: egui::Style = (*ctx.style()).clone();
     let shadow_color = style.visuals.window_shadow.color.clone();
@@ -171,7 +182,11 @@ fn setup(
     camera.transform = Transform::from_xyz(-2.0, 2.5, 5.0)
         .looking_at(Vec3::ZERO, Vec3::Y);
 
-    commands.spawn_bundle(camera).insert(FlyCamera::default());
+    commands.spawn_bundle(camera).insert(FlyCamera {
+        enabled: false,
+        sensitivity: 0.0,
+        ..Default::default()
+    });
 }
 
 fn control_camera(
@@ -181,9 +196,16 @@ fn control_camera(
     mut cam_query: Query<&mut FlyCamera>,
 ) {
     let key_down = is_camera_button_down(&key_input);
+    let mouse_down = mouse_input.pressed(MouseButton::Left);
 
     for mut cam in cam_query.iter_mut() {
-        cam.enabled = !egui_ctx.ctx().wants_pointer_input() && (key_down || mouse_input.pressed(MouseButton::Left));
+        // Disable camera move if mouse button not held
+        cam.sensitivity = match mouse_down {
+            true => 3.0,
+            _ => 0.0
+        };
+
+        cam.enabled = !egui_ctx.ctx().wants_pointer_input() && (key_down || mouse_down);
     }
 }
 
