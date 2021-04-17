@@ -7,13 +7,15 @@ use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 
 #[derive(Debug)]
 pub struct AppSettings {
-    pub show_controls: bool
+    pub show_controls: bool,
+    pub show_side_panel: bool,
 }
 
 impl Default for AppSettings {
     fn default() -> Self {
         AppSettings {
-            show_controls: true
+            show_controls: true,
+            show_side_panel: true,
         }
     }
 }
@@ -104,12 +106,59 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut egui_ctx: ResMut<EguiContex
 
     // Side panel
     egui::SidePanel::left("side_panel", 500.0).show(ctx, |ui| {
-        let mut style = ui.style_mut();
-        style.visuals.extreme_bg_color = Color32::BLUE;
+        ui.horizontal(|ui| {
+            if settings.show_side_panel {
+                //ui.set_min_width(300.0);
+                
 
-        ui.set_min_width(300.0);
-        ui.heading("Options");
+                ui.vertical(|ui| {
+                    egui::CollapsingHeader::new("Heading")
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            ui.label("Not much, as it turns out");
+                        });
+
+                    ui.group(|ui| {
+                        ui.heading("Options");
+                        ui.label("Do something 1");
+                        ui.label("Do something 2");
+
+                        let popup_id = ui.make_persistent_id("popup_id");
+                        let popup_btn = ui.button("Show popup");
+
+                        if popup_btn.clicked() {
+                            ui.memory().toggle_popup(popup_id);
+                        }
+
+                        egui::popup::popup_below_widget(ui, popup_id, &popup_btn, |ui| {
+                            ui.group(|ui| {
+                                ui.label("Some more info, or things you can select:");
+                                ui.label("…");
+                            });
+                        });
+                    });
+                });
+
+                ui.separator();
+            }
+
+            ui.style_mut().spacing.interact_size = bevy_egui::egui::Vec2::default();
+
+            ui.vertical(|ui| {
+                ui.style_mut().spacing.item_spacing = bevy_egui::egui::Vec2::default();
+
+                ui.checkbox(&mut settings.show_side_panel, "");
+            });
+        })
     });
+
+    /*let mut frame = egui::Frame::default();
+    frame.fill = Color32::from_rgba_premultiplied(0, 128, 128, 16);
+
+    egui::CentralPanel::default().frame(frame).show(ctx, |ui| {
+        ui.label("Hello world");
+    });*/
+
 /*
     let frame = egui::Frame::none().fill(Color32::GREEN).multiply_with_opacity(0.1);
     egui::CentralPanel::default().frame(frame).show(ctx, |_| {});
@@ -162,13 +211,41 @@ fn setup(
     // plane
     commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Plane { size: 5.0 })),
-        material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
+        material: materials.add(StandardMaterial {
+            base_color: Color::rgb(0.3, 0.5, 0.3),
+            double_sided: true,
+            unlit: false,
+            ..Default::default()
+        }),
         ..Default::default()
     });
+
+    commands.spawn_bundle(PbrBundle {
+        mesh: meshes.add(Mesh::from(
+            shape::Icosphere {
+                radius: 0.8,
+                subdivisions: 5,
+            })
+        ),
+        material: materials.add(StandardMaterial {
+            base_color: Color::rgb(1.0, 0.0, 1.0),
+            double_sided: true,
+            unlit: false,
+            ..Default::default()
+        }),
+        transform: Transform::from_xyz(0.0, 2.0, 0.0),
+        ..Default::default()
+    });
+
     // cube
     commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-        material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
+        material: materials.add(StandardMaterial {
+            base_color: Color::rgb(0.8, 0.7, 0.6),
+            double_sided: true,
+            unlit: false,
+            ..Default::default()
+        }),
         transform: Transform::from_xyz(0.0, 0.5, 0.0),
         ..Default::default()
     });
