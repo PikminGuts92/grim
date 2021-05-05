@@ -3,7 +3,7 @@ pub struct Ark {
     pub version: u32,
     pub encryption: ArkEncryption,
     pub entries: Vec<ArkOffsetEntry>,
-    
+    pub paths: Vec<String>,
 }
 
 #[derive(Debug)]
