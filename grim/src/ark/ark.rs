@@ -1,16 +1,18 @@
+use std::path::PathBuf;
+
 #[derive(Debug, Default)]
 pub struct Ark {
-    pub version: u32,
+    pub version: i32,
     pub encryption: ArkEncryption,
     pub entries: Vec<ArkOffsetEntry>,
-    pub paths: Vec<String>,
+    pub path: PathBuf, // Hdr/ark path
 }
 
 #[derive(Debug)]
 pub enum ArkEncryption {
     None,
-    ClassicEncryption(u32),
-    NewEncryption(u32),
+    ClassicEncryption(i32),
+    NewEncryption(i32),
 }
 
 #[derive(Debug)]
