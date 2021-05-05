@@ -1,5 +1,6 @@
 use crate::ark::*;
 use crate::io::*;
+use std::collections::HashMap;
 use std::path::Path;
 
 const MAX_HDR_SIZE: u64 = 20 * 0x100000; // 20MB
@@ -84,6 +85,12 @@ impl Ark {
                 .map_err(|_| ArkReadError::ArkNotSupported)?;
         }
 
+        // Read string blob
+        let strings = parse_string_blob(&mut reader)?;
+
+        // Read string indicies
+        let string_indicies = parse_string_indices(&mut reader)?;
+
         Ok(())
     }
 }
@@ -100,4 +107,38 @@ fn version_is_supported(version: i32) -> bool {
         5 => true,
         _ => false
     }
+}
+
+fn parse_string_blob(reader: &mut BinaryStream) -> Result<HashMap<u32, String>, ArkReadError> {
+    let mut strings = HashMap::new();
+    let blob_size = reader.read_uint32()
+        .map_err(|_| ArkReadError::ArkNotSupported)?;
+
+    let mut offset = 0;
+    let start_pos = reader.pos();
+
+    // Read string from table
+    while offset < blob_size {
+        let s = reader.read_null_terminated_string()
+            .map_err(|_| ArkReadError::ArkNotSupported)?;
+
+        strings.insert(offset, s);
+        offset = (reader.pos() - start_pos) as u32;
+    }
+
+    Ok(strings)
+}
+
+fn parse_string_indices(reader: &mut BinaryStream) -> Result<Vec<u32>, ArkReadError> {
+    let indices_count = reader.read_uint32()
+        .map_err(|_| ArkReadError::ArkNotSupported)?;
+
+    let mut indices = vec![0; indices_count as usize];
+
+    for ind in indices.iter_mut() {
+        *ind = reader.read_uint32()
+            .map_err(|_| ArkReadError::ArkNotSupported)?;
+    }
+
+    Ok(indices)
 }
