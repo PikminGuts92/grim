@@ -494,7 +494,7 @@ impl<'a> BinaryStream<'a> {
     }
 
     pub fn read_null_terminated_string(&mut self) -> Result<String, Box<dyn Error>> {
-        let raw_bytes = Vec::new();
+        let mut raw_bytes = Vec::new();
 
         loop {
             let b = self.read_uint8()?;
