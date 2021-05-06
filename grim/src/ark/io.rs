@@ -67,12 +67,16 @@ impl Ark {
         let part_size_count = reader.read_uint32()
             .map_err(|_| ArkReadError::ArkNotSupported)?;
 
-        let mut part_sizes = vec![0u32; part_size_count as usize];
+        let mut part_size_ranges = vec![(0u64, 0u64); part_size_count as usize];
+        let mut part_start = 0u64;
 
         // Read part sizes
-        for p in part_sizes.iter_mut() {
-            *p = reader.read_uint32()
-                .map_err(|_| ArkReadError::ArkNotSupported)?;
+        for p in part_size_ranges.iter_mut() {
+            let size = reader.read_uint32()
+                .map_err(|_| ArkReadError::ArkNotSupported)? as u64;
+
+            *p = (part_start, part_start + size);
+            part_start += size;
         }
 
         // TODO: Verify count matches here too
@@ -90,6 +94,43 @@ impl Ark {
 
         // Read string indicies
         let string_indicies = parse_string_indices(&mut reader)?;
+
+        // Read file entries
+        self.parse_file_entries(&mut reader, part_size_ranges.as_slice(), &strings, string_indicies.as_slice())?;
+
+        Ok(())
+    }
+
+    fn parse_file_entries(&mut self, reader: &mut BinaryStream, part_sizes: &[(u64, u64)], strings: &HashMap<u32, String>, string_indices: &[u32]) -> Result<(), ArkReadError> {
+        let entry_count = reader.read_uint32()
+            .map_err(|_| ArkReadError::ArkNotSupported)?;
+
+        for id in 0..entry_count {
+            // Read offset as either u32 or u64 depending on ark version
+            let offset = match self.version {
+                3 | 4 => reader.read_uint32().map_err(|_| ArkReadError::ArkNotSupported)? as u64,
+                _ => reader.read_uint64().map_err(|_| ArkReadError::ArkNotSupported)?
+            };
+
+            let file_name_idx = reader.read_uint32().map_err(|_| ArkReadError::ArkNotSupported)? as usize;
+            let dir_path_idx = reader.read_uint32().map_err(|_| ArkReadError::ArkNotSupported)? as usize;
+            let size = reader.read_uint32().map_err(|_| ArkReadError::ArkNotSupported)? as usize;
+            let inflated_size = reader.read_uint32().map_err(|_| ArkReadError::ArkNotSupported)? as usize;
+
+            let file_name = &strings[&string_indices[file_name_idx]];
+            let dir_path = &strings[&string_indices[dir_path_idx]];
+
+            let (part, offset) = get_ark_part_and_offset(offset, part_sizes);
+
+            self.entries.push(ArkOffsetEntry {
+                id,
+                path: create_full_path(file_name, dir_path),
+                offset,
+                part,
+                size,
+                inflated_size,
+            });
+        }
 
         Ok(())
     }
@@ -141,4 +182,21 @@ fn parse_string_indices(reader: &mut BinaryStream) -> Result<Vec<u32>, ArkReadEr
     }
 
     Ok(indices)
+}
+
+fn create_full_path(dir_path: &String, file_name: &String) -> String {
+    if dir_path.is_empty() {
+        return file_name.to_owned();
+    }
+
+    format!("{}/{}", dir_path, file_name)
+}
+
+fn get_ark_part_and_offset(offset: u64, part_size_ranges: &[(u64, u64)]) -> (u32, u64) {
+    part_size_ranges
+        .iter()
+        .enumerate()
+        .find(|(_, (start, end))| &offset >= start && &offset < end)
+        .map(|(i, (start, _))| (i as u32, &offset - start))
+        .unwrap()
 }
