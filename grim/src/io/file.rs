@@ -1,5 +1,5 @@
-use std::error::Error;
-use std::fs::read_dir;
+use std::{error::Error, io::Read};
+use std::fs::{File, metadata, read_dir};
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Copy, Debug)]
@@ -62,4 +62,19 @@ fn find_files(files: &mut Vec<PathBuf>, dir: &Path, search_type: &FileSearchDept
     }
 
     Ok(())
+}
+
+pub fn get_file_size<T: AsRef<Path>>(path: T) -> u64 {
+    // TODO: Safely handle
+    let meta = metadata(path).unwrap();
+    meta.len()
+}
+
+pub fn read_to_bytes<T: AsRef<Path>>(path: T) -> Vec<u8> {
+    let mut file = File::open(path).unwrap();
+
+    let mut data = Vec::new();
+    file.read_to_end(&mut data).unwrap();
+
+    data
 }

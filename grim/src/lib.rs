@@ -1,4 +1,5 @@
 #![feature(with_options)] // Required for File::with_options()
+pub mod ark;
 pub mod io;
 pub mod model;
 pub mod scene;

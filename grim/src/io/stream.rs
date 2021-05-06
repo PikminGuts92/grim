@@ -493,6 +493,22 @@ impl<'a> BinaryStream<'a> {
         // TODO: Replace with better one (FromUtf8Error message is awful)
         Ok(String::from_utf8(raw_bytes)?)
     }
+
+    pub fn read_null_terminated_string(&mut self) -> Result<String, Box<dyn Error>> {
+        let mut raw_bytes = Vec::new();
+
+        loop {
+            let b = self.read_uint8()?;
+            if b == 0 {
+                break
+            }
+
+            raw_bytes.push(b);
+        }
+
+        // TODO: Replace with better one (FromUtf8Error message is awful)
+        Ok(String::from_utf8(raw_bytes)?)
+    }
 }
 
 // Writer implementation
