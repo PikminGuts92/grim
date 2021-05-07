@@ -57,7 +57,7 @@ impl Ark {
         let mut reader = BinaryStream::from_stream(&mut stream);
 
         // Skip read version
-        reader.seek(SeekFrom::Current(0))
+        reader.seek(SeekFrom::Current(4))
             .map_err(|_| ArkReadError::ArkNotSupported)?;
 
         let part_count = reader.read_uint32()
