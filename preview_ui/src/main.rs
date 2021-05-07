@@ -4,6 +4,8 @@
 use bevy::{prelude::*, render::camera::PerspectiveProjection};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Pos2}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
+use grim::ark::Ark;
+use std::env::args;
 
 #[derive(Debug)]
 pub struct AppSettings {
@@ -20,8 +22,14 @@ impl Default for AppSettings {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct AppState {
+    pub ark: Option<Ark>,
+}
+
 fn main() {
     App::build()
+        .insert_resource(AppState::default())
         .insert_resource(AppSettings::default())
         .insert_resource(Msaa { samples: 8 })
         .insert_resource(WindowDescriptor {
@@ -37,6 +45,7 @@ fn main() {
         .add_plugin(FlyCameraPlugin)
         .add_system(ui_example.system())
         .add_system(control_camera.system())
+        .add_startup_system(setup_args.system())
         .add_startup_system(setup.system())
         .run();
 }
@@ -264,6 +273,18 @@ fn setup(
         sensitivity: 0.0,
         ..Default::default()
     });
+}
+
+fn setup_args(mut state: ResMut<AppState>) {
+    let args = args().skip(1).collect::<Vec<String>>();
+    if args.is_empty() {
+        return;
+    }
+
+    let hdr_path = &args[0];
+    println!("Hdr path is \"{}\"", hdr_path);
+
+    let ark_res = Ark::from_path(hdr_path);
 }
 
 fn control_camera(
