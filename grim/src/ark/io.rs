@@ -124,7 +124,7 @@ impl Ark {
 
             self.entries.push(ArkOffsetEntry {
                 id,
-                path: create_full_path(file_name, dir_path),
+                path: create_full_path(dir_path, file_name),
                 offset,
                 part,
                 size,
