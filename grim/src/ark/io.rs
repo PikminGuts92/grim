@@ -95,8 +95,9 @@ impl Ark {
         // Read string indicies
         let string_indicies = parse_string_indices(&mut reader)?;
 
-        // Read file entries
+        // Read file entries (and sort)
         self.parse_file_entries(&mut reader, part_size_ranges.as_slice(), &strings, string_indicies.as_slice())?;
+        self.sort_entries_by_name();
 
         Ok(())
     }
@@ -133,6 +134,10 @@ impl Ark {
         }
 
         Ok(())
+    }
+
+    fn sort_entries_by_name(&mut self) {
+        self.entries.sort_by(|a, b| a.path.cmp(&b.path));
     }
 }
 
