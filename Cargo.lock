@@ -2885,6 +2885,7 @@ dependencies = [
  "bevy_egui",
  "bevy_fly_camera",
  "grim",
+ "itertools",
  "thiserror",
 ]
 

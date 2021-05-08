@@ -4,8 +4,9 @@
 use bevy::{prelude::*, render::camera::PerspectiveProjection};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Pos2}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
-use grim::ark::Ark;
+use grim::ark::{Ark, ArkOffsetEntry};
 use std::env::args;
+use itertools::Itertools;
 
 #[derive(Debug)]
 pub struct AppSettings {
@@ -25,6 +26,29 @@ impl Default for AppSettings {
 #[derive(Debug, Default)]
 pub struct AppState {
     pub ark: Option<Ark>,
+    pub root: Option<ArkDirNode>,
+}
+
+#[derive(Debug)]
+pub struct ArkDirNode {
+    pub name: String,
+    pub path: String,
+    pub dirs: Vec<ArkDirNode>,
+    pub files: Vec<usize>,
+    pub loaded: bool,
+}
+
+impl ArkDirNode {
+    pub fn expand(&mut self, ark: &Ark) {
+        if self.loaded {
+            return;
+        }
+
+        let (mut dirs, mut files) = get_dirs_and_files(&self.path, ark);
+        self.dirs.append(&mut dirs);
+        self.files.append(&mut files);
+        self.loaded = true;
+    }
 }
 
 fn main() {
@@ -285,6 +309,64 @@ fn setup_args(mut state: ResMut<AppState>) {
     println!("Hdr path is \"{}\"", hdr_path);
 
     let ark_res = Ark::from_path(hdr_path);
+    if let Ok(ark) = ark_res {
+        state.root = Some(create_ark_tree(&ark));
+        state.ark = Some(ark);
+    }
+}
+
+fn create_ark_tree(ark: &Ark) -> ArkDirNode {
+    let mut root = ArkDirNode {
+        name: ark.path
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_owned(), // There's gotta be a better conversion...
+        path: String::from(""),
+        dirs: Vec::new(),
+        files: Vec::new(),
+        loaded: false
+    };
+
+    root.expand(ark);
+    root
+}
+
+fn get_dirs_and_files(dir: &str, ark: &Ark) -> (Vec<ArkDirNode>, Vec<usize>) {
+    let is_root = match dir {
+        "" | "." => true,
+        _ => false,
+    };
+
+    if is_root {
+        let files = ark.entries
+            .iter()
+            .enumerate()
+            .filter(|(i, e)| !e.path.contains("/")
+                || (e.path.starts_with("./") && e.path.matches(|c: char | c.eq(&'/')).count() == 1))
+            .map(|(i, _)| i)
+            .collect::<Vec<usize>>();
+
+        let dirs = ark.entries
+            .iter()
+            .filter(|e| e.path.contains("/"))
+            .map(|e| e.path.split("/").next().unwrap())
+            .unique()
+            .filter(|s| !s.eq(&"."))
+            .map(|s| ArkDirNode {
+                name: s.to_owned(),
+                path: s.to_owned(),
+                dirs: Vec::new(),
+                files: Vec::new(),
+                loaded: false,
+            })
+            .collect::<Vec<ArkDirNode>>();
+
+        return (dirs, files);
+    }
+
+    Default::default()
 }
 
 fn control_camera(
