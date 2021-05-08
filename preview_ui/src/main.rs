@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use bevy::{prelude::*, render::camera::PerspectiveProjection};
-use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Pos2}};
+use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, CtxRef, Pos2, Ui}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use grim::ark::{Ark, ArkOffsetEntry};
 use std::env::args;
@@ -51,6 +51,10 @@ impl ArkDirNode {
     }
 }
 
+pub fn get_file_name(path: &str) -> &str {
+    path.split("/").last().unwrap_or(&path)
+}
+
 fn main() {
     App::build()
         .insert_resource(AppState::default())
@@ -74,7 +78,7 @@ fn main() {
         .run();
 }
 
-fn ui_example(mut settings: ResMut<AppSettings>, mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<bevy::app::AppExit>) {
+fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<bevy::app::AppExit>) {
     let ctx = &mut egui_ctx.ctx();
 
     // Toolbar
@@ -142,14 +146,9 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut egui_ctx: ResMut<EguiContex
         ui.horizontal(|ui| {
             if settings.show_side_panel {
                 //ui.set_min_width(300.0);
-                
 
                 ui.vertical(|ui| {
-                    egui::CollapsingHeader::new("Heading")
-                        .default_open(true)
-                        .show(ui, |ui| {
-                            ui.label("Not much, as it turns out");
-                        });
+                    draw_ark_tree(state, ctx, ui);
 
                     ui.group(|ui| {
                         ui.heading("Options");
@@ -234,6 +233,33 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut egui_ctx: ResMut<EguiContex
             });
         });
     }
+}
+
+fn draw_ark_tree(mut state: ResMut<AppState>, ctx: &mut &CtxRef, ui: &mut Ui) {
+    if let Some(root) = &state.root {
+        let entries = &state.ark.as_ref().unwrap().entries;
+
+        draw_node(root, entries, ctx, ui);
+    }
+}
+
+fn draw_node(node: &ArkDirNode, entries: &Vec<ArkOffsetEntry>, ctx: &mut &CtxRef, ui: &mut Ui) {
+    egui::CollapsingHeader::new(&node.name)
+        .default_open(false)
+        .show(ui, |ui| {
+            for child in &node.dirs {
+                draw_node(child, entries, ctx, ui);
+            }
+
+            //ui.label("Not much, as it turns out");
+
+            for file_idx in &node.files {
+                let ark_entry = &entries[*file_idx];
+                let file_name = get_file_name(&ark_entry.path);
+
+                ui.label(file_name);
+            }
+        });
 }
 
 fn setup(
