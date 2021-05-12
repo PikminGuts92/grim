@@ -251,14 +251,17 @@ fn draw_node(node: &ArkDirNode, entries: &Vec<ArkOffsetEntry>, ctx: &mut &CtxRef
                 draw_node(child, entries, ctx, ui);
             }
 
-            //ui.label("Not much, as it turns out");
+            egui::Grid::new(&node.path).striped(true).show(ui, |ui| {
+                for file_idx in &node.files {
+                    let ark_entry = &entries[*file_idx];
+                    let file_name = get_file_name(&ark_entry.path);
 
-            for file_idx in &node.files {
-                let ark_entry = &entries[*file_idx];
-                let file_name = get_file_name(&ark_entry.path);
+                    ui.label(file_name);
+                    ui.end_row();
 
-                ui.label(file_name);
-            }
+                    //ui.small_button(file_name);
+                }
+            });
         });
 }
 
