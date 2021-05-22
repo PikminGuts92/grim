@@ -213,7 +213,7 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
 
     // Camera controls
     if settings.show_controls {
-        egui::Window::new("Controls").resizable(false).collapsible(false).show(ctx, |ui| {
+        egui::Window::new("Controls").resizable(false).collapsible(false).anchor(bevy_egui::egui::Align2::RIGHT_BOTTOM, bevy_egui::egui::Vec2::new(-10.0, -10.0)).show(ctx, |ui| {
             egui::Grid::new("grid_controls").striped(true).show(ui, |ui| {
                 ui.label("Move");
                 ui.label("W/A/S/D");
