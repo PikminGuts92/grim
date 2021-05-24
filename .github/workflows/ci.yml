@@ -3,20 +3,14 @@ on: [push, pull_request]
 name: Continuous integration
 
 jobs:
-  install-deps:
-    name: Install dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install pkg-config, libx11-dev, libasound2-dev, libudev-dev
-        shell: bash
-        run: |
-          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
-
   check:
     name: Check
     runs-on: ubuntu-latest
-    needs: install-deps
     steps:
+      - name: Install linux dependencies
+        shell: bash
+        run: |
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -30,8 +24,11 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    needs: install-deps
     steps:
+      - name: Install linux dependencies
+        shell: bash
+        run: |
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -46,8 +43,11 @@ jobs:
     name: Clippy
     if: ${{ false }} # Always skip job (for now)
     runs-on: ubuntu-latest
-    needs: install-deps
     steps:
+      - name: Install linux dependencies
+        shell: bash
+        run: |
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
