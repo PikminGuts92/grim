@@ -10,7 +10,7 @@ jobs:
       - name: Install pkg-config, libx11-dev, libasound2-dev, libudev-dev
         shell: bash
         run: |
-          apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
 
   check:
     name: Check
