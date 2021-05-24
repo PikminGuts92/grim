@@ -1,0 +1,10 @@
+[package]
+name = "mesh_tool"
+version = "0.1.0"
+authors = ["PikminGuts92"]
+edition = "2018"
+
+[dependencies]
+clap = "3.0.0-beta.1"
+grim = { path = "../grim" }
+thiserror = "1.0.20"

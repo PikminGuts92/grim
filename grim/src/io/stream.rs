@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::prelude::*;
 pub use std::io::SeekFrom;
 use std::path::Path;
+pub use half::f16;
 
 #[derive(Copy, Clone, Debug)]
 pub enum IOEndian {
@@ -587,6 +588,16 @@ impl<'a> BinaryStream<'a> {
     }
 
     // Write floats
+    pub fn write_float16(&mut self, value: f16) -> Result<(), Box<dyn Error>> {
+        let data = match self.endian {
+            IOEndian::Little => value.to_le_bytes(),
+            IOEndian::Big => value.to_be_bytes(),
+        };
+
+        Ok(self.write_bytes(&data)?)
+    }
+
+
     pub fn write_float32(&mut self, value: f32) -> Result<(), Box<dyn Error>> {
         let data = match self.endian {
             IOEndian::Little => value.to_le_bytes(),

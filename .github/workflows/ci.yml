@@ -1,10 +1,4 @@
-on:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+on: [push, pull_request]
 
 name: Continuous integration
 
@@ -13,7 +7,16 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
+      - name: Install linux dependencies
+        shell: bash
+        run: |
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+          sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
+      - name: Remove cargo configuration
+        shell: bash
+        run: |
+          rm .cargo -rf
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -27,7 +30,16 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
+      - name: Install linux dependencies
+        shell: bash
+        run: |
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+          sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
+      - name: Remove cargo configuration
+        shell: bash
+        run: |
+          rm .cargo -rf
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -42,7 +54,16 @@ jobs:
     if: ${{ false }} # Always skip job (for now)
     runs-on: ubuntu-latest
     steps:
+      - name: Install linux dependencies
+        shell: bash
+        run: |
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+          sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
+      - name: Remove cargo configuration
+        shell: bash
+        run: |
+          rm .cargo -rf
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
