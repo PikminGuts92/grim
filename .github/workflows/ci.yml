@@ -12,6 +12,10 @@ jobs:
         run: |
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - uses: actions/checkout@v2
+      - name: Remove cargo configuration
+        shell: bash
+        run: |
+          rm .cargo -rf
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -30,6 +34,10 @@ jobs:
         run: |
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - uses: actions/checkout@v2
+      - name: Remove cargo configuration
+        shell: bash
+        run: |
+          rm .cargo -rf
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -49,6 +57,10 @@ jobs:
         run: |
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - uses: actions/checkout@v2
+      - name: Remove cargo configuration
+        shell: bash
+        run: |
+          rm .cargo -rf
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
