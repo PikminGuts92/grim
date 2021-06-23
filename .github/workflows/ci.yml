@@ -10,6 +10,7 @@ jobs:
       - name: Install linux dependencies
         shell: bash
         run: |
+          sudo apt-get update
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
@@ -33,6 +34,7 @@ jobs:
       - name: Install linux dependencies
         shell: bash
         run: |
+          sudo apt-get update
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
@@ -57,6 +59,7 @@ jobs:
       - name: Install linux dependencies
         shell: bash
         run: |
+          sudo apt-get update
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
