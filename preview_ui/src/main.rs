@@ -224,11 +224,11 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
                 ui.end_row();
 
                 ui.label("Down");
-                ui.label("LShift");
+                ui.label("L-Shift");
                 ui.end_row();
 
                 ui.label("View");
-                ui.label("LButton + Mouse Move");
+                ui.label("L-Click + Mouse");
                 ui.end_row();
             });
         });
