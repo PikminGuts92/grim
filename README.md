@@ -1,4 +1,4 @@
-# Grim (Working Title)
+# Grim (Working Title) [![CI](https://github.com/PikminGuts92/grim/workflows/CI/badge.svg)](https://github.com/PikminGuts92/grim/actions?query=workflow%3ACI)
 This repo is intended to be a re-write of [Mackiloha](https://github.com/PikminGuts92/Mackiloha).
 
 # Phase 1
