@@ -142,7 +142,7 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
     //ctx.set_visuals(egui::Visuals::light());
 
     // Side panel
-    egui::SidePanel::left("side_panel", 500.0).show(ctx, |ui| {
+    egui::SidePanel::left("side_panel").max_width(500.0).show(ctx, |ui| {
         ui.horizontal(|ui| {
             if settings.show_side_panel {
                 //ui.set_min_width(300.0);
