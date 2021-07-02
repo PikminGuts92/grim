@@ -48,6 +48,11 @@ impl ArkDirNode {
         self.dirs.append(&mut dirs);
         self.files.append(&mut files);
         self.loaded = true;
+
+        // TODO: Rely on lazy load
+        for c in &mut self.dirs {
+            c.expand(ark);
+        }
     }
 }
 
@@ -81,8 +86,8 @@ fn main() {
 fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<bevy::app::AppExit>) {
     let ctx = &mut egui_ctx.ctx();
 
-    // Toolbar
-    egui::TopPanel::top("top_panel").show(ctx, |ui| {
+    // Top Toolbar
+    egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         // ui.heading("Main");
 
         egui::menu::bar(ui, |ui| {
@@ -142,46 +147,48 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
     //ctx.set_visuals(egui::Visuals::light());
 
     // Side panel
-    egui::SidePanel::left("side_panel").max_width(500.0).show(ctx, |ui| {
-        ui.horizontal(|ui| {
-            if settings.show_side_panel {
-                //ui.set_min_width(300.0);
+    egui::SidePanel::left("side_panel").min_width(400.0).resizable(true).show(ctx, |ui| {
+        egui::ScrollArea::auto_sized().show_viewport(ui, |ui, viewport| {
+            //ui.horizontal(|ui| {
+                if settings.show_side_panel {
+                    //ui.set_min_width(300.0);
 
-                ui.vertical(|ui| {
-                    draw_ark_tree(state, ctx, ui);
+                    ui.vertical(|ui| {
+                        draw_ark_tree(state, ctx, ui);
 
-                    ui.group(|ui| {
-                        ui.heading("Options");
-                        ui.label("Do something 1");
-                        ui.label("Do something 2");
+                        ui.group(|ui| {
+                            ui.heading("Options");
+                            ui.label("Do something 1");
+                            ui.label("Do something 2");
 
-                        let popup_id = ui.make_persistent_id("popup_id");
-                        let popup_btn = ui.button("Show popup");
+                            let popup_id = ui.make_persistent_id("popup_id");
+                            let popup_btn = ui.button("Show popup");
 
-                        if popup_btn.clicked() {
-                            ui.memory().toggle_popup(popup_id);
-                        }
+                            if popup_btn.clicked() {
+                                ui.memory().toggle_popup(popup_id);
+                            }
 
-                        egui::popup::popup_below_widget(ui, popup_id, &popup_btn, |ui| {
-                            ui.group(|ui| {
-                                ui.label("Some more info, or things you can select:");
-                                ui.label("…");
+                            egui::popup::popup_below_widget(ui, popup_id, &popup_btn, |ui| {
+                                ui.group(|ui| {
+                                    ui.label("Some more info, or things you can select:");
+                                    ui.label("…");
+                                });
                             });
                         });
                     });
+
+                    ui.separator();
+                }
+
+                ui.style_mut().spacing.interact_size = bevy_egui::egui::Vec2::default();
+
+                ui.vertical(|ui| {
+                    ui.style_mut().spacing.item_spacing = bevy_egui::egui::Vec2::default();
+
+                    ui.checkbox(&mut settings.show_side_panel, "");
                 });
-
-                ui.separator();
-            }
-
-            ui.style_mut().spacing.interact_size = bevy_egui::egui::Vec2::default();
-
-            ui.vertical(|ui| {
-                ui.style_mut().spacing.item_spacing = bevy_egui::egui::Vec2::default();
-
-                ui.checkbox(&mut settings.show_side_panel, "");
-            });
-        })
+            //});
+        });
     });
 
     /*let mut frame = egui::Frame::default();
@@ -233,6 +240,11 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
             });
         });
     }
+
+    // Bottom Toolbar
+    egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
+        ui.label("Created by PikminGuts92");
+    });
 }
 
 fn draw_ark_tree(mut state: ResMut<AppState>, ctx: &mut &CtxRef, ui: &mut Ui) {
@@ -395,7 +407,33 @@ fn get_dirs_and_files(dir: &str, ark: &Ark) -> (Vec<ArkDirNode>, Vec<usize>) {
         return (dirs, files);
     }
 
-    Default::default()
+    let dir_path = format!["{}/", dir];
+    let slash_count = dir_path.matches(|c: char| c.eq(&'/')).count();
+
+    let files = ark.entries
+        .iter()
+        .enumerate()
+        .filter(|(i, e)| e.path.starts_with(&dir_path)
+            && e.path.matches(|c: char| c.eq(&'/')).count() == slash_count)
+        .map(|(i, _)| i)
+        .collect::<Vec<usize>>();
+
+    let dirs = ark.entries
+        .iter()
+        .filter(|e| e.path.starts_with(&dir_path)
+            && e.path.matches(|c: char| c.eq(&'/')).count() > slash_count)
+        .map(|e| e.path.split("/").skip(slash_count).next().unwrap())
+        .unique()
+        .map(|s| ArkDirNode {
+            name: s.to_owned(),
+            path: format!("{}{}", dir_path, s),
+            dirs: Vec::new(),
+            files: Vec::new(),
+            loaded: false,
+        })
+        .collect::<Vec<ArkDirNode>>();
+
+    (dirs, files)
 }
 
 fn control_camera(
