@@ -1,32 +1,31 @@
 // Hide console if release build
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod settings;
+
+use settings::*;
 use bevy::{prelude::*, render::camera::PerspectiveProjection};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, CtxRef, Pos2, Ui}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use grim::ark::{Ark, ArkOffsetEntry};
-use std::env::args;
+use std::{env::args, path::{Path, PathBuf}};
 use itertools::Itertools;
 
-#[derive(Debug)]
-pub struct AppSettings {
-    pub show_controls: bool,
-    pub show_side_panel: bool,
-}
-
-impl Default for AppSettings {
-    fn default() -> Self {
-        AppSettings {
-            show_controls: true,
-            show_side_panel: true,
-        }
-    }
-}
+const SETTINGS_FILE_NAME: &str = "settings.json";
+const PROJECT_NAME: &str = env!("CARGO_PKG_NAME");
 
 #[derive(Debug, Default)]
 pub struct AppState {
     pub ark: Option<Ark>,
     pub root: Option<ArkDirNode>,
+    pub settings_path: PathBuf,
+}
+
+impl AppState {
+    pub fn save_settings(&self, settings: &AppSettings) {
+        settings.save_to_file(&self.settings_path);
+        println!("Saved settings to \"{}\"", &self.settings_path.to_str().unwrap());
+    }
 }
 
 #[derive(Debug)]
@@ -61,9 +60,12 @@ pub fn get_file_name(path: &str) -> &str {
 }
 
 fn main() {
+    let app_state = load_state();
+    let app_settings = load_settings(&app_state.settings_path);
+
     App::build()
-        .insert_resource(AppState::default())
-        .insert_resource(AppSettings::default())
+        .insert_resource(app_state)
+        .insert_resource(app_settings)
         .insert_resource(Msaa { samples: 8 })
         .insert_resource(WindowDescriptor {
             title: String::from("Preview"),
@@ -123,7 +125,9 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
             egui::menu::menu(ui, "View", |ui| {
                 ui.set_min_width(80.0);
 
-                ui.checkbox(&mut settings.show_controls, "Controls");
+                if ui.checkbox(&mut settings.show_controls, "Controls").changed() {
+                    state.save_settings(&settings);
+                }
             });
 
             // Tools dropdown
@@ -154,7 +158,7 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
                     //ui.set_min_width(300.0);
 
                     ui.vertical(|ui| {
-                        draw_ark_tree(state, ctx, ui);
+                        draw_ark_tree(&state, ctx, ui);
 
                         ui.group(|ui| {
                             ui.heading("Options");
@@ -185,7 +189,9 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
                 ui.vertical(|ui| {
                     ui.style_mut().spacing.item_spacing = bevy_egui::egui::Vec2::default();
 
-                    ui.checkbox(&mut settings.show_side_panel, "");
+                    if ui.checkbox(&mut settings.show_side_panel, "").changed() {
+                        state.save_settings(&settings);
+                    }
                 });
             //});
         });
@@ -247,7 +253,7 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
     });
 }
 
-fn draw_ark_tree(mut state: ResMut<AppState>, ctx: &mut &CtxRef, ui: &mut Ui) {
+fn draw_ark_tree(mut state: &ResMut<AppState>, ctx: &mut &CtxRef, ui: &mut Ui) {
     if let Some(root) = &state.root {
         let entries = &state.ark.as_ref().unwrap().entries;
 
@@ -339,6 +345,24 @@ fn setup(
         sensitivity: 0.0,
         ..Default::default()
     });
+}
+
+fn load_state() -> AppState {
+    let exe_path = &std::env::current_exe().unwrap();
+    let exe_dir_path = exe_path.parent().unwrap();
+    let settings_path = exe_dir_path.join(&format!("{}.{}", PROJECT_NAME, SETTINGS_FILE_NAME));
+
+    AppState {
+        settings_path,
+        ..Default::default()
+    }
+}
+
+fn load_settings(settings_path: &Path) -> AppSettings {
+    let settings = AppSettings::load_from_file(settings_path);
+    println!("Loaded settings from \"{}\"", settings_path.to_str().unwrap());
+
+    settings
 }
 
 fn setup_args(mut state: ResMut<AppState>) {
