@@ -257,13 +257,14 @@ fn draw_ark_tree(mut state: ResMut<AppState>, ctx: &mut &CtxRef, ui: &mut Ui) {
 
 fn draw_node(node: &ArkDirNode, entries: &Vec<ArkOffsetEntry>, ctx: &mut &CtxRef, ui: &mut Ui) {
     egui::CollapsingHeader::new(&node.name)
+        .id_source(format!("dir_{}", &node.path))
         .default_open(false)
         .show(ui, |ui| {
             for child in &node.dirs {
                 draw_node(child, entries, ctx, ui);
             }
 
-            egui::Grid::new(&node.path).striped(true).show(ui, |ui| {
+            egui::Grid::new(format!("files_{}", &node.path)).striped(true).show(ui, |ui| {
                 for file_idx in &node.files {
                     let ark_entry = &entries[*file_idx];
                     let file_name = get_file_name(&ark_entry.path);
