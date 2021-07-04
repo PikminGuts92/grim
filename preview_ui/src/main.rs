@@ -19,6 +19,7 @@ pub struct AppState {
     pub ark: Option<Ark>,
     pub root: Option<ArkDirNode>,
     pub settings_path: PathBuf,
+    pub show_options: bool,
 }
 
 impl AppState {
@@ -81,6 +82,7 @@ fn main() {
         .add_plugin(FlyCameraPlugin)
         .add_system(ui_example.system())
         .add_system(control_camera.system())
+        .add_system(drop_files.system())
         .add_system(window_resized.system())
         .add_startup_system(setup_args.system())
         .add_startup_system(setup.system())
@@ -136,7 +138,9 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
             egui::menu::menu(ui, "Tools", |ui| {
                 ui.set_min_width(80.0);
 
-                ui.button("Options");
+                if ui.button("Options").clicked() {
+                    state.show_options = true;
+                }
             });
 
             // Help dropdown
@@ -253,6 +257,72 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
     egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
         ui.label("Created by PikminGuts92");
     });
+
+    if state.show_options {
+        egui::Window::new("Options")
+            //.id("options_window")
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .fixed_size(bevy_egui::egui::Vec2::new(600.0, 400.0))
+            .open(&mut state.show_options)
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.group(|ui| {
+                        egui::Grid::new("options_list")
+                            .striped(true)
+                            .min_col_width(120.0)
+                            .show(ui, |ui| {
+                                ui.label("General");
+                                ui.end_row();
+
+                                ui.label("Ark Paths");
+                                ui.end_row();
+
+                                ui.label("Preferences");
+                                ui.end_row();
+                        });
+                    });
+
+                    ui.separator();
+
+                    ui.vertical_centered_justified(|ui| {
+                        ui.heading("Ark Paths");
+
+                        ui.add_space(500.0);
+                    });
+                });
+
+                /*ui.columns(2, |cols| {
+                    egui::Grid::new("options_list")
+                        .striped(true)
+                        .show(&mut cols[0], |ui| {
+                            ui.label("Ark Paths");
+                            ui.end_row();
+
+                            ui.label("Preferences");
+                            ui.end_row();
+                        });
+
+                    let ui = &mut cols[1];
+                    ui.add(egui::Separator::default().vertical());
+
+                    ui.group(|ui| {
+                        ui.vertical_centered_justified(|ui| {
+                            ui.heading("Ark Paths");
+
+                            ui.add_space(500.0);
+                        });
+                    });
+
+                    /*egui::Grid::new("options_view")
+                        .striped(true)
+                        .show(&mut cols[1], |ui| {
+                            ui.label("Options view goes here");
+                            ui.end_row();
+                        });*/
+                });*/
+            });
+    }
 }
 
 fn draw_ark_tree(mut state: &ResMut<AppState>, ctx: &mut &CtxRef, ui: &mut Ui) {
@@ -364,6 +434,7 @@ fn load_state() -> AppState {
 
     AppState {
         settings_path,
+        show_options: true, // TODO: Remove after testing
         ..Default::default()
     }
 }
@@ -521,5 +592,24 @@ fn window_resized(
         settings.window_width = e.width;
         settings.window_height = e.height;
         app_state.save_settings(&settings);
+    }
+}
+
+fn drop_files(
+    mut drag_drop_events: EventReader<FileDragAndDrop>,
+) {
+    // Currently doesn't work on Windows
+    // https://github.com/bevyengine/bevy/issues/2096
+    for d in drag_drop_events.iter() {
+        if let FileDragAndDrop::DroppedFile { id, path_buf } = d {
+            println!("Dropped \"{}\"", path_buf.to_str().unwrap())
+        }
+    }
+}
+
+fn is_drop_event(dad_event: &FileDragAndDrop) -> bool {
+    match dad_event {
+        FileDragAndDrop::DroppedFile { id, path_buf } => true,
+        _ => false
     }
 }
