@@ -28,6 +28,9 @@ pub struct AppSettings {
     pub show_controls: bool,
     pub show_side_panel: bool,
     pub game_paths: Vec<GamePath>,
+    pub window_width: f32,
+    pub window_height: f32,
+    pub maximized: bool,
 }
 
 impl Default for AppSettings {
@@ -36,6 +39,9 @@ impl Default for AppSettings {
             show_controls: true,
             show_side_panel: true,
             game_paths: Vec::new(),
+            window_width: 1280.0,
+            window_height: 720.0,
+            maximized: false,
         }
     }
 }

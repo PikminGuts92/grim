@@ -4,7 +4,7 @@
 mod settings;
 
 use settings::*;
-use bevy::{prelude::*, render::camera::PerspectiveProjection};
+use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{WindowMode, WindowResized}};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, CtxRef, Pos2, Ui}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use grim::ark::{Ark, ArkOffsetEntry};
@@ -64,22 +64,24 @@ fn main() {
     let app_settings = load_settings(&app_state.settings_path);
 
     App::build()
-        .insert_resource(app_state)
-        .insert_resource(app_settings)
-        .insert_resource(Msaa { samples: 8 })
         .insert_resource(WindowDescriptor {
             title: String::from("Preview"),
-            width: 1920.0,
-            height: 1080.0,
+            width: app_settings.window_width,
+            height: app_settings.window_height,
+            mode: WindowMode::Windowed,
             vsync: true,
             resizable: true,
             ..Default::default()
         })
+        .insert_resource(Msaa { samples: 8 })
+        .insert_resource(app_state)
+        .insert_resource(app_settings)
         .add_plugins(DefaultPlugins)
         .add_plugin(EguiPlugin)
         .add_plugin(FlyCameraPlugin)
         .add_system(ui_example.system())
         .add_system(control_camera.system())
+        .add_system(window_resized.system())
         .add_startup_system(setup_args.system())
         .add_startup_system(setup.system())
         .run();
@@ -288,7 +290,15 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut windows: ResMut<Windows>,
+    settings: Res<AppSettings>,
 ) {
+    // Set primary window to maximized if preferred
+    if settings.maximized {
+        let window = windows.get_primary_mut().unwrap();
+        window.set_maximized(true);
+    }
+
     // plane
     commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Plane { size: 5.0 })),
@@ -498,4 +508,18 @@ fn is_camera_button_down(key_input: &Res<Input<KeyCode>>) -> bool {
     control_keys
         .iter()
         .any(|k| key_input.pressed(*k))
+}
+
+fn window_resized(
+    mut resize_events: EventReader<WindowResized>,
+    mut settings: ResMut<AppSettings>,
+    app_state: Res<AppState>,
+) {
+    for e in resize_events.iter() {
+        println!("Window resized: {}x{}", e.width, e.height);
+
+        settings.window_width = e.width;
+        settings.window_height = e.height;
+        app_state.save_settings(&settings);
+    }
 }
