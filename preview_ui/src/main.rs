@@ -446,7 +446,7 @@ fn load_state() -> AppState {
 
     AppState {
         settings_path,
-        show_options: true, // TODO: Remove after testing
+        //show_options: true, // TODO: Remove after testing
         ..Default::default()
     }
 }
