@@ -288,6 +288,18 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
                     ui.vertical_centered_justified(|ui| {
                         ui.heading("Ark Paths");
 
+                        egui::Grid::new("ark_paths")
+                            .striped(true)
+                            .show(ui, |ui| {
+                                for g in settings.game_paths.iter() {
+                                    ui.label(&g.game.to_string());
+                                    ui.label(&g.platform.to_string());
+                                    ui.label(&g.path);
+
+                                    ui.end_row();
+                                }
+                            });
+
                         ui.add_space(500.0);
                     });
                 });

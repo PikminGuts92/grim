@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::fmt::{self, Display, Formatter};
 use std::fs::{read_to_string, self};
 use std::path::Path;
 
@@ -21,6 +22,18 @@ pub enum Platform {
     X360,
     PS3,
     Wii
+}
+
+impl Display for Game {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Display for Platform {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -58,6 +71,11 @@ impl AppSettings {
 
         if let Ok(text) = json_text {
             let settings = serde_json::from_str::<AppSettings>(&text);
+
+            if let Err(err) = &settings {
+                println!("Unable to parse settings: {:?}", err);
+            }
+
             return settings.unwrap_or_default();
         }
 
