@@ -15,16 +15,6 @@ pub struct PackedObject {
     pub data: Vec<u8>
 }
 
-// TODO: Use for post GH1 games
-#[derive(Debug)]
-struct ObjectMeta {
-    // TODO: Save i32 version too?
-    revision: i32,
-    proj_name: String,
-    // script: Script,
-    comment: String,
-}
-
 impl Object {
     pub fn get_name(&self) -> &str {
         match self {
