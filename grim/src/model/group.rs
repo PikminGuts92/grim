@@ -19,7 +19,9 @@ impl Group {
         writer.write_int32(14)?;
 
         // Write meta
-        writer.write_bytes(&[0u8; 13])?;
+        // TODO: Use struct
+        writer.write_uint32(2)?; // Revision - VERY important
+        writer.write_bytes(&[0u8; 9])?;
 
         // Write anim
         let anim = Anim::default();
