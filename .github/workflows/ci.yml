@@ -29,6 +29,7 @@ jobs:
 
   test:
     name: Test
+    if: ${{ false }} # Skip until tests are added
     runs-on: ubuntu-latest
     steps:
       - name: Install linux dependencies
