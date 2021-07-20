@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 pub use std::io::SeekFrom;
 use std::path::Path;
@@ -187,7 +187,7 @@ pub struct FileOptions {
 
 impl FileStream {
     fn from_options(path: &Path, ops: FileOptions) -> Result<FileStream, Box<dyn Error>> {
-        let file = File::with_options()
+        let file = OpenOptions::new()
             .read(ops.read)
             .write(ops.write)
             .create(ops.create)
