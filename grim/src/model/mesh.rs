@@ -170,6 +170,7 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
             verts,
             faces,
             mat: mat_name.to_owned(),
+            parent: Some(String::from("main.grp")),
         };
 
         if mat_name.is_empty() {
@@ -220,6 +221,7 @@ pub struct MiloMesh {
     pub verts: Vec<Vertex>,
     pub faces: Vec<Face>,
     pub mat: String,
+    pub parent: Option<String>,
 }
 
 impl MiloMesh {
@@ -239,7 +241,10 @@ impl MiloMesh {
 
         // Write trans
         let mut trans = Trans::default();
-        trans.transform = self.name.to_owned();
+        trans.transform = match &self.parent {
+            Some(parent) => parent.to_owned(),
+            _ => self.name.to_owned(),
+        };
         trans.write_to_stream(&mut writer)?;
 
         // Write draw
