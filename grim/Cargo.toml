@@ -5,12 +5,12 @@ authors = ["PikminGuts92"]
 edition = "2018"
 
 [dependencies]
-flate2 = "1.0.16"
-gltf = { version = "0.15.2", features = ["extras", "import", "names", "utils" ] }
+flate2 = "1.0.20"
+gltf = { version = "0.16.0", features = ["extras", "import", "names", "utils" ] }
 half = "1.7.1"
-image = "0.23.8"
-itertools = "0.10.0"
+image = "0.23.14"
+itertools = "0.10.1"
 lazy_static = "1.4.0"
-nalgebra = "0.25.3"
-regex = { version = "1.3.9", default-features = false, features = [ "std" ] }
-thiserror = "1.0.20"
+nalgebra = "0.28.0"
+regex = { version = "1.5.4", default-features = false, features = [ "std" ] }
+thiserror = "1.0.26"
