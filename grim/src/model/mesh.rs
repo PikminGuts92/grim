@@ -215,6 +215,27 @@ fn transform_verts(verts: &mut Vec<Vertex>) {
     }
 }
 
+fn transform_verts_with_quat(verts: &mut Vec<Vertex>, i: f32, j: f32, k: f32, w: f32) {
+    // TODO: Figure out less ugly way for type conversion
+    let quat = na::Quaternion::new(w, i, j, k);
+    let unit_quat = na::UnitQuaternion::from_quaternion(quat);
+    let mat: na::Matrix4<f32> = unit_quat.into();
+
+    for vert in verts.iter_mut() {
+        // Update position
+        let pos = mat.transform_vector(&na::Vector3::new(vert.x, vert.y, vert.z));
+        vert.x = *pos.get(0).unwrap();
+        vert.y = *pos.get(1).unwrap();
+        vert.z = *pos.get(2).unwrap();
+
+        // Update normal
+        let norm = mat.transform_vector(&na::Vector3::new(vert.nx, vert.ny, vert.nz));
+        vert.nx = *norm.get(0).unwrap();
+        vert.ny = *norm.get(1).unwrap();
+        vert.nz = *norm.get(2).unwrap();
+    }
+}
+
 #[derive(Debug)]
 pub struct MiloMesh {
     pub name: String,
