@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Mat {
     base_mat: Vec<u8>,
     pub name: String,
