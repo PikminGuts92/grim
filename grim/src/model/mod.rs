@@ -1,5 +1,6 @@
 mod anim;
 mod draw;
+mod gltf;
 mod group;
 mod mat;
 mod mesh;
@@ -10,6 +11,7 @@ use std::{error::Error, fs::copy, path::Path};
 
 pub use self::anim::*;
 pub use self::draw::*;
+pub(crate) use self::gltf::*;
 pub use self::group::*;
 pub use self::mat::*;
 pub use self::mesh::*;
