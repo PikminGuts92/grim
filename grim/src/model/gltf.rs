@@ -69,9 +69,19 @@ impl GLTFImporter {
                     mesh.parent = Some(group.name.to_owned());
                     group.objects.push(mesh.name.to_owned());
                 }
+
+                // Add meshes to asset manager
+                while meshes.len() > 0 {
+                    asset_manager.add_mesh(meshes.remove(0));
+                }
             }
 
             asset_manager.add_group(group);
+        }
+
+        // Add materials to asset manager
+        while self.mats.len() > 0 {
+            asset_manager.add_material(self.mats.remove(0));
         }
 
         self.document = Some(document); // Give back
