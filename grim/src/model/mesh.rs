@@ -11,9 +11,16 @@ use nalgebra as na;
 use std::{borrow::Borrow, error::Error};
 use std::path::Path;
 
-use crate::model::{AssetManagager, Face, Group, Mat, Tex, Vertex};
+use crate::model::{AssetManagager, Face, GLTFImporter, Group, Mat, Tex, Vertex};
 
 pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<dyn Error>> where T: AsRef<Path> {
+    let mut gltf_importer = GLTFImporter::new(&model_path)?;
+    gltf_importer.use_mat(&mat_path);
+    gltf_importer.process()
+}
+
+// TODO: Remove old code
+pub fn open_model_old<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<dyn Error>> where T: AsRef<Path> {
     let (model, buffers, images) = gltf::import(&model_path)?;
 
     let mut asset_manager = AssetManagager::new();
