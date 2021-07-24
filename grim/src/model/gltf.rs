@@ -72,7 +72,10 @@ impl GLTFImporter {
 
                 // Add meshes to asset manager
                 while meshes.len() > 0 {
-                    asset_manager.add_mesh(meshes.remove(0));
+                    let mut mesh = meshes.remove(0);
+                    transform_verts(&mut mesh.verts); // Update to DX coordinates
+
+                    asset_manager.add_mesh(mesh);
                 }
             }
 
@@ -138,19 +141,25 @@ impl GLTFImporter {
     fn process_node(&mut self, node: &Node, asset_manager: &mut AssetManagager) -> Result<Vec<MiloMesh>, Box<dyn Error>> {
         let mut meshes = Vec::new();
 
+        // Process mesh
+        if let Some(mesh) = node.mesh() {
+            let mut milo_meshes = self.read_mesh(&mesh);
+            meshes.append(&mut milo_meshes);
+        }
+
+        // Process children
         for child_node in node.children() {
             let mut sub_meshes = self.process_node(&child_node, asset_manager)?;
             meshes.append(&mut sub_meshes);
         }
 
-        // Process mesh
-        if let Some(mesh) = node.mesh() {
-            let milo_mesh = self.read_mesh(&mesh);
-        }
-
         // Apply transforms
         let trans = node.transform();
         let matrix = trans.matrix();
+
+        for mesh in meshes.iter_mut() {
+            transform_verts_with_mat(&mut mesh.verts, &matrix);
+        };
 
         Ok(meshes)
     }
@@ -263,5 +272,46 @@ impl GLTFImporter {
             mat: mat_name,
             parent: None,
         }
+    }
+}
+
+fn transform_verts(verts: &mut Vec<Vertex>) {
+    let mat = na::Matrix4::new(
+        1.0,  0.0,  0.0, 0.0,
+        0.0, -1.0,  0.0, 0.0,
+        0.0,  0.0, -1.0, 0.0,
+        0.0,  0.0,  0.0, 1.0,
+    );
+
+    for vert in verts.iter_mut() {
+        // Update position
+        let pos = mat.transform_vector(&na::Vector3::new(vert.x, vert.y, vert.z));
+        vert.x = *pos.get(0).unwrap();
+        vert.y = *pos.get(1).unwrap();
+        vert.z = *pos.get(2).unwrap();
+
+        // Update normal
+        let norm = mat.transform_vector(&na::Vector3::new(vert.nx, vert.ny, vert.nz));
+        vert.nx = *norm.get(0).unwrap();
+        vert.ny = *norm.get(1).unwrap();
+        vert.nz = *norm.get(2).unwrap();
+    }
+}
+
+fn transform_verts_with_mat(verts: &mut Vec<Vertex>, matrix: &[[f32; 4]; 4]) {
+    let mat = na::Matrix4::from(matrix.to_owned());
+
+    for vert in verts.iter_mut() {
+        // Update position
+        let pos = mat.transform_vector(&na::Vector3::new(vert.x, vert.y, vert.z));
+        vert.x = *pos.get(0).unwrap();
+        vert.y = *pos.get(1).unwrap();
+        vert.z = *pos.get(2).unwrap();
+
+        // Update normal
+        let norm = mat.transform_vector(&na::Vector3::new(vert.nx, vert.ny, vert.nz));
+        vert.nx = *norm.get(0).unwrap();
+        vert.ny = *norm.get(1).unwrap();
+        vert.nz = *norm.get(2).unwrap();
     }
 }
