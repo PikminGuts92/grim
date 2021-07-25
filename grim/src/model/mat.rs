@@ -8,6 +8,7 @@ use std::path::Path;
 pub struct Mat {
     base_mat: Vec<u8>,
     pub name: String,
+    pub base_color: [f32; 4], // rgba
     pub diffuse_tex: String,
     pub normal_tex: String,
     pub specular_tex: String,
@@ -23,6 +24,7 @@ impl Mat {
         Ok(Mat {
             base_mat: data,
             name: String::default(),
+            base_color: Default::default(),
             diffuse_tex: String::default(),
             normal_tex: String::default(),
             specular_tex: String::default(),
@@ -30,7 +32,8 @@ impl Mat {
     }
 
     pub fn write_to_file<T>(&self, out_path: T) -> Result<(), Box<dyn Error>> where T: AsRef<Path> {
-        const PART_1_SIZE: usize = 105;
+        const PART_1_1_SIZE: usize = 21;
+        const PART_1_2_SIZE: usize = 68;
         const PART_2_SIZE: usize = 22;
         const PART_3_SIZE: usize = 4;
 
@@ -38,8 +41,11 @@ impl Mat {
         let mut size_buf = [0u8; 4];
 
         // Read 1st mat part
-        let part_1 = &self.base_mat[offset..(offset + PART_1_SIZE)];
-        offset += PART_1_SIZE;
+        let part_1_1 = &self.base_mat[offset..(offset + PART_1_1_SIZE)];
+        offset += PART_1_1_SIZE + 16; // Skip base color
+
+        let part_1_2 = &self.base_mat[offset..(offset + PART_1_2_SIZE)];
+        offset += PART_1_2_SIZE;
 
         // Skip diffuse tex name
         offset += self.read_as_i32(offset, &mut size_buf) as usize + 4;
@@ -68,7 +74,15 @@ impl Mat {
         let mut stream = FileStream::from_path_as_read_write_create(out_path.as_ref())?;
         let mut writer = BinaryStream::from_stream_with_endian(&mut stream, IOEndian::Big);
 
-        writer.write_bytes(part_1)?;
+        writer.write_bytes(part_1_1)?;
+
+        // Write base color
+        writer.write_float32(self.base_color[0])?; // r
+        writer.write_float32(self.base_color[1])?; // g
+        writer.write_float32(self.base_color[2])?; // g
+        writer.write_float32(self.base_color[3])?; // a
+
+        writer.write_bytes(part_1_2)?;
         writer.write_prefixed_string(&self.diffuse_tex)?;
         writer.write_uint32(0)?; // Next mat pass
         writer.write_bytes(part_2)?;

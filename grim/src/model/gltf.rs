@@ -107,6 +107,10 @@ impl GLTFImporter {
             let mut mat = base_mat.clone();
             mat.name = mat_name;
 
+            // Get base color
+            mat.base_color = doc_mat.pbr_metallic_roughness().base_color_factor();
+
+            // Get diffuse texture
             if let Some(diffuse_tex) = doc_mat.pbr_metallic_roughness().base_color_texture() {
                 // For now copy exising png files
                 let tex_source = diffuse_tex.texture().source().source();
@@ -131,8 +135,6 @@ impl GLTFImporter {
                     }
                 }
             }
-
-            // TODO: How to handle materials without texture (i.e. base color)?
 
             self.mats.push(mat);
         }
