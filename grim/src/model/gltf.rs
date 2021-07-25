@@ -193,9 +193,9 @@ impl GLTFImporter {
 
         let faces: Vec<Face> = faces_chunked
             .map(|f| Face {
-                v1: *f.get(0).unwrap(), // Clockwise -> Anti
+                v1: *f.get(2).unwrap(), // Clockwise -> Anti
                 v2: *f.get(1).unwrap(),
-                v3: *f.get(2).unwrap(),
+                v3: *f.get(0).unwrap(),
             })
             .collect();
 
@@ -238,16 +238,16 @@ impl GLTFImporter {
                 a: 1.0,
                 u: match uv.get(0) {
                     Some(u) => match u {
-                        u if *u > 1.0 => u.fract(),
-                        u if *u < 0.0 => u.fract() + 1.0,
+                        //u if *u > 1.0 => u.fract(),
+                        //u if *u < 0.0 => u.fract() + 1.0,
                         _ => *u,
                     },
                     _ => 0.0,
                 },
                 v: match uv.get(1) {
                     Some(v) => match v {
-                        v if *v > 1.0 => v.fract(),
-                        v if *v < 0.0 => v.fract() + 1.0,
+                        //v if *v > 1.0 => v.fract(),
+                        //v if *v < 0.0 => v.fract() + 1.0,
                         _ => *v,
                     },
                     _ => 0.0,
@@ -277,9 +277,9 @@ impl GLTFImporter {
 
 fn transform_verts(verts: &mut Vec<Vertex>) {
     let mat = na::Matrix4::new(
-        1.0,  0.0,  0.0, 0.0,
-        0.0, -1.0,  0.0, 0.0,
-        0.0,  0.0, -1.0, 0.0,
+        -1.0,  0.0,  0.0, 0.0,
+        0.0,  0.0,  1.0, 0.0,
+        0.0,  1.0,  0.0, 0.0,
         0.0,  0.0,  0.0, 1.0,
     );
 
@@ -289,12 +289,6 @@ fn transform_verts(verts: &mut Vec<Vertex>) {
         vert.x = *pos.get(0).unwrap();
         vert.y = *pos.get(1).unwrap();
         vert.z = *pos.get(2).unwrap();
-
-        // Update normal
-        let norm = mat.transform_vector(&na::Vector3::new(vert.nx, vert.ny, vert.nz));
-        vert.nx = *norm.get(0).unwrap();
-        vert.ny = *norm.get(1).unwrap();
-        vert.nz = *norm.get(2).unwrap();
     }
 }
 
@@ -307,11 +301,5 @@ fn transform_verts_with_mat(verts: &mut Vec<Vertex>, matrix: &[[f32; 4]; 4]) {
         vert.x = *pos.get(0).unwrap();
         vert.y = *pos.get(1).unwrap();
         vert.z = *pos.get(2).unwrap();
-
-        // Update normal
-        let norm = mat.transform_vector(&na::Vector3::new(vert.nx, vert.ny, vert.nz));
-        vert.nx = *norm.get(0).unwrap();
-        vert.ny = *norm.get(1).unwrap();
-        vert.nz = *norm.get(2).unwrap();
     }
 }
