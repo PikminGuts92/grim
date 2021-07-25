@@ -375,8 +375,20 @@ impl MiloMesh {
         }
 
         // Write groups
-        writer.write_uint32(1)?;
-        writer.write_uint8(self.faces.len() as u8)?;
+        let mut face_count = self.faces.len() as u32;
+        let group_count = (face_count as f32 / 255.0).ceil() as u32;
+
+        writer.write_uint32(group_count)?;
+
+        while face_count > 0 {
+            if face_count < 255 {
+                writer.write_uint8(face_count as u8)?;
+                break;
+            }
+
+            writer.write_uint8(255)?;
+            face_count -= 255;
+        }
 
         // Write bones
         writer.write_uint32(0)?;
