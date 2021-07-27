@@ -1,0 +1,14 @@
+[package]
+name = "grim_macros"
+version = "0.1.0"
+authors = ["PikminGuts92"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+# grim = { path = "../grim" } # TODO: Move shared traits to seperate packages
+thiserror = "1.0.26"
+quote = "1.0"
+syn = "=1.0.65"
