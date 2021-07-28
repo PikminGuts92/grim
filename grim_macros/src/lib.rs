@@ -1,6 +1,28 @@
 use proc_macro::TokenStream;
-use syn::{DeriveInput, parse::Parser, parse_macro_input};
+use syn::{AttributeArgs, DeriveInput, ItemFn, NestedMeta, parse::Parser, parse_macro_input};
 use quote::quote;
+
+// TODO: Implment custom macro for getting type
+/*#[proc_macro_attribute]
+pub fn milo_object(args: TokenStream, input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as AttributeArgs);
+
+    for arg in &args {
+        match arg {
+            NestedMeta::Lit(lit) => {
+
+            },
+            NestedMeta::Meta(meta) => {
+
+            },
+            _ => {
+
+            }
+        }
+    }
+
+    input
+}*/
 
 #[proc_macro_derive(Version)]
 pub fn version(input: TokenStream) -> TokenStream {

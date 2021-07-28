@@ -11,4 +11,4 @@ proc-macro = true
 # grim = { path = "../grim" } # TODO: Move shared traits to seperate packages
 thiserror = "1.0.26"
 quote = "1.0"
-syn = "=1.0.65"
+syn = { version = "=1.0.65", features = ["derive"] }
