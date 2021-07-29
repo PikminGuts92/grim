@@ -8,7 +8,6 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-# grim = { path = "../grim" } # TODO: Move shared traits to seperate packages
-thiserror = "1.0.26"
+grim_traits = { path = "../grim_traits" }
 quote = "1.0"
 syn = { version = "=1.0.65", features = ["derive"] }

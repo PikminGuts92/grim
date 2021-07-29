@@ -1924,6 +1924,7 @@ dependencies = [
  "flate2",
  "gltf 0.16.0",
  "grim_macros",
+ "grim_traits",
  "half",
  "image",
  "itertools",
@@ -1937,10 +1938,14 @@ dependencies = [
 name = "grim_macros"
 version = "0.1.0"
 dependencies = [
+ "grim_traits",
  "quote",
  "syn",
- "thiserror",
 ]
+
+[[package]]
+name = "grim_traits"
+version = "0.1.0"
 
 [[package]]
 name = "guillotiere"

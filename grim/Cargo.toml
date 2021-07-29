@@ -8,6 +8,7 @@ edition = "2018"
 flate2 = "1.0.20"
 gltf = { version = "0.16.0", features = ["extras", "import", "names", "utils" ] }
 grim_macros = { path = "../grim_macros" }
+grim_traits = { path = "../grim_traits" }
 half = "1.7.1"
 image = "0.23.14"
 itertools = "0.10.1"

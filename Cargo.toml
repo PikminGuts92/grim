@@ -2,6 +2,7 @@
 members = [
     "grim",
     "grim_macros",
+    "grim_traits",
     "mesh_tool",
     "preview_ui",
     "scene_tool"
