@@ -1,4 +1,4 @@
-use grim_macros::Version;
+use grim_macros::*;
 
 /*pub trait Version {
     fn get_version(&self) -> Option<u32>;
@@ -16,9 +16,10 @@ pub trait Metadata: AsObject<MetadataObject> {
     //fn get_metadata(&mut)
 }
 
-#[derive(Version)]
+//#[derive(Version)]
+#[version]
 pub struct MetadataObject {
-    pub version: Option<u32>,
+    // pub version: Option<u32>,
     pub revision: Option<u32>,
     pub r#type: String,
     // pub props: DataArray,
@@ -26,7 +27,10 @@ pub struct MetadataObject {
 }
 
 impl MetadataObject {
-    pub fn test(&self) {
-        let v = self.get_version().unwrap();
+    pub fn test(&mut self) {
+        //let v = self.get_version().unwrap();
+        //self.version = None;
+        let t = self.version;
+        let t = self.get_version();
     }
 }
