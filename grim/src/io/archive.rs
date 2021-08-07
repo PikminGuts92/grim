@@ -238,7 +238,7 @@ impl MiloArchive {
             magic = reader.read_int32()?;
             reader.seek(SeekFrom::Current(-4))?;
 
-            if magic >= 0 && magic <= 0xFF {
+            if (0..=0xFF).contains(&magic) {
                 break;
             }
         }

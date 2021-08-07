@@ -57,7 +57,7 @@ impl ArkDirNode {
 }
 
 pub fn get_file_name(path: &str) -> &str {
-    path.split("/").last().unwrap_or(&path)
+    path.split('/').last().unwrap_or(path)
 }
 
 fn main() {
@@ -89,7 +89,7 @@ fn main() {
         .run();
 }
 
-fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<bevy::app::AppExit>) {
+fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<bevy::app::AppExit>) {
     let ctx = &mut egui_ctx.ctx();
 
     // Top Toolbar
@@ -158,7 +158,7 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
 
     // Side panel
     egui::SidePanel::left("side_panel").min_width(400.0).resizable(true).show(ctx, |ui| {
-        egui::ScrollArea::auto_sized().show_viewport(ui, |ui, viewport| {
+        egui::ScrollArea::auto_sized().show_viewport(ui, |ui, _viewport| {
             //ui.horizontal(|ui| {
                 if settings.show_side_panel {
                     //ui.set_min_width(300.0);
@@ -216,7 +216,7 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
 */
     // Hide menu shadow
     let mut style: egui::Style = (*ctx.style()).clone();
-    let shadow_color = style.visuals.window_shadow.color.clone();
+    let shadow_color = style.visuals.window_shadow.color;
     style.visuals.window_shadow.color = shadow_color.linear_multiply(0.0);
     ctx.set_style(style);
 
@@ -228,7 +228,7 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
     });*/
 
     let size = ctx.used_size();
-    let size_pos = Pos2::new(size.x, size.y);
+    let _size_pos = Pos2::new(size.x, size.y);
 
     // Camera controls
     if settings.show_controls {
@@ -337,7 +337,7 @@ fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mu
     }
 }
 
-fn draw_ark_tree(mut state: &ResMut<AppState>, ctx: &mut &CtxRef, ui: &mut Ui) {
+fn draw_ark_tree(state: &ResMut<AppState>, ctx: &mut &CtxRef, ui: &mut Ui) {
     if let Some(root) = &state.root {
         let entries = &state.ark.as_ref().unwrap().entries;
 
@@ -502,15 +502,15 @@ fn get_dirs_and_files(dir: &str, ark: &Ark) -> (Vec<ArkDirNode>, Vec<usize>) {
         let files = ark.entries
             .iter()
             .enumerate()
-            .filter(|(i, e)| !e.path.contains("/")
+            .filter(|(_i, e)| !e.path.contains('/')
                 || (e.path.starts_with("./") && e.path.matches(|c: char | c.eq(&'/')).count() == 1))
             .map(|(i, _)| i)
             .collect::<Vec<usize>>();
 
         let dirs = ark.entries
             .iter()
-            .filter(|e| e.path.contains("/"))
-            .map(|e| e.path.split("/").next().unwrap())
+            .filter(|e| e.path.contains('/'))
+            .map(|e| e.path.split('/').next().unwrap())
             .unique()
             .filter(|s| !s.eq(&"."))
             .map(|s| ArkDirNode {
@@ -531,7 +531,7 @@ fn get_dirs_and_files(dir: &str, ark: &Ark) -> (Vec<ArkDirNode>, Vec<usize>) {
     let files = ark.entries
         .iter()
         .enumerate()
-        .filter(|(i, e)| e.path.starts_with(&dir_path)
+        .filter(|(_i, e)| e.path.starts_with(&dir_path)
             && e.path.matches(|c: char| c.eq(&'/')).count() == slash_count)
         .map(|(i, _)| i)
         .collect::<Vec<usize>>();
@@ -540,7 +540,7 @@ fn get_dirs_and_files(dir: &str, ark: &Ark) -> (Vec<ArkDirNode>, Vec<usize>) {
         .iter()
         .filter(|e| e.path.starts_with(&dir_path)
             && e.path.matches(|c: char| c.eq(&'/')).count() > slash_count)
-        .map(|e| e.path.split("/").skip(slash_count).next().unwrap())
+        .map(|e| e.path.split('/').nth(slash_count).unwrap())
         .unique()
         .map(|s| ArkDirNode {
             name: s.to_owned(),
@@ -613,7 +613,7 @@ fn drop_files(
     // Currently doesn't work on Windows
     // https://github.com/bevyengine/bevy/issues/2096
     for d in drag_drop_events.iter() {
-        if let FileDragAndDrop::DroppedFile { id, path_buf } = d {
+        if let FileDragAndDrop::DroppedFile { id: _, path_buf } = d {
             println!("Dropped \"{}\"", path_buf.to_str().unwrap())
         }
     }
@@ -621,7 +621,7 @@ fn drop_files(
 
 fn is_drop_event(dad_event: &FileDragAndDrop) -> bool {
     match dad_event {
-        FileDragAndDrop::DroppedFile { id, path_buf } => true,
+        FileDragAndDrop::DroppedFile { id: _, path_buf: _ } => true,
         _ => false
     }
 }

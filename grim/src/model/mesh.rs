@@ -21,7 +21,7 @@ pub fn open_model<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<d
 
 // TODO: Remove old code
 pub fn open_model_old<T>(model_path: T, mat_path: T) -> Result<AssetManagager, Box<dyn Error>> where T: AsRef<Path> {
-    let (model, buffers, images) = gltf::import(&model_path)?;
+    let (model, buffers, _images) = gltf::import(&model_path)?;
 
     let mut asset_manager = AssetManagager::new();
     let mut meshes = Vec::new();
@@ -36,7 +36,7 @@ pub fn open_model_old<T>(model_path: T, mat_path: T) -> Result<AssetManagager, B
             .primitives()
             .enumerate()
             .map(move |(p_idx, p)| (m_idx, m.name(), p_idx, p)))
-                .flat_map(|p| p) {
+                .flatten() {
         let mesh_suffix = match prim_idx {
             0 => String::default(),
             _ => format!("_{}", prim_idx),

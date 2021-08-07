@@ -69,10 +69,7 @@ impl SubApp for Milo2DirApp {
         let dir_path = Path::new(&self.dir_path);
 
         if let Some(file_name) = milo_path.file_name() {
-            let file_name = match  file_name.to_str() {
-                Some(name) => name,
-                None => "file"
-            };
+            let file_name = file_name.to_str().unwrap_or("file");
 
             println!("Opening {}", file_name);
         }
@@ -131,7 +128,7 @@ fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, convert_texures: b
 
 fn extract_packed_object(packed: &PackedObject, entry_dir: &PathBuf) -> Result<(), Box<dyn Error>> {
     let entry_name = &packed.name;
-    let entry_path = Path::join(&entry_dir, entry_name);
+    let entry_path = Path::join(entry_dir, entry_name);
 
     let mut stream = FileStream::from_path_as_read_write_create(&entry_path)?;
     stream.write_bytes(packed.data.as_slice())?;
@@ -153,7 +150,7 @@ fn extract_tex_object(tex: &Tex, entry_dir: &PathBuf, info: &SystemInfo) -> Resu
         None => tex.name.to_owned()
     };
 
-    let entry_path = Path::join(&entry_dir, &entry_name);
+    let entry_path = Path::join(entry_dir, &entry_name);
 
     let bitmap = match &tex.bitmap {
         Some(bitmap) => bitmap,

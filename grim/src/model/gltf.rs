@@ -71,7 +71,7 @@ impl GLTFImporter {
                 }
 
                 // Add meshes to asset manager
-                while meshes.len() > 0 {
+                while !meshes.is_empty() {
                     let mut mesh = meshes.remove(0);
                     transform_verts(&mut mesh.verts); // Update to DX coordinates
 
@@ -83,7 +83,7 @@ impl GLTFImporter {
         }
 
         // Add materials to asset manager
-        while self.mats.len() > 0 {
+        while !self.mats.is_empty() {
             asset_manager.add_material(self.mats.remove(0));
         }
 
@@ -168,7 +168,7 @@ impl GLTFImporter {
 
     fn read_mesh(&mut self, mesh: &Mesh) -> Vec<MiloMesh> {
         let mesh_name_prefix = match mesh.name() {
-            Some(name) => format!("{}", name),
+            Some(name) => name.to_string(),
             None => format!("mesh_{}", mesh.index()),
         };
 

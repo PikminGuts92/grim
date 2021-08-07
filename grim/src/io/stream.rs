@@ -520,7 +520,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_int16(&mut self, value: i16) -> Result<(), Box<dyn Error>> {
@@ -529,7 +529,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_int32(&mut self, value: i32) -> Result<(), Box<dyn Error>> {
@@ -538,7 +538,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_int64(&mut self, value: i64) -> Result<(), Box<dyn Error>> {
@@ -547,7 +547,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     // Write unsigned integers
@@ -557,7 +557,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_uint16(&mut self, value: u16) -> Result<(), Box<dyn Error>> {
@@ -566,7 +566,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_uint32(&mut self, value: u32) -> Result<(), Box<dyn Error>> {
@@ -575,7 +575,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_uint64(&mut self, value: u64) -> Result<(), Box<dyn Error>> {
@@ -584,7 +584,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     // Write floats
@@ -594,7 +594,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
 
@@ -604,7 +604,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_float64(&mut self, value: f64) -> Result<(), Box<dyn Error>> {
@@ -613,7 +613,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     // Write strings

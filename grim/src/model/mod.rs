@@ -105,7 +105,7 @@ impl AssetManagager {
         let groups = self.get_groups();
 
         for grp in groups {
-            let meshes: Vec<&MiloMesh> = (&grp.objects).iter().map(|m| self.get_mesh(&m).unwrap()).collect();
+            let meshes: Vec<&MiloMesh> = (&grp.objects).iter().map(|m| self.get_mesh(m).unwrap()).collect();
 
             for mesh in meshes {
                 // Write mat
