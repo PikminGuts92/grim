@@ -9,9 +9,9 @@ pub fn proc_trait_draw(input: TokenStream) -> TokenStream {
         quote! { pub draw_order: f32 },
     ];
 
-    let DeriveInput { ident, data, .. } = &mut parse_macro_input!(input);
+    let mut input = parse_macro_input!(input as DeriveInput);
 
-    if let syn::Data::Struct(s) = data {
+    if let syn::Data::Struct(s) = &mut input.data {
         if let syn::Fields::Named(fields) = &mut s.fields {
             for field in struct_fields {
                 fields.named.push(syn::Field::parse_named.parse(field.into()).unwrap())
@@ -19,7 +19,11 @@ pub fn proc_trait_draw(input: TokenStream) -> TokenStream {
         }
     }
 
+    let ident = input.ident.to_owned();
+
     let output = quote! {
+        #input
+
         impl grim_traits::scene::Draw for #ident {
             fn get_showing(&self) -> bool {
                 self.showing

@@ -1,8 +1,11 @@
 use proc_macro::TokenStream;
-use syn::{AttributeArgs, DeriveInput, NestedMeta, parse::Parser, parse_macro_input};
+use syn::{AttributeArgs, DeriveInput, Meta, MetaList, NestedMeta, parse::Parser, parse_macro_input};
 use quote::quote;
 
+mod common;
 mod scene;
+
+use common::*;
 
 // TODO: Implment custom macro for getting type
 /*#[proc_macro_attribute]
@@ -72,23 +75,21 @@ pub fn draw(input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn milo(args: TokenStream, input: TokenStream) -> TokenStream {
-    //scene::proc_trait_draw(input)
+    //return scene::proc_trait_draw(input);
 
     let args = parse_macro_input!(args as AttributeArgs);
-    for arg in &args {
-        match arg {
-            NestedMeta::Lit(lit) => {
+    let tags = get_meta_list(&args);
 
-            },
-            NestedMeta::Meta(meta) => {
-
+    if let Some(tag) = tags.first() {
+        match tag.as_str() {
+            "Draw" => {
+                return scene::proc_trait_draw(input);
             },
             _ => {
 
             }
         }
     }
-
 
     input
 }
