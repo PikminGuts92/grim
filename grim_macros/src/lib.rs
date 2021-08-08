@@ -1,3 +1,4 @@
+use crate::scene::get_object_tokens;
 use proc_macro::TokenStream;
 use syn::{AttributeArgs, DeriveInput, Meta, MetaList, NestedMeta, parse::Parser, parse_macro_input};
 use quote::quote;
@@ -68,27 +69,20 @@ pub fn version(_args: TokenStream, input: TokenStream) -> TokenStream {
     }).into()*/
 }
 
-#[proc_macro_derive(Draw)]
-pub fn draw(input: TokenStream) -> TokenStream {
-    scene::proc_trait_draw(input)
-}
-
 #[proc_macro_attribute]
 pub fn milo(args: TokenStream, input: TokenStream) -> TokenStream {
-    //return scene::proc_trait_draw(input);
-
     let args = parse_macro_input!(args as AttributeArgs);
-    let tags = get_meta_list(&args);
+    let paths = get_meta_paths(&args);
 
-    if let Some(tag) = tags.first() {
-        match tag.as_str() {
-            "Draw" => {
-                return scene::proc_trait_draw(input);
-            },
-            _ => {
+    // TODO: Inherit base fields like type/field/metadata
 
-            }
-        }
+    if let Some(path) = paths.first() {
+        let trait_name = path.segments.last().unwrap().ident.to_string();
+
+        return match get_object_tokens(&trait_name) {
+            Some(tokens) => tokens.apply(input, path),
+            _ => panic!("Unsupported trait!"),
+        };
     }
 
     input
@@ -96,29 +90,19 @@ pub fn milo(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn milo_super(args: TokenStream, input: TokenStream) -> TokenStream {
-    //scene::proc_trait_draw(input)
-
     let args = parse_macro_input!(args as AttributeArgs);
-    for arg in &args {
-        match arg {
-            NestedMeta::Lit(lit) => {
+    let paths = get_meta_paths(&args);
 
-            },
-            NestedMeta::Meta(meta) => {
+    let mut transformed_input = input;
 
-            },
-            _ => {
+    for path in &paths {
+        let trait_name = path.segments.last().unwrap().ident.to_string();
 
-            }
-        }
+        transformed_input = match get_object_tokens(&trait_name) {
+            Some(tokens) => tokens.apply(transformed_input, path),
+            _ => panic!("Unsupported trait!"),
+        };
     }
 
-
-    input
-}
-
-#[proc_macro]
-pub fn milo2(input: TokenStream) -> TokenStream {
-
-    input
+    transformed_input
 }
