@@ -1,5 +1,4 @@
-use crate::{Color4, Matrix, Vector4};
-use crate::scene::{Draw, Trans};
+use crate::scene::{Color4, Draw, Matrix, Trans, Vector4};
 
 pub struct BoneTrans {
     pub name: String,

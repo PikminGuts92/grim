@@ -1,4 +1,4 @@
-use crate::Sphere;
+use crate::scene::Sphere;
 
 pub trait Draw {
     fn get_showing(&self) -> bool;

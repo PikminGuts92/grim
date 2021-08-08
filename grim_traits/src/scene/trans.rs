@@ -1,4 +1,4 @@
-use crate::Matrix;
+use crate::scene::Matrix;
 
 pub enum TransConstraint {
     KConstraintNone,

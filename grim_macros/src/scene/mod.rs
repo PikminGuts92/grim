@@ -1,7 +1,11 @@
+mod anim;
 mod draw;
+mod group;
+mod mesh;
+mod poll;
+mod trans;
 
 use crate::*;
-pub use draw::*;
 use lazy_static::*;
 use proc_macro::TokenStream;
 use quote::quote;
@@ -13,7 +17,9 @@ type GetObjectTokensFn = fn() -> ObjectTokens;
 lazy_static! {
     static ref OBJECT_TOKENS: HashMap<&'static str, GetObjectTokensFn> = {
         let mut m: HashMap<&'static str, GetObjectTokensFn> = HashMap::new();
-        m.insert("Draw", get_draw_tokens);
+        m.insert("Anim", anim::get_anim_tokens);
+        m.insert("Draw", draw::get_draw_tokens);
+        m.insert("Trans", trans::get_trans_tokens);
         m
     };
 }
