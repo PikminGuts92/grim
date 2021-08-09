@@ -58,3 +58,17 @@ pub fn with_trait_implementation(input: &DeriveInput, trait_path: &Path, trait_i
         }
     }).into()
 }
+
+pub fn extend_token_stream_with_trait_implementation(
+    input: proc_macro2::TokenStream,
+    ident: &proc_macro2::Ident,
+    trait_path: &Path,
+    trait_impl: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+    quote! {
+        #input
+
+        impl #trait_path for #ident {
+            #trait_impl
+        }
+    }
+}

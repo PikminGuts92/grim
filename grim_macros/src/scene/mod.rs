@@ -19,6 +19,7 @@ lazy_static! {
         let mut m: HashMap<&'static str, GetObjectTokensFn> = HashMap::new();
         m.insert("Anim", anim::get_anim_tokens);
         m.insert("Draw", draw::get_draw_tokens);
+        m.insert("Mesh", mesh::get_mesh_tokens);
         m.insert("Trans", trans::get_trans_tokens);
         m
     };
@@ -46,7 +47,9 @@ impl ObjectTokens {
     }
 
     pub fn apply(self, input: TokenStream, trait_path: &Path) -> TokenStream {
+        // TODO: Fix for regular milo attribute
         let mut input = parse_macro_input!(input as DeriveInput);
+
         insert_as_struct_fields(&mut input, self.struct_fields);
         with_trait_implementation(&input, trait_path, self.trait_impl)
     }

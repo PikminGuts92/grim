@@ -93,16 +93,23 @@ pub fn milo_super(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
     let paths = get_meta_paths(&args);
 
-    let mut transformed_input = input;
+    let mut input = parse_macro_input!(input as DeriveInput);
+    let mut transformed_input = proc_macro2::TokenStream::new();
 
     for path in &paths {
         let trait_name = path.segments.last().unwrap().ident.to_string();
 
         transformed_input = match get_object_tokens(&trait_name) {
-            Some(tokens) => tokens.apply(transformed_input, path),
-            _ => panic!("Unsupported trait!"),
+            Some(tokens) => {
+                insert_as_struct_fields(&mut input, tokens.struct_fields);
+                extend_token_stream_with_trait_implementation(transformed_input, &input.ident, path, tokens.trait_impl)
+            },
+            _ => panic!("Unsupported \"{}\" trait!", &trait_name),
         };
     }
 
-    transformed_input
+    (quote! {
+        #input
+        #transformed_input
+    }).into()
 }
