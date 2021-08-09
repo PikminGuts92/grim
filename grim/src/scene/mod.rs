@@ -6,6 +6,7 @@ mod meta;
 mod milo;
 mod object_dir;
 mod object;
+mod poll;
 mod tex;
 mod trans;
 
@@ -17,5 +18,6 @@ pub use self::mesh::*;
 pub use self::milo::*;
 pub use self::object_dir::*;
 pub use self::object::*;
+pub use poll::*;
 pub use tex::*;
 pub use trans::*;

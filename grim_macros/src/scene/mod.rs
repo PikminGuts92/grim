@@ -21,6 +21,7 @@ lazy_static! {
         m.insert("Draw", draw::get_draw_tokens);
         m.insert("Group", group::get_group_tokens);
         m.insert("Mesh", mesh::get_mesh_tokens);
+        m.insert("Poll", poll::get_poll_tokens);
         m.insert("Trans", trans::get_trans_tokens);
         m
     };
