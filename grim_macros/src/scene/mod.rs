@@ -19,6 +19,7 @@ lazy_static! {
         let mut m: HashMap<&'static str, GetObjectTokensFn> = HashMap::new();
         m.insert("Anim", anim::get_anim_tokens);
         m.insert("Draw", draw::get_draw_tokens);
+        m.insert("Group", group::get_group_tokens);
         m.insert("Mesh", mesh::get_mesh_tokens);
         m.insert("Trans", trans::get_trans_tokens);
         m
