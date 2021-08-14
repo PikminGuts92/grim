@@ -5,6 +5,12 @@ pub struct Sphere {
     pub r: f32,
 }
 
+pub struct Color3 {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+}
+
 pub struct Color4 {
     pub r: f32,
     pub g: f32,
