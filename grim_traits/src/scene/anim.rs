@@ -1,9 +1,10 @@
+#[allow(non_camel_case_types)]
 pub enum AnimRate {
-    K30Fps,
-    K480Fpb,
-    K30FpsUi,
-    K1Fpb,
-    K30FpsTutorial,
+    k30_fps,
+    k480_fpb,
+    k30_fps_ui,
+    k1_fpb,
+    k30_fps_tutorial
 }
 
 pub trait Anim {

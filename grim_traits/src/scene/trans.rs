@@ -1,15 +1,16 @@
 use crate::scene::Matrix;
 
+#[allow(non_camel_case_types)]
 pub enum TransConstraint {
-    KConstraintNone,
-    KConstraintLocalRotate,
-    KConstraintParentWorld,
-    KConstraintLookAtTarget,
-    KConstraintShadowTarget,
-    KConstraintBillboardZ,
-    KConstraintBillboardXZ,
-    KConstraintBillboardXYZ,
-    KConstraintFastBillboardXYZ
+    kConstraintNone,
+    kConstraintLocalRotate,
+    kConstraintParentWorld,
+    kConstraintLookAtTarget,
+    kConstraintShadowTarget,
+    kConstraintBillboardZ,
+    kConstraintBillboardXZ,
+    kConstraintBillboardXYZ,
+    kConstraintFastBillboardXYZ
 }
 
 pub trait Trans {
