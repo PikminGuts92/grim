@@ -123,6 +123,8 @@ mod tests {
     }
 
     #[rstest]
+    #[case(2, [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], 0)]
+    //#[case(2, [0, 27, 27, 37, 37, 37, 37], [0, 216, 216, 352, 352, 352, 352], 352)]
     #[case(2, [0, 36, 36, 53, 53, 53, 53], [0, 216, 216, 352, 352, 352, 352], 352)]
     fn char_bones_recompute_sizes(#[case] input_compression: u32, #[case] input_counts: [u32; 7], #[case] expected_computed_sizes: [u32; 7], #[case] expected_computed_flags: u32) {
         let mut char_bone = CharBones {
