@@ -3,6 +3,7 @@ pub struct CharBones {
     pub compression: u32, // TODO: Convert to enum?
     pub counts: [u32; 7],
     pub computed_sizes: [u32; 7],
+    pub computed_flags: u32,
 }
 
 #[derive(Debug, Default)]
@@ -49,6 +50,23 @@ impl CharBones {
         }
 
         return 8;
+    }
+
+    pub fn recompute_sizes(&mut self) {
+        self.computed_sizes[0] = 0;
+
+        for i in 0..6 {
+            // Next count bleeds into computed sizes
+            // In C++ code, the same array was likely shared
+            let curr_count = self.counts[i];
+            let next_count = self.counts[i + 1];
+
+            let type_size = self.get_type_size(i as u32);
+
+            self.computed_sizes[i + 1] = self.computed_sizes[i] + (next_count - curr_count) * type_size;
+        }
+
+        self.computed_flags = (self.computed_sizes.last().unwrap() + 0xF) & 0xFFFF_FFF0;
     }
 }
 
@@ -102,5 +120,20 @@ mod tests {
 
         let result = char_bone.get_type_size(input_idx);
         assert_eq!(expected, result);
+    }
+
+    #[rstest]
+    #[case(2, [0, 36, 36, 53, 53, 53, 53], [0, 216, 216, 352, 352, 352, 352], 352)]
+    fn char_bones_recompute_sizes(#[case] input_compression: u32, #[case] input_counts: [u32; 7], #[case] expected_computed_sizes: [u32; 7], #[case] expected_computed_flags: u32) {
+        let mut char_bone = CharBones {
+            compression: input_compression,
+            counts: input_counts,
+            ..Default::default()
+        };
+
+        char_bone.recompute_sizes();
+
+        assert_eq!(expected_computed_sizes, char_bone.computed_sizes);
+        assert_eq!(expected_computed_flags, char_bone.computed_flags);
     }
 }
