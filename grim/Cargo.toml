@@ -16,3 +16,6 @@ lazy_static = "1.4.0"
 nalgebra = "0.28.0"
 regex = { version = "1.5.4", default-features = false, features = [ "std" ] }
 thiserror = "1.0.26"
+
+[dev-dependencies]
+rstest = "0.7" # Need old version to avoid conflict w/ bevy 0.5

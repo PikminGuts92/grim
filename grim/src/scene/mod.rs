@@ -1,4 +1,5 @@
 mod anim;
+mod char_bones_samples;
 mod draw;
 mod group;
 mod mesh;
@@ -11,6 +12,7 @@ mod tex;
 mod trans;
 
 pub use anim::*;
+pub use char_bones_samples::*;
 pub use draw::*;
 pub use group::*;
 pub use self::meta::*;
