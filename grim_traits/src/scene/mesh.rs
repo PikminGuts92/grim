@@ -1,4 +1,4 @@
-use crate::scene::{Color4, Draw, Matrix, Trans, Vector4};
+use super::{Color4, Draw, Matrix, MiloObject, Trans, Vector4};
 
 pub struct BoneTrans {
     pub name: String,
@@ -17,7 +17,7 @@ pub struct Vertex {
     pub uv: UV,
 }
 
-pub trait Mesh : Draw + Trans {
+pub trait Mesh : Draw + MiloObject + Trans {
     fn get_material(&self) -> &String;
     fn get_material_mut(&mut self) -> &mut String;
     fn set_material(&mut self, mat: String);

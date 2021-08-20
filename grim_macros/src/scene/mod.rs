@@ -2,11 +2,13 @@ mod anim;
 mod draw;
 mod group;
 mod mesh;
+mod milo_object;
 mod poll;
 mod trans;
 
 use crate::*;
 use lazy_static::*;
+pub use milo_object::*;
 use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::HashMap;
@@ -33,7 +35,6 @@ pub fn get_object_tokens(obj_type: &str) -> Option<ObjectTokens> {
         _ => None,
     }
 }
-
 
 pub struct ObjectTokens {
     pub struct_fields: Box<[TokenStream]>,

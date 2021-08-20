@@ -1,4 +1,4 @@
-use super::{Color3, Matrix};
+use super::{Color3, Matrix, MiloObject};
 
 #[allow(non_camel_case_types)]
 pub enum Blend {
@@ -61,7 +61,7 @@ pub enum ZMode {
     kZModeDecal,
 }
 
-pub trait Mat {
+pub trait Mat : MiloObject {
     fn get_blend(&self) -> &Blend;
     fn get_blend_mut(&mut self) -> &mut Blend;
     fn set_blend(&mut self, blend: Blend);

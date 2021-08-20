@@ -1,6 +1,6 @@
-use crate::scene::Sphere;
+use super::{MiloObject, Sphere};
 
-pub trait Draw {
+pub trait Draw : MiloObject {
     fn get_showing(&self) -> bool;
     fn set_showing(&mut self, showing: bool);
 

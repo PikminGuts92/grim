@@ -1,4 +1,5 @@
 use crate::scene::get_object_tokens;
+use crate::scene::get_milo_object_tokens;
 use proc_macro::TokenStream;
 use syn::{AttributeArgs, DeriveInput, Meta, MetaList, NestedMeta, parse::Parser, parse_macro_input};
 use quote::quote;
@@ -74,18 +75,32 @@ pub fn milo(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
     let paths = get_meta_paths(&args);
 
-    // TODO: Inherit base fields like type/field/metadata
+    let mut input = parse_macro_input!(input as DeriveInput);
+    let mut transformed_input = proc_macro2::TokenStream::new();
+
+    // Inherit base milo object trait
+    let path: syn::Path = syn::parse_str("grim_traits::scene::MiloObject").unwrap();
+
+    let base_tokens = get_milo_object_tokens();
+    insert_as_struct_fields(&mut input, base_tokens.struct_fields);
+    transformed_input = extend_token_stream_with_trait_implementation(transformed_input, &input.ident, &path, base_tokens.trait_impl);
 
     if let Some(path) = paths.first() {
         let trait_name = path.segments.last().unwrap().ident.to_string();
 
-        return match get_object_tokens(&trait_name) {
-            Some(tokens) => tokens.apply(input, path),
+        match get_object_tokens(&trait_name) {
+            Some(tokens) => {
+                insert_as_struct_fields(&mut input, tokens.struct_fields);
+                transformed_input = extend_token_stream_with_trait_implementation(transformed_input, &input.ident, path, tokens.trait_impl);
+            },
             _ => panic!("Unsupported trait!"),
         };
     }
 
-    input
+    (quote! {
+        #input
+        #transformed_input
+    }).into()
 }
 
 #[proc_macro_attribute]

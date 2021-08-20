@@ -1,4 +1,4 @@
-use crate::scene::Matrix;
+use super::{Matrix, MiloObject};
 
 #[allow(non_camel_case_types)]
 pub enum TransConstraint {
@@ -13,7 +13,7 @@ pub enum TransConstraint {
     kConstraintFastBillboardXYZ
 }
 
-pub trait Trans {
+pub trait Trans : MiloObject {
     fn get_local_transform(&self) -> &Matrix;
     fn get_local_transform_mut(&mut self) -> &mut Matrix;
     fn set_local_transform(&mut self, transform: Matrix);

@@ -1,3 +1,5 @@
+use super::MiloObject;
+
 #[allow(non_camel_case_types)]
 pub enum AnimRate {
     k30_fps,
@@ -7,7 +9,7 @@ pub enum AnimRate {
     k30_fps_tutorial
 }
 
-pub trait Anim {
+pub trait Anim : MiloObject {
     fn get_frame(&self) -> f32;
     fn set_frame(&mut self, frame: f32);
 

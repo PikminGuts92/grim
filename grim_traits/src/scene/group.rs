@@ -1,6 +1,6 @@
-use crate::scene::{Anim, Draw, Trans};
+use super::{Anim, Draw, MiloObject, Trans};
 
-pub trait Group : Anim + Draw + Trans {
+pub trait Group : Anim + Draw + MiloObject + Trans {
     fn get_environ(&self) -> &String;
     fn get_environ_mut(&mut self) -> &mut String;
     fn set_environ(&mut self, environ: String);
