@@ -77,7 +77,9 @@ impl SubApp for Milo2DirApp {
         let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(milo_path)?);
         let milo = MiloArchive::from_stream(&mut stream)?;
 
-        let system_info = self.get_system_info();
+        // TODO: First get system info from args then guess if not supplied
+        //let system_info = self.get_system_info();
+        let system_info = guess_system_info(&milo, &milo_path);
 
         let obj_dir = milo.unpack_directory(&system_info)?;
         //obj_dir.unpack_entries(&SYSTEM_INFO);
@@ -186,5 +188,37 @@ fn compare_entries_by_name(a : &grim::scene::Object, b: &grim::scene::Object) ->
             // Then compare name
             a_name.cmp(b_name)
         }
+    }
+}
+
+fn guess_system_info(milo: &MiloArchive, milo_path: &Path) -> SystemInfo {
+    let platform = match milo_path.extension() {
+        Some(ext) => match ext.to_str() {
+            Some("milo_ps2") => Platform::PS2,
+            Some("milo_ps3") => Platform::PS3,
+            Some("milo_xbox") => Platform::X360,
+            _ => Platform::X360,
+        },
+        None => Platform::X360,
+    };
+
+    // Default: Big endian - RB1
+    let mut endian = IOEndian::Big;
+    let mut version = 25;
+
+    if platform == Platform::X360 {
+        if let Some((end, ver)) = milo.guess_endian_version() {
+            endian = end;
+            version = ver;
+        }
+    } else if platform == Platform::PS2 {
+        endian = IOEndian::Little;
+        version = milo.get_version(endian).unwrap_or(24); // GH2
+    }
+
+    SystemInfo {
+        version,
+        platform,
+        endian,
     }
 }

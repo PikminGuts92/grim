@@ -1,6 +1,6 @@
 use crate::{SystemInfo};
 use crate::io::compression::*;
-use crate::io::stream::{BinaryStream, MemoryStream, SeekFrom, Stream};
+use crate::io::stream::{BinaryStream, IOEndian, MemoryStream, SeekFrom, Stream};
 use crate::scene::{Object, ObjectDir, ObjectDirBase, PackedObject};
 use std::cmp::Ordering;
 use std::error::Error;
@@ -418,5 +418,39 @@ impl MiloArchive {
         }
 
         Ok(())
+    }
+
+    pub fn guess_endian_version(&self) -> Option<(IOEndian, u32)> {
+        if self.data.len() < 4 {
+            return None;
+        }
+
+        let mut buffer = [0u8; 4];
+        buffer.copy_from_slice(&self.data[..4]);
+
+        let mut endian = IOEndian::Big;
+        let mut version = u32::from_be_bytes(buffer);
+        if version > 32 {
+            endian = IOEndian::Little;
+            version = u32::from_le_bytes(buffer);
+        }
+
+        Some((endian, version))
+    }
+
+    pub fn get_version(&self, endian: IOEndian) -> Option<u32> {
+        if self.data.len() < 4 {
+            return None;
+        }
+
+        let mut buffer = [0u8; 4];
+        buffer.copy_from_slice(&self.data[..4]);
+
+        let version = match endian {
+            IOEndian::Big => u32::from_be_bytes(buffer),
+            _ => u32::from_le_bytes(buffer),
+        };
+
+        Some(version)
     }
 }
