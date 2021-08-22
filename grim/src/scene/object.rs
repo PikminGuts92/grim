@@ -41,9 +41,19 @@ impl Object {
     pub fn unpack(&self, info: &SystemInfo) -> Option<Object> {
         match self {
             Object::Packed(packed) => {
-                let mut stream = MemoryStream::from_slice_as_read(&packed.data[..]);
+                let mut stream = MemoryStream::from_slice_as_read(packed.data.as_slice());
 
-                match &packed.object_type[..] {
+                match packed.object_type.as_str() {
+                    "Mat" => {
+                        let mut mat = MatObject::default();
+
+                        if mat.load(&mut stream, info).is_ok() {
+                            mat.name = packed.name.to_owned();
+                            Some(Object::Mat(mat))
+                        } else {
+                            None
+                        }
+                    },
                     "Tex" => {
                         match Tex::from_stream(&mut stream, info) {
                             Ok(mut tex) => {
