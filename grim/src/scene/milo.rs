@@ -1,7 +1,6 @@
 use crate::{SystemInfo};
 use crate::scene::*;
 
-#[derive(Debug)]
 pub struct Milo {
     pub entries: Vec<Object>,
     pub directory: Option<ObjectDir>, // Used starting w/ v24?

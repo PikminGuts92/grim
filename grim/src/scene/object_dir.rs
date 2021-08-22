@@ -11,12 +11,10 @@ lazy_static! {
     static ref MILO_ENTRY_REGEX: Regex = Regex::new(r"(?i)([/\\][a-z]+[/\\])[^/\\]+$").unwrap();
 }
 
-#[derive(Debug)]
 pub enum ObjectDir {
     ObjectDir(ObjectDirBase)
 }
 
-#[derive(Debug)]
 pub struct ObjectDirBase {
     pub entries: Vec<Object>,
     pub name: String,

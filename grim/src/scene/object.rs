@@ -2,8 +2,10 @@ use crate::{SystemInfo};
 use crate::io::MemoryStream;
 use crate::scene::*;
 
-#[derive(Debug)]
 pub enum Object {
+    Group(GroupObject),
+    Mat(MatObject),
+    Mesh(MeshObject),
     Tex(Tex),
     Packed(PackedObject),
 }
@@ -18,6 +20,9 @@ pub struct PackedObject {
 impl Object {
     pub fn get_name(&self) -> &str {
         match self {
+            Object::Group(grp) => &grp.name,
+            Object::Mat(mat) => &mat.name,
+            Object::Mesh(mesh) => &mesh.name,
             Object::Tex(tex) => &tex.name,
             Object::Packed(packed) => &packed.name,
         }
@@ -25,6 +30,9 @@ impl Object {
 
     pub fn get_type(&self) -> &str {
         match self {
+            Object::Group(_) => "Group",
+            Object::Mat(_) => "Mat",
+            Object::Mesh(_) => "Mesh",
             Object::Tex(_) => "Tex",
             Object::Packed(packed) => &packed.object_type,
         }
