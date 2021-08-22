@@ -1,6 +1,7 @@
 use super::{Color3, Matrix, MiloObject};
 
 #[allow(non_camel_case_types)]
+#[repr(u32)]
 pub enum Blend {
     kBlendDest,
     kBlendSrc,
@@ -11,7 +12,30 @@ pub enum Blend {
     kPreMultAlpha,
 }
 
+impl Default for Blend {
+    fn default() -> Blend {
+        Blend::kBlendDest
+    }
+}
+
+impl From<u32> for Blend {
+    fn from(num: u32) -> Blend {
+        match num {
+            0 => Blend::kBlendDest,
+            1 => Blend::kBlendSrc,
+            2 => Blend::kBlendAdd,
+            3 => Blend::kBlendSrcAlpha,
+            4 => Blend::kBlendSubtract,
+            5 => Blend::kBlendMultiply,
+            6 => Blend::kPreMultAlpha,
+            // Default
+            _ => Blend::kBlendDest,
+        }
+    }
+}
+
 #[allow(non_camel_case_types)]
+#[repr(u32)]
 pub enum PerPixel {
     kPerPixelOff,
     kPerPixelXbox360Only,
@@ -19,21 +43,79 @@ pub enum PerPixel {
     kPerPixelAllNgPlatforms,
 }
 
+impl Default for PerPixel {
+    fn default() -> PerPixel {
+        PerPixel::kPerPixelOff
+    }
+}
+
+impl From<u32> for PerPixel {
+    fn from(num: u32) -> PerPixel {
+        match num {
+            0 => PerPixel::kPerPixelOff,
+            1 => PerPixel::kPerPixelXbox360Only,
+            2 => PerPixel::kPerPixelPs3Only,
+            3 => PerPixel::kPerPixelAllNgPlatforms,
+            // Default
+            _ => PerPixel::kPerPixelOff,
+        }
+    }
+}
+
 #[allow(non_camel_case_types)]
+#[repr(u32)]
 pub enum ShaderVariation {
     kShaderVariationNone,
     kShaderVariationSkin,
     kShaderVariationHair,
 }
 
+impl Default for ShaderVariation {
+    fn default() -> ShaderVariation {
+        ShaderVariation::kShaderVariationNone
+    }
+}
+
+impl From<u32> for ShaderVariation {
+    fn from(num: u32) -> ShaderVariation {
+        match num {
+            0 => ShaderVariation::kShaderVariationNone,
+            1 => ShaderVariation::kShaderVariationSkin,
+            2 => ShaderVariation::kShaderVariationHair,
+            // Default
+            _ => ShaderVariation::kShaderVariationNone,
+        }
+    }
+}
+
 #[allow(non_camel_case_types)]
+#[repr(u32)]
 pub enum StencilMode {
     kStencilIgnore,
     kStencilWrite,
     kStencilTest
 }
 
+impl Default for StencilMode {
+    fn default() -> StencilMode {
+        StencilMode::kStencilIgnore
+    }
+}
+
+impl From<u32> for StencilMode {
+    fn from(num: u32) -> StencilMode {
+        match num {
+            0 => StencilMode::kStencilIgnore,
+            1 => StencilMode::kStencilWrite,
+            2 => StencilMode::kStencilTest,
+            // Default
+            _ => StencilMode::kStencilIgnore,
+        }
+    }
+}
+
 #[allow(non_camel_case_types)]
+#[repr(u32)]
 pub enum TexGen {
     kTexGenNone,
     kTexGenXfm,
@@ -43,7 +125,29 @@ pub enum TexGen {
     kTexGenEnviron,
 }
 
+impl Default for TexGen {
+    fn default() -> TexGen {
+        TexGen::kTexGenNone
+    }
+}
+
+impl From<u32> for TexGen {
+    fn from(num: u32) -> TexGen {
+        match num {
+            0 => TexGen::kTexGenNone,
+            1 => TexGen::kTexGenXfm,
+            2 => TexGen::kTexGenSphere,
+            3 => TexGen::kTexGenProjected,
+            4 => TexGen::kTexGenXfmOrigin,
+            5 => TexGen::kTexGenEnviron,
+            // Default
+            _ => TexGen::kTexGenNone,
+        }
+    }
+}
+
 #[allow(non_camel_case_types)]
+#[repr(u32)]
 pub enum TexWrap {
     kTexWrapClamp,
     kTexWrapRepeat,
@@ -52,13 +156,54 @@ pub enum TexWrap {
     kTexWrapMirror,
 }
 
+impl Default for TexWrap {
+    fn default() -> TexWrap {
+        TexWrap::kTexWrapClamp
+    }
+}
+
+impl From<u32> for TexWrap {
+    fn from(num: u32) -> TexWrap {
+        match num {
+            0 => TexWrap::kTexWrapClamp,
+            1 => TexWrap::kTexWrapRepeat,
+            2 => TexWrap::kTexBorderBlack,
+            3 => TexWrap::kTexBorderWhite,
+            4 => TexWrap::kTexWrapMirror,
+            // Default
+            _ => TexWrap::kTexWrapClamp,
+        }
+    }
+}
+
 #[allow(non_camel_case_types)]
+#[repr(u32)]
 pub enum ZMode {
     kZModeDisable,
     kZModeNormal,
     kZModeTransparent,
     kZModeForce,
     kZModeDecal,
+}
+
+impl Default for ZMode {
+    fn default() -> ZMode {
+        ZMode::kZModeDisable
+    }
+}
+
+impl From<u32> for ZMode {
+    fn from(num: u32) -> ZMode {
+        match num {
+            0 => ZMode::kZModeDisable,
+            1 => ZMode::kZModeNormal,
+            2 => ZMode::kZModeTransparent,
+            3 => ZMode::kZModeForce,
+            4 => ZMode::kZModeDecal,
+            // Default
+            _ => ZMode::kZModeDisable,
+        }
+    }
 }
 
 pub trait Mat : MiloObject {
