@@ -102,7 +102,7 @@ fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, convert_texures: b
         }
 
         // First try parsing object
-        if convert_texures {
+        if convert_texures && obj.get_type() == "Tex" {
             if let Some(unpacked) = obj.unpack(info) {
                 match &unpacked {
                     Object::Tex(tex) => {
@@ -116,7 +116,7 @@ fn extract_contents(milo_dir: &ObjectDir, output_path: &Path, convert_texures: b
                 }
             }
         }
-        
+
         // Just write raw bytes if can't convert or not selected
         if let Object::Packed(packed) = obj {
             if extract_packed_object(packed, &entry_dir).is_err() {
