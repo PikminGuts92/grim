@@ -28,6 +28,34 @@ impl From<u32> for Volume {
     }
 }
 
+#[allow(non_camel_case_types)]
+#[repr(u32)]
+pub enum Mutable {
+    kMutableNone = 0,
+    kMutableVerts = 31,
+    kMutableFaces = 32,
+    kMutableAll = 63,
+}
+
+impl Default for Mutable {
+    fn default() -> Mutable {
+        Mutable::kMutableNone
+    }
+}
+
+impl From<u32> for Mutable {
+    fn from(num: u32) -> Mutable {
+        match num {
+             0 => Mutable::kMutableNone,
+            31 => Mutable::kMutableVerts,
+            32 => Mutable::kMutableFaces,
+            63 => Mutable::kMutableAll,
+            // Default
+            _ => Mutable::kMutableNone,
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct BoneTrans {
     pub name: String,
@@ -57,8 +85,9 @@ pub trait Mesh : Draw + MiloObject + Trans {
     fn get_geom_owner_mut(&mut self) -> &mut String;
     fn set_geom_owner(&mut self, geom_owner: String);
 
-    fn get_mutable(&self) -> u32;
-    fn set_mutable(&mut self, mutable: u32);
+    fn get_mutable(&self) -> &Mutable;
+    fn get_mutable_mut(&mut self) -> &mut Mutable;
+    fn set_mutable(&mut self, mutable: Mutable);
 
     fn get_volume(&self) -> &Volume;
     fn get_volume_mut(&mut self) -> &mut Volume;

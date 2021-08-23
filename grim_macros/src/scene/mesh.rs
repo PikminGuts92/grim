@@ -6,7 +6,7 @@ pub fn get_mesh_tokens() -> ObjectTokens {
     let struct_fields = [
         quote! { pub mat: String }.into(),
         quote! { pub geom_owner: String }.into(),
-        quote! { pub mutable: u32 }.into(),
+        quote! { pub mutable: grim_traits::scene::Mutable }.into(),
         quote! { pub volume: grim_traits::scene::Volume }.into(),
         quote! { pub vertices: Vec<grim_traits::scene::Vertex> }.into(),
         quote! { pub faces: Vec<[u16; 3]> }.into(),
@@ -36,10 +36,13 @@ pub fn get_mesh_tokens() -> ObjectTokens {
             self.geom_owner = geom_owner;
         }
 
-        fn get_mutable(&self) -> u32 {
-            self.mutable
+        fn get_mutable(&self) -> &grim_traits::scene::Mutable {
+            &self.mutable
         }
-        fn set_mutable(&mut self, mutable: u32) {
+        fn get_mutable_mut(&mut self) -> &mut grim_traits::scene::Mutable {
+            &mut self.mutable
+        }
+        fn set_mutable(&mut self, mutable: grim_traits::scene::Mutable) {
             self.mutable = mutable;
         }
 

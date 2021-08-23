@@ -35,7 +35,7 @@ impl Default for MeshObject {
             mat: String::default(),
             geom_owner: String::default(),
 
-            mutable: 0,
+            mutable: Mutable::kMutableNone,
             volume: Volume::kVolumeTriangles,
 
             vertices: Vec::new(),

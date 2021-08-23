@@ -28,7 +28,7 @@ impl ObjectReadWrite for MeshObject {
         self.mat = reader.read_prefixed_string()?;
         self.geom_owner = reader.read_prefixed_string()?;
 
-        self.mutable = reader.read_uint32()?;
+        self.mutable = reader.read_uint32()?.into();
         self.volume = reader.read_uint32()?.into();
 
         let bsp = reader.read_uint8()?;
