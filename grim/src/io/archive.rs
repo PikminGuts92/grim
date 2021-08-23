@@ -185,8 +185,9 @@ impl MiloArchive {
                 reader.read_prefixed_string()?;
             }
         } else {
-            // Parse directory info (entry)
-
+            // TODO: Parse directory info (entry)
+            let entry_size = self.guess_entry_size(&mut reader)?.unwrap();
+            reader.seek(SeekFrom::Current((entry_size + 4) as i64))?;
         }
 
         // Get data for entries
