@@ -5,7 +5,7 @@ use quote::quote;
 pub fn get_draw_tokens() -> ObjectTokens {
     let struct_fields = [
         quote! { pub showing: bool }.into(),
-        quote! { pub bounding: grim_traits::scene::Sphere }.into(),
+        quote! { pub sphere: grim_traits::scene::Sphere }.into(),
         quote! { pub draw_order: f32 }.into(),
     ];
 
@@ -18,16 +18,16 @@ pub fn get_draw_tokens() -> ObjectTokens {
             self.showing = showing;
         }
 
-        fn get_bounding(&self) -> &grim_traits::scene::Sphere {
-            &self.bounding
+        fn get_sphere(&self) -> &grim_traits::scene::Sphere {
+            &self.sphere
         }
 
-        fn get_bounding_mut(&mut self) -> &mut grim_traits::scene::Sphere {
-            &mut self.bounding
+        fn get_sphere_mut(&mut self) -> &mut grim_traits::scene::Sphere {
+            &mut self.sphere
         }
 
-        fn set_bounding(&mut self, bounding: grim_traits::scene::Sphere) {
-            self.bounding = bounding;
+        fn set_sphere(&mut self, sphere: grim_traits::scene::Sphere) {
+            self.sphere = sphere;
         }
 
         fn get_draw_order(&self) -> f32 {

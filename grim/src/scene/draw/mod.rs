@@ -17,7 +17,7 @@ impl Default for DrawObject {
 
             // Draw object
             showing: true,
-            bounding: Sphere::default(),
+            sphere: Sphere::default(),
             draw_order: 0.0,
         }
     }
