@@ -1,5 +1,29 @@
+mod io;
+
 use grim_macros::*;
-use grim_traits::scene::Trans;
+use grim_traits::scene::*;
+pub use io::*;
 
 #[milo(Trans)]
 pub struct TransObject {}
+
+impl Default for TransObject {
+    fn default() -> TransObject {
+        TransObject {
+            // Base object
+            name: String::default(),
+            type2: String::default(),
+            note: String::default(),
+
+            // Trans object
+            local_xfm: Matrix::default(),
+            world_xfm: Matrix::default(),
+
+            constraint: TransConstraint::default(),
+            target: String::default(),
+
+            preserve_scale: false,
+            parent: String::default(),
+        }
+    }
+}

@@ -4,8 +4,8 @@ use quote::quote;
 
 pub fn get_trans_tokens() -> ObjectTokens {
     let struct_fields = [
-        quote! { pub local_transform: grim_traits::scene::Matrix }.into(),
-        quote! { pub world_transform: grim_traits::scene::Matrix }.into(),
+        quote! { pub local_xfm: grim_traits::scene::Matrix }.into(),
+        quote! { pub world_xfm: grim_traits::scene::Matrix }.into(),
         quote! { pub constraint: grim_traits::scene::TransConstraint }.into(),
         quote! { pub target: String }.into(),
         quote! { pub preserve_scale: bool }.into(),
@@ -13,24 +13,24 @@ pub fn get_trans_tokens() -> ObjectTokens {
     ];
 
     let trait_impl = quote! {
-        fn get_local_transform(&self) -> &grim_traits::scene::Matrix {
-            &self.local_transform
+        fn get_local_xfm(&self) -> &grim_traits::scene::Matrix {
+            &self.local_xfm
         }
-        fn get_local_transform_mut(&mut self) -> &mut grim_traits::scene::Matrix {
-            &mut self.local_transform
+        fn get_local_xfm_mut(&mut self) -> &mut grim_traits::scene::Matrix {
+            &mut self.local_xfm
         }
-        fn set_local_transform(&mut self, transform: grim_traits::scene::Matrix) {
-            self.local_transform = transform;
+        fn set_local_xfm(&mut self, xfm: grim_traits::scene::Matrix) {
+            self.local_xfm = xfm;
         }
 
-        fn get_world_transform(&self) -> &grim_traits::scene::Matrix {
-            &self.world_transform
+        fn get_world_xfm(&self) -> &grim_traits::scene::Matrix {
+            &self.world_xfm
         }
-        fn get_world_transform_mut(&mut self) -> &mut grim_traits::scene::Matrix {
-            &mut self.world_transform
+        fn get_world_xfm_mut(&mut self) -> &mut grim_traits::scene::Matrix {
+            &mut self.world_xfm
         }
-        fn set_world_transform(&mut self, transform: grim_traits::scene::Matrix) {
-            self.world_transform = transform;
+        fn set_world_xfm(&mut self, xfm: grim_traits::scene::Matrix) {
+            self.world_xfm = xfm;
         }
 
         fn get_constraint(&self) -> &grim_traits::scene::TransConstraint {

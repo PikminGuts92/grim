@@ -7,6 +7,7 @@ pub enum Object {
     Mat(MatObject),
     Mesh(MeshObject),
     Tex(Tex),
+    Trans(TransObject),
     Packed(PackedObject),
 }
 
@@ -24,6 +25,7 @@ impl Object {
             Object::Mat(mat) => &mat.name,
             Object::Mesh(mesh) => &mesh.name,
             Object::Tex(tex) => &tex.name,
+            Object::Trans(trans) => &trans.name,
             Object::Packed(packed) => &packed.name,
         }
     }
@@ -34,6 +36,7 @@ impl Object {
             Object::Mat(_) => "Mat",
             Object::Mesh(_) => "Mesh",
             Object::Tex(_) => "Tex",
+            Object::Trans(_) => "Trans",
             Object::Packed(packed) => &packed.object_type,
         }
     }
@@ -61,6 +64,16 @@ impl Object {
                                 Some(Object::Tex(tex))
                             },
                             Err(_) => None,
+                        }
+                    },
+                    "Trans" => {
+                        let mut trans = TransObject::default();
+
+                        if trans.load(&mut stream, info).is_ok() {
+                            trans.name = packed.name.to_owned();
+                            Some(Object::Trans(trans))
+                        } else {
+                            None
                         }
                     },
                     _ => None

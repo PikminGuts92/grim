@@ -17,6 +17,7 @@ impl ObjectReadWrite for MatObject {
 
         let version = reader.read_uint32()?;
         if !is_version_supported(version) {
+            // TODO: Switch to custom error
             panic!("Mat version \"{}\" is not supported!", version);
         }
 

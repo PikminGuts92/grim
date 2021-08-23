@@ -1,6 +1,7 @@
 use super::{Matrix, MiloObject};
 
 #[allow(non_camel_case_types)]
+#[repr(u32)]
 pub enum TransConstraint {
     kConstraintNone,
     kConstraintLocalRotate,
@@ -13,14 +14,38 @@ pub enum TransConstraint {
     kConstraintFastBillboardXYZ
 }
 
-pub trait Trans : MiloObject {
-    fn get_local_transform(&self) -> &Matrix;
-    fn get_local_transform_mut(&mut self) -> &mut Matrix;
-    fn set_local_transform(&mut self, transform: Matrix);
+impl Default for TransConstraint {
+    fn default() -> TransConstraint {
+        TransConstraint::kConstraintNone
+    }
+}
 
-    fn get_world_transform(&self) -> &Matrix;
-    fn get_world_transform_mut(&mut self) -> &mut Matrix;
-    fn set_world_transform(&mut self, transform: Matrix);
+impl From<u32> for TransConstraint {
+    fn from(num: u32) -> TransConstraint {
+        match num {
+            0 => TransConstraint::kConstraintNone,
+            1 => TransConstraint::kConstraintLocalRotate,
+            2 => TransConstraint::kConstraintParentWorld,
+            3 => TransConstraint::kConstraintLookAtTarget,
+            4 => TransConstraint::kConstraintShadowTarget,
+            5 => TransConstraint::kConstraintBillboardZ,
+            6 => TransConstraint::kConstraintBillboardXZ,
+            7 => TransConstraint::kConstraintBillboardXYZ,
+            8 => TransConstraint::kConstraintFastBillboardXYZ,
+            // Default
+            _ => TransConstraint::kConstraintNone,
+        }
+    }
+}
+
+pub trait Trans : MiloObject {
+    fn get_local_xfm(&self) -> &Matrix;
+    fn get_local_xfm_mut(&mut self) -> &mut Matrix;
+    fn set_local_xfm(&mut self, transform: Matrix);
+
+    fn get_world_xfm(&self) -> &Matrix;
+    fn get_world_xfm_mut(&mut self) -> &mut Matrix;
+    fn set_world_xfm(&mut self, transform: Matrix);
 
     fn get_constraint(&self) -> &TransConstraint;
     fn get_constraint_mut(&mut self) -> &mut TransConstraint;
