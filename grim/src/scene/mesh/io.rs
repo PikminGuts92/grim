@@ -53,11 +53,8 @@ impl ObjectReadWrite for MeshObject {
             // TODO: Read 16-bit floating-point normals
             reader.seek(SeekFrom::Current(8))?;
 
-            // Read color?
-            vec.color.r = (reader.read_uint8()? as f32) / 255.0;
-            vec.color.g = (reader.read_uint8()? as f32) / 255.0;
-            vec.color.b = (reader.read_uint8()? as f32) / 255.0;
-            vec.color.a = (reader.read_uint8()? as f32) / 255.0;
+            // TODO: Parse weights?
+            reader.seek(SeekFrom::Current(4))?;
 
             // TODO: Figure out what this value is
             reader.seek(SeekFrom::Current(4))?;

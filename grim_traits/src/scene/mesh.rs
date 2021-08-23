@@ -72,8 +72,9 @@ pub struct UV {
 pub struct Vertex {
     pub pos: Vector4,
     pub normals: Vector4,
-    pub color: Color4,
     pub uv: UV,
+    pub bones: [u16; 4],
+    pub weights: [f32; 4],
 }
 
 pub trait Mesh : Draw + MiloObject + Trans {
