@@ -79,6 +79,12 @@ impl Default for MatObject {
     fn default() -> MatObject {
         // TODO: Match default values to C++ code
         MatObject {
+            // Base object
+            name: String::default(),
+            type2: String::default(),
+            note: String::default(),
+
+            // Mat object
             blend: Blend::default(),
             color: Color3::white(),
             alpha: 1.0,
@@ -146,8 +152,6 @@ impl Default for MatObject {
 
             alpha_mask: String::default(),
             ps3_force_trilinear: false,
-
-            ..Default::default() // Base object
         }
     }
 }
