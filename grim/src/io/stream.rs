@@ -465,6 +465,16 @@ impl<'a> BinaryStream<'a> {
     }
 
     // Read floats
+    pub fn read_float16(&mut self) -> Result<f16, Box<dyn Error>> {
+        let mut buffer = [0u8; 2];
+        self.read_bytes_into_slice(&mut buffer)?;
+
+        match self.endian {
+            IOEndian::Little => Ok(f16::from_le_bytes(buffer)),
+            IOEndian::Big => Ok(f16::from_be_bytes(buffer)),
+        }
+    }
+
     pub fn read_float32(&mut self) -> Result<f32, Box<dyn Error>> {
         let mut buffer = [0u8; 4];
         self.read_bytes_into_slice(&mut buffer)?;
@@ -596,7 +606,6 @@ impl<'a> BinaryStream<'a> {
 
         self.write_bytes(&data)
     }
-
 
     pub fn write_float32(&mut self, value: f32) -> Result<(), Box<dyn Error>> {
         let data = match self.endian {

@@ -37,30 +37,91 @@ impl ObjectReadWrite for MeshObject {
         }
 
         let vert_count = reader.read_uint32()?;
-        reader.seek(SeekFrom::Current(9))?; // (true, 36, 1)
+        let is_ng = reader.read_boolean()?;
+
+        // If next gen, read stride + 1 constant
+        if is_ng {
+            reader.seek(SeekFrom::Current(8))?; // (true, 36, 1)
+        }
 
         self.vertices.clear();
         for _ in 0..vert_count {
             let mut vec = Vert::default();
 
+            // Position
             vec.pos.x = reader.read_float32()?;
             vec.pos.y = reader.read_float32()?;
             vec.pos.z = reader.read_float32()?;
 
-            // TODO: Read 16-bit floating-point uvs
-            reader.seek(SeekFrom::Current(4))?;
+            if !is_ng {
+                // Normals
+                vec.normals.x = reader.read_float32()?;
+                vec.normals.y = reader.read_float32()?;
+                vec.normals.z = reader.read_float32()?;
 
-            // TODO: Read 16-bit floating-point normals
-            reader.seek(SeekFrom::Current(8))?;
+                // Weights
+                vec.weights[0] = reader.read_float32()?;
+                vec.weights[1] = reader.read_float32()?;
+                vec.weights[2] = reader.read_float32()?;
+                vec.weights[3] = reader.read_float32()?;
 
-            // TODO: Parse weights?
-            reader.seek(SeekFrom::Current(4))?;
+                // UVs
+                vec.uv.u = reader.read_float32()?;
+                vec.uv.v = reader.read_float32()?;
 
-            // TODO: Figure out what this value is
-            reader.seek(SeekFrom::Current(4))?;
+                // Bone indices
+                vec.bones[0] = reader.read_uint16()?;
+                vec.bones[1] = reader.read_uint16()?;
+                vec.bones[2] = reader.read_uint16()?;
+                vec.bones[3] = reader.read_uint16()?;
 
-            // TODO: Figure out what these values are
-            reader.seek(SeekFrom::Current(4))?;
+                // Skip unknown data for now
+                reader.seek(SeekFrom::Current(16))?;
+            } else {
+                let uv_check = reader.read_int32()?;
+
+                if uv_check == -1 {
+                    // UVs
+                    vec.uv.u = reader.read_float16()?.into();
+                    vec.uv.v = reader.read_float16()?.into();
+
+                    // Normals
+                    vec.normals.x = reader.read_float16()?.into();
+                    vec.normals.y = reader.read_float16()?.into();
+                    vec.normals.z = reader.read_float16()?.into();
+
+                    // Not sure
+                    reader.seek(SeekFrom::Current(6))?;
+
+                    // Bone indices
+                    vec.bones[0] = reader.read_uint8()?.into();
+                    vec.bones[1] = reader.read_uint8()?.into();
+                    vec.bones[2] = reader.read_uint8()?.into();
+                    vec.bones[3] = reader.read_uint8()?.into();
+                } else {
+                    // Read as regular uvs
+                    reader.seek(SeekFrom::Current(-4))?;
+
+                    // UVs
+                    vec.uv.u = reader.read_float16()?.into();
+                    vec.uv.v = reader.read_float16()?.into();
+
+                    // Normals
+                    vec.normals.x = reader.read_float16()?.into();
+                    vec.normals.y = reader.read_float16()?.into();
+                    vec.normals.z = reader.read_float16()?.into();
+                    reader.seek(SeekFrom::Current(2))?; // Not sure
+
+                    // Not sure
+                    reader.seek(SeekFrom::Current(4))?;
+
+                    // Bone indices
+                    vec.bones[0] = reader.read_uint16()?;
+                    vec.bones[1] = reader.read_uint16()?;
+                    vec.bones[2] = reader.read_uint16()?;
+                    vec.bones[3] = reader.read_uint16()?;
+                }
+            }
 
             self.vertices.push(vec);
         }
