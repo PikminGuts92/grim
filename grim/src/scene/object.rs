@@ -70,6 +70,16 @@ impl Object {
                             None
                         }
                     },
+                    "Mesh" => {
+                        let mut mesh = MeshObject::default();
+
+                        if mesh.load(&mut stream, info).is_ok() {
+                            mesh.name = packed.name.to_owned();
+                            Some(Object::Mesh(mesh))
+                        } else {
+                            None
+                        }
+                    },
                     "Tex" => {
                         match Tex::from_stream(&mut stream, info) {
                             Ok(mut tex) => {

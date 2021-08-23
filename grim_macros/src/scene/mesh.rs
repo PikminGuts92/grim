@@ -4,33 +4,53 @@ use quote::quote;
 
 pub fn get_mesh_tokens() -> ObjectTokens {
     let struct_fields = [
-        quote! { pub material: String }.into(),
-        quote! { pub mesh_name: String }.into(),
+        quote! { pub mat: String }.into(),
+        quote! { pub geom_owner: String }.into(),
+        quote! { pub mutable: u32 }.into(),
+        quote! { pub volume: grim_traits::scene::Volume }.into(),
         quote! { pub vertices: Vec<grim_traits::scene::Vertex> }.into(),
         quote! { pub faces: Vec<[u16; 3]> }.into(),
         quote! { pub face_groups: Vec<u8> }.into(),
         quote! { pub bones: Vec<grim_traits::scene::BoneTrans> }.into(),
+        quote! { pub keep_mesh_data: bool }.into(),
     ];
 
     let trait_impl = quote! {
-        fn get_material(&self) -> &String {
-            &self.material
+        fn get_mat(&self) -> &String {
+            &self.mat
         }
-        fn get_material_mut(&mut self) -> &mut String {
-            &mut self.material
+        fn get_mat_mut(&mut self) -> &mut String {
+            &mut self.mat
         }
-        fn set_material(&mut self, material: String) {
-            self.material = material;
+        fn set_mat(&mut self, mat: String) {
+            self.mat = mat;
         }
 
-        fn get_mesh_name(&self) -> &String {
-            &self.mesh_name
+        fn get_geom_owner(&self) -> &String {
+            &self.geom_owner
         }
-        fn get_mesh_name_mut(&mut self) -> &mut String {
-            &mut self.mesh_name
+        fn get_geom_owner_mut(&mut self) -> &mut String {
+            &mut self.geom_owner
         }
-        fn set_mesh_name(&mut self, mesh_name: String) {
-            self.mesh_name = mesh_name;
+        fn set_geom_owner(&mut self, geom_owner: String) {
+            self.geom_owner = geom_owner;
+        }
+
+        fn get_mutable(&self) -> u32 {
+            self.mutable
+        }
+        fn set_mutable(&mut self, mutable: u32) {
+            self.mutable = mutable;
+        }
+
+        fn get_volume(&self) -> &grim_traits::scene::Volume {
+            &self.volume
+        }
+        fn get_volume_mut(&mut self) -> &mut grim_traits::scene::Volume {
+            &mut self.volume
+        }
+        fn set_volume(&mut self, volume: grim_traits::scene::Volume) {
+            self.volume = volume;
         }
 
         fn get_vertices(&self) -> &Vec<grim_traits::scene::Vertex> {
@@ -71,6 +91,13 @@ pub fn get_mesh_tokens() -> ObjectTokens {
         }
         fn set_bones(&mut self, bones: Vec<grim_traits::scene::BoneTrans>) {
             self.bones = bones;
+        }
+
+        fn get_keep_mesh_data(&self) -> bool {
+            self.keep_mesh_data
+        }
+        fn set_keep_mesh_data(&mut self, keep_mesh_data: bool) {
+            self.keep_mesh_data = keep_mesh_data;
         }
     };
 
