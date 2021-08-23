@@ -41,7 +41,7 @@ impl ObjectReadWrite for MeshObject {
 
         self.vertices.clear();
         for _ in 0..vert_count {
-            let mut vec = Vertex::default();
+            let mut vec = Vert::default();
 
             vec.pos.x = reader.read_float32()?;
             vec.pos.y = reader.read_float32()?;

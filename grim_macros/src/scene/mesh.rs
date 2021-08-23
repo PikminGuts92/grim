@@ -8,7 +8,7 @@ pub fn get_mesh_tokens() -> ObjectTokens {
         quote! { pub geom_owner: String }.into(),
         quote! { pub mutable: grim_traits::scene::Mutable }.into(),
         quote! { pub volume: grim_traits::scene::Volume }.into(),
-        quote! { pub vertices: Vec<grim_traits::scene::Vertex> }.into(),
+        quote! { pub vertices: Vec<grim_traits::scene::Vert> }.into(),
         quote! { pub faces: Vec<[u16; 3]> }.into(),
         quote! { pub face_groups: Vec<u8> }.into(),
         quote! { pub bones: Vec<grim_traits::scene::BoneTrans> }.into(),
@@ -56,13 +56,13 @@ pub fn get_mesh_tokens() -> ObjectTokens {
             self.volume = volume;
         }
 
-        fn get_vertices(&self) -> &Vec<grim_traits::scene::Vertex> {
+        fn get_vertices(&self) -> &Vec<grim_traits::scene::Vert> {
             &self.vertices
         }
-        fn get_vertices_mut(&mut self) -> &mut Vec<grim_traits::scene::Vertex> {
+        fn get_vertices_mut(&mut self) -> &mut Vec<grim_traits::scene::Vert> {
             &mut self.vertices
         }
-        fn set_vertices(&mut self, vertices: Vec<grim_traits::scene::Vertex>) {
+        fn set_vertices(&mut self, vertices: Vec<grim_traits::scene::Vert>) {
             self.vertices = vertices;
         }
 

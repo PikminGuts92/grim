@@ -69,7 +69,7 @@ pub struct UV {
 }
 
 #[derive(Default)]
-pub struct Vertex {
+pub struct Vert {
     pub pos: Vector4,
     pub normals: Vector4,
     pub uv: UV,
@@ -94,9 +94,9 @@ pub trait Mesh : Draw + MiloObject + Trans {
     fn get_volume_mut(&mut self) -> &mut Volume;
     fn set_volume(&mut self, volume: Volume);
 
-    fn get_vertices(&self) -> &Vec<Vertex>;
-    fn get_vertices_mut(&mut self) -> &mut Vec<Vertex>;
-    fn set_vertices(&mut self, vertices: Vec<Vertex>);
+    fn get_vertices(&self) -> &Vec<Vert>;
+    fn get_vertices_mut(&mut self) -> &mut Vec<Vert>;
+    fn set_vertices(&mut self, vertices: Vec<Vert>);
 
     fn get_faces(&self) -> &Vec<[u16; 3]>;
     fn get_faces_mut(&mut self) -> &mut Vec<[u16; 3]>;
