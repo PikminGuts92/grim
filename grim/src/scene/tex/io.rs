@@ -2,12 +2,21 @@ use crate::{SystemInfo};
 use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::scene::Tex;
 use crate::texture::Bitmap;
+use thiserror::Error as ThisError;
 use std::error::Error;
+
+#[derive(Debug, ThisError)]
+pub enum TexReadError {
+    #[error("Tex version of {version} not supported")]
+    TexVersionNotSupported {
+        version: u32
+    },
+}
 
 impl Tex {
     // TODO: Add from_hmx_image() function
 
-    fn is_magic_valid(magic: i32, info: &SystemInfo) -> bool {
+    fn is_magic_valid(magic: u32, info: &SystemInfo) -> bool {
         match info.version {
             // GH1
             10 => match magic {
@@ -32,9 +41,14 @@ impl Tex {
         let mut tex = Tex::new();
         let mut reader = BinaryStream::from_stream_with_endian(stream, info.endian);
 
-        let magic = reader.read_int32()?;
-        let _is_magic_valid = Tex::is_magic_valid(magic, info);
-        // TODO: If not valid, return unsupported error
+        let magic = reader.read_uint32()?;
+
+        // If not valid, return unsupported error
+        if !Tex::is_magic_valid(magic, info) {
+            return Err(Box::new(TexReadError::TexVersionNotSupported {
+                version: magic
+            }));
+        }
 
         // Skip meta for now
         if magic >= 10 && info.version == 24 {
