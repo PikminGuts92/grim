@@ -1,6 +1,6 @@
 use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::SystemInfo;
-use grim_traits::scene::{Color3, Matrix, MiloObject};
+use grim_traits::scene::{Color3, Matrix, MiloObject, Sphere};
 use std::error::Error;
 
 pub trait ObjectReadWrite {
@@ -57,6 +57,15 @@ pub (crate) fn load_matrix(mat: &mut Matrix, reader: &mut Box<BinaryStream>) -> 
     mat.m42 = reader.read_float32()?;
     mat.m43 = reader.read_float32()?;
     mat.m44 = 1.0;
+
+    Ok(())
+}
+
+pub (crate) fn load_sphere(sphere: &mut Sphere, reader: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    sphere.x = reader.read_float32()?;
+    sphere.y = reader.read_float32()?;
+    sphere.z = reader.read_float32()?;
+    sphere.r = reader.read_float32()?;
 
     Ok(())
 }

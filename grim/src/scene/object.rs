@@ -3,6 +3,7 @@ use crate::io::MemoryStream;
 use crate::scene::*;
 
 pub enum Object {
+    Draw(DrawObject),
     Group(GroupObject),
     Mat(MatObject),
     Mesh(MeshObject),
@@ -21,6 +22,7 @@ pub struct PackedObject {
 impl Object {
     pub fn get_name(&self) -> &str {
         match self {
+            Object::Draw(draw) => &draw.name,
             Object::Group(grp) => &grp.name,
             Object::Mat(mat) => &mat.name,
             Object::Mesh(mesh) => &mesh.name,
@@ -32,6 +34,7 @@ impl Object {
 
     pub fn get_type(&self) -> &str {
         match self {
+            Object::Draw(_) => "Draw",
             Object::Group(_) => "Group",
             Object::Mat(_) => "Mat",
             Object::Mesh(_) => "Mesh",
@@ -47,6 +50,16 @@ impl Object {
                 let mut stream = MemoryStream::from_slice_as_read(packed.data.as_slice());
 
                 match packed.object_type.as_str() {
+                    "Draw" => {
+                        let mut draw = DrawObject::default();
+
+                        if draw.load(&mut stream, info).is_ok() {
+                            draw.name = packed.name.to_owned();
+                            Some(Object::Draw(draw))
+                        } else {
+                            None
+                        }
+                    },
                     "Mat" => {
                         let mut mat = MatObject::default();
 
