@@ -6,8 +6,9 @@ use std::error::Error;
 
 fn is_version_supported(version: u32) -> bool {
     match version {
-        9.. => true, // GH2
-        _ => false
+        0..=8 => false,
+        9 => true, // GH2 TODO: Update to "9.." once adopted in rust stable
+        _ => true
     }
 }
 
