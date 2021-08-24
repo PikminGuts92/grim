@@ -1,25 +1,37 @@
 // Hide console if release build
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod render;
 mod settings;
 
+use render::render_milo;
 use settings::*;
 use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{WindowMode, WindowResized}};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, CtxRef, Pos2, Ui}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
+use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
+use grim::scene::*;
 use std::{env::args, path::{Path, PathBuf}};
 use itertools::Itertools;
+
+use crate::render::open_and_unpack_milo;
 
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const PROJECT_NAME: &str = env!("CARGO_PKG_NAME");
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct AppState {
     pub ark: Option<Ark>,
     pub root: Option<ArkDirNode>,
+    pub system_info: Option<SystemInfo>,
+    pub milo: Option<ObjectDir>,
     pub settings_path: PathBuf,
     pub show_options: bool,
+}
+
+enum UpdateState {
+    RefreshMilo,
 }
 
 impl AppState {
@@ -74,6 +86,7 @@ fn main() {
             resizable: true,
             ..Default::default()
         })
+        .add_event::<UpdateState>()
         .insert_resource(Msaa { samples: 8 })
         .insert_resource(app_state)
         .insert_resource(app_settings)
@@ -84,6 +97,7 @@ fn main() {
         .add_system(control_camera.system())
         .add_system(drop_files.system())
         .add_system(window_resized.system())
+        .add_system(update_state.system())
         .add_startup_system(setup_args.system())
         .add_startup_system(setup.system())
         .run();
@@ -374,6 +388,7 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut windows: ResMut<Windows>,
     settings: Res<AppSettings>,
+    state: Res<AppState>,
 ) {
     // Set primary window to maximized if preferred
     if settings.maximized {
@@ -458,19 +473,70 @@ fn load_settings(settings_path: &Path) -> AppSettings {
     settings
 }
 
-fn setup_args(mut state: ResMut<AppState>) {
+fn setup_args(
+    mut state: ResMut<AppState>,
+    mut ev_update_state: EventWriter<UpdateState>,
+) {
     let args = args().skip(1).collect::<Vec<String>>();
     if args.is_empty() {
         return;
     }
 
-    let hdr_path = &args[0];
-    println!("Hdr path is \"{}\"", hdr_path);
+    let arg0 = args[0].as_str();
+    let file_path = Path::new(arg0);
+    let ext = file_path.extension().unwrap().to_str().unwrap();
 
-    let ark_res = Ark::from_path(hdr_path);
-    if let Ok(ark) = ark_res {
-        state.root = Some(create_ark_tree(&ark));
-        state.ark = Some(ark);
+    if ext.contains("hdr") {
+        // Open ark
+        println!("Opening hdr from \"{}\"", arg0);
+
+        let ark_res = Ark::from_path(file_path);
+        if let Ok(ark) = ark_res {
+            println!("Successfully opened ark with {} entries", ark.entries.len());
+
+            state.root = Some(create_ark_tree(&ark));
+            state.ark = Some(ark);
+        }
+    } else if ext.contains("milo") {
+        // Open milo
+        println!("Opening milo from \"{}\"", arg0);
+
+        match open_and_unpack_milo(file_path) {
+            Ok((milo, info)) => {
+                println!("Successfully opened milo with {} entries", milo.get_entries().len());
+
+                state.milo = Some(milo);
+                state.system_info = Some(info);
+
+                ev_update_state.send(UpdateState::RefreshMilo);
+            },
+            Err(_err) => {
+                // TODO: Log error
+            }
+        }
+    } else {
+        println!("Unknown file type \"{}\"", arg0);
+    }
+}
+
+fn update_state(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut update_events: EventReader<UpdateState>,
+    state: Res<AppState>,
+) {
+    for e in update_events.iter() {
+        match e {
+            UpdateState::RefreshMilo => {
+                if let Some(milo) = &state.milo {
+                    let info = state.system_info.as_ref().unwrap();
+                    render_milo(&mut commands, &mut meshes, &mut materials, milo, info);
+                }
+
+                println!("Updated milo");
+            }
+        }
     }
 }
 
