@@ -77,7 +77,7 @@ pub struct Vert {
     pub weights: [f32; 4],
 }
 
-pub trait Mesh : Draw + MiloObject + Trans {
+pub trait RndMesh : Draw + MiloObject + Trans {
     fn get_mat(&self) -> &String;
     fn get_mat_mut(&mut self) -> &mut String;
     fn set_mat(&mut self, mat: String);

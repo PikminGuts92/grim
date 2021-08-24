@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use grim::{Platform, SystemInfo};
 use grim::io::*;
-use grim::scene::{Object, ObjectDir, MeshObject, PackedObject, Tex};
+use grim::scene::{RndMesh, MeshObject, Object, ObjectDir, PackedObject, Tex};
 
 pub fn open_and_unpack_milo<T: AsRef<Path>>(milo_path: T) -> Result<(ObjectDir, SystemInfo), Box<dyn Error>> {
     let milo_path = milo_path.as_ref();
@@ -60,7 +60,7 @@ pub fn render_milo(
         let mut normals = Vec::new();
         let mut uvs = Vec::new();
 
-        for vert in &mesh.vertices {
+        for vert in mesh.get_vertices() {
             positions.push([vert.pos.x, vert.pos.y, vert.pos.z]);
 
             // TODO: Figure out normals
@@ -79,6 +79,13 @@ pub fn render_milo(
         bevy_mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
         bevy_mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
 
+        let mat = Mat4::from_cols_array(&[
+            -1.0,  0.0,  0.0, 0.0,
+            0.0,  0.0,  1.0, 0.0,
+            0.0,  1.0,  0.0, 0.0,
+            0.0,  0.0,  0.0, 1.0,
+        ]);
+
         // Add mesh
         commands.spawn_bundle(PbrBundle {
             mesh: bevy_meshes.add(bevy_mesh),
@@ -88,6 +95,7 @@ pub fn render_milo(
                 unlit: false,
                 ..Default::default()
             }),
+            transform: Transform::from_matrix(mat),
             ..Default::default()
         });
 

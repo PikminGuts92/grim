@@ -4,7 +4,7 @@ use grim_macros::*;
 use grim_traits::scene::*;
 pub use io::*;
 
-#[milo(Mesh)]
+#[milo(RndMesh)]
 #[milo_super(Draw, Trans)]
 pub struct MeshObject {}
 

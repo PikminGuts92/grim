@@ -17,6 +17,7 @@ pub use anim::*;
 pub use char_bones_samples::*;
 pub use draw::*;
 pub use group::*;
+pub use grim_traits::scene::*;
 pub use io::*;
 pub use self::mat::*;
 pub use self::meta::*;
