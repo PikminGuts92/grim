@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use grim::{Platform, SystemInfo};
 use grim::io::*;
-use grim::scene::{RndMesh, MeshObject, Object, ObjectDir, PackedObject, Tex};
+use grim::scene::{RndMesh, MeshObject, MiloObject, Object, ObjectDir, PackedObject, Tex};
 
 pub fn open_and_unpack_milo<T: AsRef<Path>>(milo_path: T) -> Result<(ObjectDir, SystemInfo), Box<dyn Error>> {
     let milo_path = milo_path.as_ref();
@@ -79,23 +79,43 @@ pub fn render_milo(
         bevy_mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
         bevy_mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
 
-        let mat = Mat4::from_cols_array(&[
+        let matrix = Mat4::from_cols_array(&[
             -1.0,  0.0,  0.0, 0.0,
             0.0,  0.0,  1.0, 0.0,
             0.0,  1.0,  0.0, 0.0,
             0.0,  0.0,  0.0, 1.0,
         ]);
 
-        // Add mesh
-        commands.spawn_bundle(PbrBundle {
-            mesh: bevy_meshes.add(bevy_mesh),
-            material: materials.add(StandardMaterial {
+        let mat = mats
+            .iter()
+            .find(|m| m.get_name().eq(&mesh.mat));
+
+        let bevy_mat = match mat {
+            Some(mat) => StandardMaterial {
+                base_color: Color::rgba(
+                    mat.color.r,
+                    mat.color.g,
+                    mat.color.b,
+                    mat.alpha,
+                ),
+                double_sided: true,
+                unlit: false,
+                ..Default::default()
+            },
+            None => StandardMaterial {
                 base_color: Color::rgb(0.3, 0.5, 0.3),
                 double_sided: true,
                 unlit: false,
                 ..Default::default()
-            }),
-            transform: Transform::from_matrix(mat),
+            },
+        };
+
+        // Add mesh
+        commands.spawn_bundle(PbrBundle {
+            mesh: bevy_meshes.add(bevy_mesh),
+            material: materials.add(bevy_mat),
+            transform: Transform::from_matrix(matrix)
+                * Transform::from_scale(Vec3::new(0.2, 0.2, 0.2)),
             ..Default::default()
         });
 
