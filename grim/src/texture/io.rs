@@ -1,5 +1,5 @@
 use crate::io::{BinaryStream, SeekFrom, Stream};
-use crate::texture::Bitmap;
+use crate::texture::{Bitmap, DXGI_Encoding};
 use crate::system::{Platform, SystemInfo};
 use image::{ImageBuffer, RgbaImage};
 
@@ -9,8 +9,10 @@ use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError)]
 pub enum BitmapError {
-    #[error("Unsupported texture encoding")]
-    UnsupportedEncoding,
+    #[error("Unsupported texture encoding of {version}")]
+    UnsupportedEncoding {
+        version: u32,
+    },
     #[error("Unsupported bitmap bpp of {bpp}")]
     UnsupportedBitmapBpp {
         bpp: u8
@@ -45,18 +47,41 @@ impl Bitmap {
     }
 
     pub fn unpack_rgba(&self, info: &SystemInfo) -> Result<Vec<u8>, Box<dyn Error>> {
-        if self.encoding != 3 || info.platform != Platform::PS2 {
-            return Err(Box::new(BitmapError::UnsupportedEncoding));
+        if info.platform == Platform::PS2 && self.encoding == 3 {
+            // Decode PS2 bitmap
+            let mut rgba = vec![0u8; self.calc_rgba_size()];
+            decode_from_bitmap(self, info, &mut rgba[..])?;
+            return Ok(rgba);
+        } else if info.platform == Platform::PS3 || info.platform == Platform::X360 {
+            // Decode next gen texture
+            let dx_enc = match self.encoding {
+                 8 => DXGI_Encoding::DXGI_FORMAT_BC1_UNORM,
+                 // TODO: Implement these encodings
+                /*24 => DXGI_Encoding::DXGI_FORMAT_BC3_UNORM,
+                32 => DXGI_Encoding::DXGI_FORMAT_BC5_UNORM,*/
+                _ => {
+                    return Err(Box::new(BitmapError::UnsupportedEncoding {
+                        version: self.encoding,
+                    }));
+                }
+            };
+
+            let mut rgba = vec![0u8; self.calc_rgba_size()];
+            return Ok(rgba);
         }
-    
-        let mut rgba = vec![0u8; calc_rgba_size(self)];
-        decode_from_bitmap(self, info, &mut rgba[..])?;
-        Ok(rgba)
+
+        Err(Box::new(BitmapError::UnsupportedEncoding {
+            version: self.encoding,
+        }))
+    }
+
+    fn calc_rgba_size(&self) -> usize {
+        let Bitmap { width: w, height: h, mip_maps: mips, ..} = self;
+        calc_rgba_size(*w, *h, *mips)
     }
 }
 
-fn calc_rgba_size(bitmap: &Bitmap) -> usize {
-    let Bitmap { width: mut w, height: mut h, mip_maps: mut mips, ..} = bitmap;
+fn calc_rgba_size(mut w: u16, mut h: u16, mut mips: u8) -> usize {
     let mut size = 0;
 
     loop {
@@ -73,6 +98,7 @@ fn calc_rgba_size(bitmap: &Bitmap) -> usize {
 
     size
 }
+
 
 fn decode_from_bitmap(bitmap: &Bitmap, _info: &SystemInfo, rgba: &mut [u8]) -> Result<(), Box<dyn Error>> {
     let Bitmap { bpp, raw_data: data, .. } = bitmap;
@@ -168,4 +194,19 @@ pub fn write_rgba_to_file(width: u32, height: u32, rgba: &[u8], path: &Path) -> 
 
     image.save(path)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::*;
+    use super::*;
+
+    #[rstest]
+    #[case(64, 64, 0, 16384)]
+    #[case(64, 64, 2, 21504)]
+    #[case(256, 256, 4, 349184)]
+    #[case(4096, 4096, 0, 67108864)]
+    fn test_calc_rgba_size(#[case] w: u16, #[case] h: u16, #[case] mips: u8, #[case] expected: usize) {
+        assert_eq!(expected, calc_rgba_size(w, h, mips));
+    }
 }

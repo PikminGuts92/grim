@@ -70,14 +70,19 @@ pub fn render_milo(
         if let Some(bitmap) = &tex.bitmap {
             match bitmap.unpack_rgba(system_info) {
                 Ok(rgba) => {
-                    let bevy_tex = Texture::new(
+                    println!("Processing {}", tex.get_name());
+
+                    // TODO: Figure out how bevy can support mip maps
+                    let tex_size = (bitmap.width as usize) * (bitmap.height as usize) * 4;
+
+                    let bevy_tex = Texture::new_fill(
                         Extent3d {
                             width: bitmap.width.into(),
                             height: bitmap.height.into(),
                             depth: 1,
                         },
-                        TextureDimension::D1,
-                        rgba,
+                        TextureDimension::D2,
+                        &rgba[..tex_size],
                         TextureFormat::Rgba8Uint,
                     );
 
@@ -144,7 +149,8 @@ pub fn render_milo(
                         => Some(bevy_textures.add(texture.to_owned())),
                     None => None,
                 },
-                normal_map: match tex_map.get(mat.normal_map.as_str()) {
+                // TODO: Add extra texture maps
+                /*normal_map: match tex_map.get(mat.normal_map.as_str()) {
                     Some(texture)
                         => Some(bevy_textures.add(texture.to_owned())),
                     None => None,
@@ -153,7 +159,7 @@ pub fn render_milo(
                     Some(texture)
                         => Some(bevy_textures.add(texture.to_owned())),
                     None => None,
-                },
+                },*/
                 ..Default::default()
             },
             None => StandardMaterial {
