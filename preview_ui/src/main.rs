@@ -524,6 +524,7 @@ fn update_state(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut textures: ResMut<Assets<Texture>>,
     mut update_events: EventReader<UpdateState>,
     state: Res<AppState>,
 ) {
@@ -532,7 +533,14 @@ fn update_state(
             UpdateState::RefreshMilo => {
                 if let Some(milo) = &state.milo {
                     let info = state.system_info.as_ref().unwrap();
-                    render_milo(&mut commands, &mut meshes, &mut materials, milo, info);
+                    render_milo(
+                        &mut commands,
+                        &mut meshes,
+                        &mut materials,
+                        &mut textures,
+                        milo,
+                        info
+                    );
                 }
 
                 println!("Updated milo");

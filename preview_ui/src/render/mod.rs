@@ -1,5 +1,7 @@
 use bevy::prelude::*;
+use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
 
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -26,6 +28,7 @@ pub fn render_milo(
     commands: &mut Commands,
     bevy_meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
+    bevy_textures: &mut ResMut<Assets<Texture>>,
     milo: &ObjectDir,
     system_info: &SystemInfo,
 ) {
@@ -51,7 +54,43 @@ pub fn render_milo(
         .map(|o| o.unwrap())
         .collect::<Vec<_>>();
 
-    println!("Found {} meshes", meshes.len());
+    let textures = entries
+        .iter()
+        .map(|o| match o {
+            Object::Tex(tex) => Some(tex),
+            _ => None,
+        })
+        .filter(|o| o.is_some())
+        .map(|o| o.unwrap())
+        .collect::<Vec<_>>();
+
+    let mut tex_map = HashMap::new();
+
+    for tex in textures.iter() {
+        if let Some(bitmap) = &tex.bitmap {
+            match bitmap.unpack_rgba(system_info) {
+                Ok(rgba) => {
+                    let bevy_tex = Texture::new(
+                        Extent3d {
+                            width: bitmap.width.into(),
+                            height: bitmap.height.into(),
+                            depth: 1,
+                        },
+                        TextureDimension::D1,
+                        rgba,
+                        TextureFormat::Rgba8Uint,
+                    );
+
+                    tex_map.insert(tex.get_name().as_str(), bevy_tex);
+                },
+                Err(err) => {
+                    println!("Failed to convert {}", tex.get_name());
+                }
+            }
+        }
+    }
+
+    println!("Found {} meshes, {} textures, and {} materials", meshes.len(), textures.len(), mats.len());
 
     for mesh in meshes {
         let mut bevy_mesh = Mesh::new(bevy::render::pipeline::PrimitiveTopology::TriangleList);
@@ -100,6 +139,21 @@ pub fn render_milo(
                 ),
                 double_sided: true,
                 unlit: false,
+                base_color_texture: match tex_map.get(mat.diffuse_tex.as_str()) {
+                    Some(texture)
+                        => Some(bevy_textures.add(texture.to_owned())),
+                    None => None,
+                },
+                normal_map: match tex_map.get(mat.normal_map.as_str()) {
+                    Some(texture)
+                        => Some(bevy_textures.add(texture.to_owned())),
+                    None => None,
+                },
+                emissive_texture: match tex_map.get(mat.emissive_map.as_str()) {
+                    Some(texture)
+                        => Some(bevy_textures.add(texture.to_owned())),
+                    None => None,
+                },
                 ..Default::default()
             },
             None => StandardMaterial {
