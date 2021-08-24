@@ -83,4 +83,16 @@ impl<'a> ObjectDir {
             ObjectDir::ObjectDir(dir) => &dir.entries
         }
     }
+
+    pub fn unpack_entries(&'a mut self, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+        if let ObjectDir::ObjectDir(obj_dir) = self {
+            for entry in obj_dir.entries.iter_mut() {
+                if let Some(new_entry) = entry.unpack(info) {
+                    *entry = new_entry;
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
