@@ -53,14 +53,14 @@ pub fn decode_dx_image(dx_img: &[u8], rgba: &mut [u8], width: u32, encoding: DXG
             y = by << 2;
 
             // Read packed bytes
-            packed_0 = (dx_img[i    ] as u16) | (dx_img[i + 1] as u16) << 8;
-            packed_1 = (dx_img[i + 2] as u16) | (dx_img[i + 3] as u16) << 8;
+            packed_0 = read_as_u16(&dx_img[i..(i + 2)]);
+            packed_1 = read_as_u16(&dx_img[(i + 2)..(i + 4)]);
 
             // Unpack colors to rgba
             unpack_rgb565(packed_0, &mut color_0);
             unpack_rgb565(packed_1, &mut color_1);
 
-            // Calculate other colors
+            // Interpolate other colors
             if packed_0 > packed_1 {
                 // 4 colors
                 mix_colors_66_33(&color_0, &color_1, &mut color_2);
@@ -71,9 +71,10 @@ pub fn decode_dx_image(dx_img: &[u8], rgba: &mut [u8], width: u32, encoding: DXG
                 zero_out(&mut color_3);
             }
 
-            // Unpack indicies
+            // Unpack color indicies
             unpack_indices(&dx_img[(i + 4)..(i + 8)], &mut indices);
 
+            // Copy colors to pixel data
             let colors = [&color_0, &color_1, &color_2, &color_3];
             copy_unpacked_pixels(rgba, &colors, &indices, x, y, width);
 
@@ -88,6 +89,10 @@ fn get_dx_bpp(encoding: &DXGI_Encoding) -> u8 {
         DXGI_Encoding::DXGI_FORMAT_BC3_UNORM => 8,
         DXGI_Encoding::DXGI_FORMAT_BC5_UNORM => 8,
     }
+}
+
+fn read_as_u16(data: &[u8]) -> u16 {
+    (data[0] as u16) | (data[1] as u16) << 8
 }
 
 fn unpack_rgb565(c: u16, rgba: &mut [u8; 4]) {

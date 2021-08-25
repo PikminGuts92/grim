@@ -56,7 +56,7 @@ impl Bitmap {
             // Decode next gen texture
             let dx_enc = match self.encoding {
                  8 => DXGI_Encoding::DXGI_FORMAT_BC1_UNORM,
-                 // TODO: Implement these encodings
+                // TODO: Implement these encodings
                 /*24 => DXGI_Encoding::DXGI_FORMAT_BC3_UNORM,
                 32 => DXGI_Encoding::DXGI_FORMAT_BC5_UNORM,*/
                 _ => {
@@ -75,6 +75,8 @@ impl Bitmap {
             let mut start_dxt = 0usize;
             let mut start_rgba = 0usize;
 
+            // Hacky way to decode w/ mip maps
+            // TODO: Clean up code
             loop {
                 let dxt_size = ((width as usize) * (height as usize) * (self.bpp as usize)) / 8;
                 let dxt_img = &self.raw_data.as_slice()[start_dxt..(start_dxt + dxt_size)];
