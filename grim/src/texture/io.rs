@@ -1,5 +1,5 @@
 use crate::io::{BinaryStream, SeekFrom, Stream};
-use crate::texture::{Bitmap, DXGI_Encoding};
+use crate::texture::{Bitmap, decode_dx_image, DXGI_Encoding};
 use crate::system::{Platform, SystemInfo};
 use image::{ImageBuffer, RgbaImage};
 
@@ -67,6 +67,35 @@ impl Bitmap {
             };
 
             let mut rgba = vec![0u8; self.calc_rgba_size()];
+
+            let mut mips = self.mip_maps;
+            let mut width = self.width;
+            let mut height = self.height;
+
+            let mut start_dxt = 0usize;
+            let mut start_rgba = 0usize;
+
+            loop {
+                let dxt_size = ((width as usize) * (height as usize) * (self.bpp as usize)) / 8;
+                let dxt_img = &self.raw_data.as_slice()[start_dxt..(start_dxt + dxt_size)];
+
+                let rgba_size = (width as usize) * (height as usize) * 4;
+                let rgba_img = &mut rgba.as_mut_slice()[start_rgba..(start_rgba + rgba_size)];
+
+                decode_dx_image(dxt_img, rgba_img, self.width as u32, dx_enc);
+
+                if mips == 0 {
+                    break;
+                }
+
+                start_dxt += dxt_size;
+                start_rgba += rgba_size;
+
+                mips -= 1;
+                width >>= 1;
+                height >>= 1;
+            }
+
             return Ok(rgba);
         }
 

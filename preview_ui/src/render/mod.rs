@@ -83,7 +83,7 @@ pub fn render_milo(
                         },
                         TextureDimension::D2,
                         &rgba[..tex_size],
-                        TextureFormat::Rgba8Uint,
+                        TextureFormat::Rgba8UnormSrgb,
                     );
 
                     tex_map.insert(tex.get_name().as_str(), bevy_tex);
@@ -175,7 +175,7 @@ pub fn render_milo(
             mesh: bevy_meshes.add(bevy_mesh),
             material: materials.add(bevy_mat),
             transform: Transform::from_matrix(matrix)
-                * Transform::from_scale(Vec3::new(0.2, 0.2, 0.2)),
+                * Transform::from_scale(Vec3::new(0.1, 0.1, 0.1)),
             ..Default::default()
         });
 
