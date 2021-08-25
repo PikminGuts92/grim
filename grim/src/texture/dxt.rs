@@ -61,12 +61,14 @@ pub fn decode_dx_image(dx_img: &[u8], rgba: &mut [u8], width: u32, encoding: DXG
             unpack_rgb565(packed_1, &mut color_1);
 
             // Calculate other colors
-            if packed_0 < packed_1 {
-                mix_colors_50_50(&color_0, &color_1, &mut color_2);
-                zero_out(&mut color_3);
-            } else {
+            if packed_0 > packed_1 {
+                // 4 colors
                 mix_colors_66_33(&color_0, &color_1, &mut color_2);
                 mix_colors_66_33(&color_1, &color_0, &mut color_3);
+            } else {
+                // 3 colors + transparent
+                mix_colors_50_50(&color_0, &color_1, &mut color_2);
+                zero_out(&mut color_3);
             }
 
             // Unpack indicies
