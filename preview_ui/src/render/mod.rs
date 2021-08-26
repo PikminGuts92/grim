@@ -102,14 +102,16 @@ pub fn render_milo(
 
         let mut positions = Vec::new();
         let mut normals = Vec::new();
+        let mut tangents = Vec::new();
         let mut uvs = Vec::new();
 
         for vert in mesh.get_vertices() {
             positions.push([vert.pos.x, vert.pos.y, vert.pos.z]);
 
-            // TODO: Figure out normals
+            // TODO: Figure out normals/tangents
             //normals.push([vert.normals.x, vert.normals.y, vert.normals.z]);
             normals.push([1.0, 1.0, 1.0]);
+            tangents.push([0.0, 0.0, 0.0, 1.0]);
 
             uvs.push([vert.uv.u, vert.uv.v]);
         }
@@ -121,8 +123,10 @@ pub fn render_milo(
         bevy_mesh.set_indices(Some(indices));
         bevy_mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
         bevy_mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        bevy_mesh.set_attribute(Mesh::ATTRIBUTE_TANGENT, tangents);
         bevy_mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
 
+        // Translate to bevy coordinate system
         let matrix = Mat4::from_cols_array(&[
             -1.0,  0.0,  0.0, 0.0,
             0.0,  0.0,  1.0, 0.0,
@@ -134,6 +138,15 @@ pub fn render_milo(
             .iter()
             .find(|m| m.get_name().eq(&mesh.mat));
 
+        if mat.is_none() {
+            println!("Mat not found for \"{}\"", &mesh.mat);
+        } else {
+            let mat = mat.unwrap();
+            if !mat.diffuse_tex.is_empty() && tex_map.get(mat.diffuse_tex.as_str()).is_none() {
+                println!("Diffuse tex not found for \"{}\"", &mat.diffuse_tex);
+            }
+        }
+
         let bevy_mat = match mat {
             Some(mat) => StandardMaterial {
                 base_color: Color::rgba(
@@ -143,14 +156,14 @@ pub fn render_milo(
                     mat.alpha,
                 ),
                 double_sided: true,
-                unlit: false,
+                unlit: true,
                 base_color_texture: match tex_map.get(mat.diffuse_tex.as_str()) {
                     Some(texture)
                         => Some(bevy_textures.add(texture.to_owned())),
                     None => None,
                 },
                 // TODO: Add extra texture maps
-                /*normal_map: match tex_map.get(mat.normal_map.as_str()) {
+                normal_map: match tex_map.get(mat.normal_map.as_str()) {
                     Some(texture)
                         => Some(bevy_textures.add(texture.to_owned())),
                     None => None,
@@ -159,7 +172,7 @@ pub fn render_milo(
                     Some(texture)
                         => Some(bevy_textures.add(texture.to_owned())),
                     None => None,
-                },*/
+                },
                 ..Default::default()
             },
             None => StandardMaterial {
