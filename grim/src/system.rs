@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 pub enum Platform {
     PS2,
     PS3,
+    Wii,
     X360,
 }
 
@@ -21,6 +22,7 @@ impl SystemInfo {
             Some(ext) => match ext.to_str() {
                 Some("milo_ps2") => Platform::PS2,
                 Some("milo_ps3") => Platform::PS3,
+                Some("milo_wii") => Platform::Wii,
                 Some("milo_xbox") => Platform::X360,
                 _ => Platform::X360,
             },

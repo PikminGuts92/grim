@@ -1,5 +1,5 @@
 use crate::io::{BinaryStream, SeekFrom, Stream};
-use crate::texture::{Bitmap, decode_dx_image, DXGI_Encoding};
+use crate::texture::{Bitmap, decode_dx_image, decode_tpl_image, DXGI_Encoding, TPLEncoding};
 use crate::system::{Platform, SystemInfo};
 use image::{ImageBuffer, RgbaImage};
 
@@ -91,6 +91,51 @@ impl Bitmap {
                 }
 
                 start_dxt += dxt_size;
+                start_rgba += rgba_size;
+
+                mips -= 1;
+                width >>= 1;
+                height >>= 1;
+            }
+
+            return Ok(rgba);
+        } else if info.platform == Platform::Wii {
+            // Decode wii texture
+            let tpl_enc = match self.encoding {
+                72 => TPLEncoding::CMP,
+                _ => {
+                    return Err(Box::new(BitmapError::UnsupportedEncoding {
+                        version: self.encoding,
+                    }));
+                }
+            };
+
+            let mut rgba = vec![0u8; self.calc_rgba_size()];
+
+            let mut mips = self.mip_maps;
+            let mut width = self.width;
+            let mut height = self.height;
+
+            let mut start_tpl = 0usize;
+            let mut start_rgba = 0usize;
+
+            // Hacky way to decode w/ mip maps
+            // TODO: Clean up code
+            loop {
+                let tpl_size = ((width as usize) * (height as usize) * (self.bpp as usize)) / 8;
+                let tpl_img = &self.raw_data.as_slice()[start_tpl..(start_tpl + tpl_size)];
+
+                let rgba_size = (width as usize) * (height as usize) * 4;
+                let rgba_img = &mut rgba.as_mut_slice()[start_rgba..(start_rgba + rgba_size)];
+
+                decode_tpl_image(tpl_img, rgba_img, self.width as u32, tpl_enc);
+                //decode_dx_image(tpl_img, rgba_img, self.width as u32, DXGI_Encoding::DXGI_FORMAT_BC1_UNORM);
+
+                if mips == 0 {
+                    break;
+                }
+
+                start_tpl += tpl_size;
                 start_rgba += rgba_size;
 
                 mips -= 1;

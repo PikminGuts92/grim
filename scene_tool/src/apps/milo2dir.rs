@@ -30,7 +30,7 @@ pub struct Milo2DirApp {
     pub milo_version: u32,
     #[clap(long, about = "Use big endian serialization")]
     pub big_endian: bool,
-    #[clap(long, default_value = "ps2", about = "Platform (ps2, ps3, x360)")]
+    #[clap(long, default_value = "ps2", about = "Platform (ps2, ps3, wii, x360)")]
     pub platform: String,
     #[clap(long, about = "Game preset (gh1, gh2, gh80s, gh2_x360)")]
     pub preset: Option<String>, // Using Option<> because default of "" is unsupported
@@ -49,6 +49,7 @@ impl GameOptions for Milo2DirApp {
             platform: match self.platform.to_lowercase().as_str() {
                 "ps2" => Platform::PS2,
                 "ps3" => Platform::PS3,
+                "wii" => Platform::Wii,
                 "xbox 360" => Platform::X360,
                 "xbox360" => Platform::X360,
                 "x360" => Platform::X360,
