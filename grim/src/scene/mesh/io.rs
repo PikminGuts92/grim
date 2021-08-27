@@ -6,7 +6,7 @@ use std::error::Error;
 
 fn is_version_supported(version: u32) -> bool {
     match version {
-        36 => true,
+        36..=37 => true, // TBRB/GDRB
         _ => false
     }
 }
@@ -153,6 +153,9 @@ impl ObjectReadWrite for MeshObject {
         }
 
         self.keep_mesh_data = reader.read_boolean()?;
+        if version >= 37 {
+            self.set_exclude_from_self_shadow(reader.read_boolean()?);
+        }
 
         Ok(())
     }

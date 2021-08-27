@@ -112,4 +112,7 @@ pub trait RndMesh : Draw + MiloObject + Trans {
 
     fn get_keep_mesh_data(&self) -> bool;
     fn set_keep_mesh_data(&mut self, keep_mesh_data: bool);
+
+    fn get_exclude_from_self_shadow(&self) -> bool;
+    fn set_exclude_from_self_shadow(&mut self, exclude: bool);
 }

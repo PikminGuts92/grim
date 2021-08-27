@@ -30,6 +30,7 @@ impl Default for MeshObject {
             showing: true,
             sphere: Sphere::default(),
             draw_order: 0.0,
+            override_include_in_depth_only_pass: OverrideIncludeInDepthOnlyPass::default(),
 
             // Mesh object
             mat: String::default(),
@@ -44,6 +45,7 @@ impl Default for MeshObject {
             face_groups: Vec::new(),
             bones: Vec::new(),
             keep_mesh_data: false,
+            exclude_from_self_shadow: false,
         }
     }
 }

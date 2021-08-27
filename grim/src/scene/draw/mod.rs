@@ -19,6 +19,7 @@ impl Default for DrawObject {
             showing: true,
             sphere: Sphere::default(),
             draw_order: 0.0,
+            override_include_in_depth_only_pass: OverrideIncludeInDepthOnlyPass::default(),
         }
     }
 }

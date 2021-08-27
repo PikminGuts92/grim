@@ -6,7 +6,7 @@ use std::error::Error;
 
 fn is_version_supported(version: u32) -> bool {
     match version {
-        3 => true,
+        3..=4 => true, // TBRB/GDRB
         _ => false
     }
 }
@@ -38,6 +38,10 @@ pub(crate) fn load_draw<T: Draw>(draw: &mut T, reader: &mut Box<BinaryStream>, i
     draw.set_showing(reader.read_boolean()?);
     load_sphere(draw.get_sphere_mut(), reader)?;
     draw.set_draw_order(reader.read_float32()?);
+
+    if version >= 4{
+        draw.set_override_include_in_depth_only_pass(reader.read_uint32()?.into());
+    }
 
     Ok(())
 }

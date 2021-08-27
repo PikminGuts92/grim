@@ -13,6 +13,7 @@ pub fn get_mesh_tokens() -> ObjectTokens {
         quote! { pub face_groups: Vec<u8> }.into(),
         quote! { pub bones: Vec<grim_traits::scene::BoneTrans> }.into(),
         quote! { pub keep_mesh_data: bool }.into(),
+        quote! { pub exclude_from_self_shadow: bool }.into(),
     ];
 
     let trait_impl = quote! {
@@ -101,6 +102,13 @@ pub fn get_mesh_tokens() -> ObjectTokens {
         }
         fn set_keep_mesh_data(&mut self, keep_mesh_data: bool) {
             self.keep_mesh_data = keep_mesh_data;
+        }
+
+        fn get_exclude_from_self_shadow(&self) -> bool {
+            self.exclude_from_self_shadow
+        }
+        fn set_exclude_from_self_shadow(&mut self, exclude: bool) {
+            self.exclude_from_self_shadow = exclude;
         }
     };
 
