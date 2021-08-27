@@ -28,9 +28,10 @@ impl Tex {
                 10 => true,
                 _ => false
             },
-            // GH2 360
+            // GH2 360/TBRB/GDRB
             25 => match magic {
                 10 => true,
+                11 => true, // GDRB
                 _ => false
             },
             _ => false
@@ -55,6 +56,11 @@ impl Tex {
             reader.seek(SeekFrom::Current(9))?;
         } else if magic >= 10 {
             reader.seek(SeekFrom::Current(13))?;
+        }
+
+        if magic >= 11 {
+            // TODO: Save boolean value
+            reader.read_boolean()?;
         }
 
         tex.width = reader.read_uint32()?;
