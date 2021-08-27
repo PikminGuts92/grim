@@ -98,7 +98,7 @@ fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32) {
 
     // Get block counts
     let block_x = width >> 2;
-    let block_y = ((dx_img.len() * 8) as u32 / (width * bpp)) >> 2;
+    let block_y = calculate_texture_height(dx_img.len(), width, bpp) >> 2;
     let block_size = ((16 * bpp) / 8) as usize;
 
     let mut packed_0;

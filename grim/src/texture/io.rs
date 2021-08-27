@@ -102,7 +102,8 @@ impl Bitmap {
         } else if info.platform == Platform::Wii {
             // Decode wii texture
             let tpl_enc = match self.encoding {
-                72 => TPLEncoding::CMP,
+                 72 => TPLEncoding::CMP,
+                328 => TPLEncoding::CMP_ALPHA,
                 _ => {
                     return Err(Box::new(BitmapError::UnsupportedEncoding {
                         version: self.encoding,
