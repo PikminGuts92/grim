@@ -66,6 +66,8 @@ impl Bitmap {
                 }
             };
 
+            let is_360 = info.platform == Platform::X360;
+
             let mut rgba = vec![0u8; self.calc_rgba_size()];
 
             let mut mips = self.mip_maps;
@@ -84,7 +86,7 @@ impl Bitmap {
                 let rgba_size = (width as usize) * (height as usize) * 4;
                 let rgba_img = &mut rgba.as_mut_slice()[start_rgba..(start_rgba + rgba_size)];
 
-                decode_dx_image(dxt_img, rgba_img, self.width as u32, dx_enc);
+                decode_dx_image(dxt_img, rgba_img, self.width as u32, dx_enc, is_360);
 
                 if mips == 0 {
                     break;

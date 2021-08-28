@@ -27,15 +27,15 @@ impl From<u32> for DXGI_Encoding {
     }
 }
 
-pub fn decode_dx_image(dx_img: &[u8], rgba: &mut [u8], width: u32, encoding: DXGI_Encoding) {
+pub fn decode_dx_image(dx_img: &[u8], rgba: &mut [u8], width: u32, encoding: DXGI_Encoding, is_360: bool) {
     match &encoding {
-        DXGI_Encoding::DXGI_FORMAT_BC1_UNORM => decode_dxt1_image(dx_img, rgba, width),
-        DXGI_Encoding::DXGI_FORMAT_BC3_UNORM => decode_dxt5_image(dx_img, rgba, width),
+        DXGI_Encoding::DXGI_FORMAT_BC1_UNORM => decode_dxt1_image(dx_img, rgba, width, is_360),
+        DXGI_Encoding::DXGI_FORMAT_BC3_UNORM => decode_dxt5_image(dx_img, rgba, width, is_360),
         DXGI_Encoding::DXGI_FORMAT_BC5_UNORM => todo!("Implement BC5 texture decoding"),
     };
 }
 
-fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32) {
+fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
     let bpp = get_dx_bpp(&DXGI_Encoding::DXGI_FORMAT_BC1_UNORM) as u32;
 
     // Get block counts
@@ -57,14 +57,25 @@ fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32) {
     let mut x;
     let mut y;
 
+    let read_u16: fn(&[u8]) -> u16;
+    let unpack_ind: fn(&[u8], &mut [u8; 16]);
+
+    if is_360 {
+        read_u16 = read_as_u16_be;
+        unpack_ind = unpack_indicies_360;
+    } else {
+        read_u16 = read_as_u16;
+        unpack_ind = unpack_indicies;
+    }
+
     for by in 0..block_y {
         for bx in 0..block_x {
             x = bx << 2;
             y = by << 2;
 
             // Read packed bytes
-            packed_0 = read_as_u16(&dx_img[i..(i + 2)]);
-            packed_1 = read_as_u16(&dx_img[(i + 2)..(i + 4)]);
+            packed_0 = read_u16(&dx_img[i..(i + 2)]);
+            packed_1 = read_u16(&dx_img[(i + 2)..(i + 4)]);
 
             // Unpack colors to rgba
             unpack_rgb565(packed_0, &mut color_0);
@@ -82,7 +93,7 @@ fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32) {
             }
 
             // Unpack color indicies
-            unpack_indices(&dx_img[(i + 4)..(i + 8)], &mut indices);
+            unpack_ind(&dx_img[(i + 4)..(i + 8)], &mut indices);
 
             // Copy colors to pixel data
             let colors = [&color_0, &color_1, &color_2, &color_3];
@@ -93,7 +104,7 @@ fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32) {
     }
 }
 
-fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32) {
+fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
     let bpp = get_dx_bpp(&DXGI_Encoding::DXGI_FORMAT_BC3_UNORM) as u32;
 
     // Get block counts
@@ -115,6 +126,17 @@ fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32) {
     let mut x;
     let mut y;
 
+    let read_u16: fn(&[u8]) -> u16;
+    let unpack_ind: fn(&[u8], &mut [u8; 16]);
+
+    if is_360 {
+        read_u16 = read_as_u16_be;
+        unpack_ind = unpack_indicies_360;
+    } else {
+        read_u16 = read_as_u16;
+        unpack_ind = unpack_indicies;
+    }
+
     for by in 0..block_y {
         for bx in 0..block_x {
             x = bx << 2;
@@ -124,8 +146,8 @@ fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32) {
             i += block_size >> 1;
 
             // Read packed bytes
-            packed_0 = read_as_u16(&dx_img[i..(i + 2)]);
-            packed_1 = read_as_u16(&dx_img[(i + 2)..(i + 4)]);
+            packed_0 = read_u16(&dx_img[i..(i + 2)]);
+            packed_1 = read_u16(&dx_img[(i + 2)..(i + 4)]);
 
             // Unpack colors to rgba
             unpack_rgb565(packed_0, &mut color_0);
@@ -143,7 +165,7 @@ fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32) {
             }
 
             // Unpack color indicies
-            unpack_indices(&dx_img[(i + 4)..(i + 8)], &mut indices);
+            unpack_ind(&dx_img[(i + 4)..(i + 8)], &mut indices);
 
             // Copy colors to pixel data
             let colors = [&color_0, &color_1, &color_2, &color_3];

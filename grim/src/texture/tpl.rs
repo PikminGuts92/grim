@@ -85,7 +85,7 @@ fn decode_cmp_image(tpl_img: &[u8], rgba: &mut [u8], width: u32) {
                 }
 
                 // Unpack color indicies
-                unpack_indices_be(&tpl_img[(i + 4)..(i + 8)], &mut indices);
+                unpack_indicies_be(&tpl_img[(i + 4)..(i + 8)], &mut indices);
 
                 // Copy colors to pixel data
                 let colors = [&color_0, &color_1, &color_2, &color_3];
@@ -147,7 +147,7 @@ fn decode_cmp_alpha_image(tpl_img: &[u8], rgba: &mut [u8], width: u32) {
                 }
 
                 // Unpack color indicies
-                unpack_indices_be(&tpl_img[(i + 4)..(i + 8)], &mut indices);
+                unpack_indicies_be(&tpl_img[(i + 4)..(i + 8)], &mut indices);
 
                 // Copy colors to pixel data
                 let colors = [&color_0, &color_1, &color_2, &color_3];

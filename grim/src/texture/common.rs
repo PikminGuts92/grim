@@ -36,7 +36,7 @@ pub fn unpack_rgb565(c: u16, rgba: &mut [u8; 4]) {
     rgba[3] = 0xff;
 }
 
-pub fn unpack_indices(packed: &[u8], indices: &mut [u8; 16]) {
+pub fn unpack_indicies(packed: &[u8], indices: &mut [u8; 16]) {
     for (i, ind) in indices.chunks_mut(4).enumerate() {
         ind[0] =  packed[i] & 0b00_00_00_11;
         ind[1] = (packed[i] & 0b00_00_11_00) >> 2;
@@ -45,7 +45,16 @@ pub fn unpack_indices(packed: &[u8], indices: &mut [u8; 16]) {
     }
 }
 
-pub fn unpack_indices_be(packed: &[u8], indices: &mut [u8; 16]) {
+pub fn unpack_indicies_360(packed: &[u8], indices: &mut [u8; 16]) {
+    for (i, ind) in indices.chunks_mut(4).enumerate() {
+        ind[1] =  packed[i] & 0b00_00_00_11;
+        ind[0] = (packed[i] & 0b00_00_11_00) >> 2;
+        ind[3] = (packed[i] & 0b00_11_00_00) >> 4;
+        ind[2] = (packed[i] & 0b11_00_00_00) >> 6;
+    }
+}
+
+pub fn unpack_indicies_be(packed: &[u8], indices: &mut [u8; 16]) {
     for (i, ind) in indices.chunks_mut(4).enumerate() {
         ind[3] =  packed[i] & 0b00_00_00_11;
         ind[2] = (packed[i] & 0b00_00_11_00) >> 2;
