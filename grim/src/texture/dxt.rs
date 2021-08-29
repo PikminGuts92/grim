@@ -51,7 +51,7 @@ fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
     let mut color_2 = [0u8; 4];
     let mut color_3 = [0u8; 4];
 
-    let mut indices = [0u8; 16];
+    let mut indicies = [0u8; 16];
 
     let mut i = 0usize; // Block index
     let mut x;
@@ -93,11 +93,11 @@ fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
             }
 
             // Unpack color indicies
-            unpack_ind(&dx_img[(i + 4)..(i + 8)], &mut indices);
+            unpack_ind(&dx_img[(i + 4)..(i + 8)], &mut indicies);
 
             // Copy colors to pixel data
             let colors = [&color_0, &color_1, &color_2, &color_3];
-            copy_unpacked_pixels(rgba, &colors, &indices, x, y, width);
+            copy_unpacked_pixels(rgba, &colors, &indicies, x, y, width);
 
             i += block_size;
         }
@@ -119,20 +119,28 @@ fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
     let mut color_1 = [0u8; 4];
     let mut color_2 = [0u8; 4];
     let mut color_3 = [0u8; 4];
+    let mut alphas = [0u8; 8];
 
-    let mut indices = [0u8; 16];
+    let mut indicies = [0u8; 16];
+    let mut alpha_indicies = [0u8; 16];
 
     let mut i = 0usize; // Block index
     let mut x;
     let mut y;
 
+    let interp_alphas: fn(&[u8], &mut [u8; 8]);
+    let unpack_alphas: fn(&[u8], &mut [u8; 16]);
     let read_u16: fn(&[u8]) -> u16;
     let unpack_ind: fn(&[u8], &mut [u8; 16]);
 
     if is_360 {
+        interp_alphas = interpolate_alphas_be;
+        unpack_alphas = unpack_alpha_indicies_360;
         read_u16 = read_as_u16_be;
         unpack_ind = unpack_indicies_360;
     } else {
+        interp_alphas = interpolate_alphas;
+        unpack_alphas = unpack_alpha_indicies;
         read_u16 = read_as_u16;
         unpack_ind = unpack_indicies;
     }
@@ -142,7 +150,8 @@ fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
             x = bx << 2;
             y = by << 2;
 
-            // Skip alphas for now
+            interp_alphas(&dx_img[i..(i + 2)], &mut alphas);
+            unpack_alphas(&dx_img[(i + 2)..(i + 8)], &mut alpha_indicies);
             i += block_size >> 1;
 
             // Read packed bytes
@@ -153,23 +162,19 @@ fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
             unpack_rgb565(packed_0, &mut color_0);
             unpack_rgb565(packed_1, &mut color_1);
 
-            // Interpolate other colors
-            if packed_0 > packed_1 {
-                // 4 colors
-                mix_colors_66_33(&color_0, &color_1, &mut color_2);
-                mix_colors_66_33(&color_1, &color_0, &mut color_3);
-            } else {
-                // 3 colors + transparent
-                mix_colors_50_50(&color_0, &color_1, &mut color_2);
-                zero_out(&mut color_3);
-            }
+            // Interpolate other colors (4 colors)
+            mix_colors_66_33(&color_0, &color_1, &mut color_2);
+            mix_colors_66_33(&color_1, &color_0, &mut color_3);
 
             // Unpack color indicies
-            unpack_ind(&dx_img[(i + 4)..(i + 8)], &mut indices);
+            unpack_ind(&dx_img[(i + 4)..(i + 8)], &mut indicies);
 
             // Copy colors to pixel data
             let colors = [&color_0, &color_1, &color_2, &color_3];
-            copy_unpacked_pixels(rgba, &colors, &indices, x, y, width);
+            copy_unpacked_pixels(rgba, &colors, &indicies, x, y, width);
+
+            // Copy alphas to pixel data
+            copy_unpacked_alphas(rgba, &alphas, &alpha_indicies, x, y, width);
 
             i += block_size >> 1;
         }
