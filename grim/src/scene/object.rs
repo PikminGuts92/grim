@@ -3,6 +3,7 @@ use crate::io::MemoryStream;
 use crate::scene::*;
 
 pub enum Object {
+    Anim(AnimObject),
     Draw(DrawObject),
     Group(GroupObject),
     Mat(MatObject),
@@ -22,6 +23,7 @@ pub struct PackedObject {
 impl Object {
     pub fn get_name(&self) -> &str {
         match self {
+            Object::Anim(anim) => &anim.name,
             Object::Draw(draw) => &draw.name,
             Object::Group(grp) => &grp.name,
             Object::Mat(mat) => &mat.name,
@@ -34,6 +36,7 @@ impl Object {
 
     pub fn get_type(&self) -> &str {
         match self {
+            Object::Anim(_) => "Anim",
             Object::Draw(_) => "Draw",
             Object::Group(_) => "Group",
             Object::Mat(_) => "Mat",
@@ -50,12 +53,32 @@ impl Object {
                 let mut stream = MemoryStream::from_slice_as_read(packed.data.as_slice());
 
                 match packed.object_type.as_str() {
+                    "Anim" => {
+                        let mut anim = AnimObject::default();
+
+                        if anim.load(&mut stream, info).is_ok() {
+                            anim.name = packed.name.to_owned();
+                            Some(Object::Anim(anim))
+                        } else {
+                            None
+                        }
+                    },
                     "Draw" => {
                         let mut draw = DrawObject::default();
 
                         if draw.load(&mut stream, info).is_ok() {
                             draw.name = packed.name.to_owned();
                             Some(Object::Draw(draw))
+                        } else {
+                            None
+                        }
+                    },
+                    "Group" => {
+                        let mut group = GroupObject::default();
+
+                        if group.load(&mut stream, info).is_ok() {
+                            group.name = packed.name.to_owned();
+                            Some(Object::Group(group))
                         } else {
                             None
                         }
