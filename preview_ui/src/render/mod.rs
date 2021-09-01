@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use grim::{Platform, SystemInfo};
 use grim::io::*;
-use grim::scene::{RndMesh, MeshObject, MiloObject, Object, ObjectDir, PackedObject, Tex};
+use grim::scene::{RndMesh, Matrix, MeshObject, MiloObject, Object, ObjectDir, PackedObject, Tex, Trans, TransConstraint};
 
 pub fn open_and_unpack_milo<T: AsRef<Path>>(milo_path: T) -> Result<(ObjectDir, SystemInfo), Box<dyn Error>> {
     let milo_path = milo_path.as_ref();
@@ -61,6 +61,17 @@ pub fn render_milo(
             _ => None,
         })
         .filter(|o| o.is_some())
+        .map(|o| o.unwrap())
+        .collect::<Vec<_>>();
+
+    let transforms = entries
+        .iter()
+        .map(|o| match o {
+            Object::Mesh(mesh) => Some(get_transform(mesh)),
+            Object::Trans(trans) => Some(get_transform(trans)),
+            _ => None,
+        })
+        .filter(|t| t.is_some())
         .map(|o| o.unwrap())
         .collect::<Vec<_>>();
 
@@ -126,6 +137,17 @@ pub fn render_milo(
         bevy_mesh.set_attribute(Mesh::ATTRIBUTE_TANGENT, tangents);
         bevy_mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
 
+        // Get base matrix
+        let base_matrix = match mesh.get_constraint() {
+            TransConstraint::kConstraintParentWorld
+                => transforms
+                    .iter()
+                    .find(|t| t.get_name().eq(mesh.get_parent()))
+                    .and_then(|p| Some(map_matrix(p.get_world_xfm())))
+                    .unwrap_or(Mat4::IDENTITY),
+            _ => map_matrix(mesh.get_world_xfm())
+        };
+
         // Translate to bevy coordinate system
         let matrix = Mat4::from_cols_array(&[
             -1.0,  0.0,  0.0, 0.0,
@@ -187,11 +209,37 @@ pub fn render_milo(
         commands.spawn_bundle(PbrBundle {
             mesh: bevy_meshes.add(bevy_mesh),
             material: materials.add(bevy_mat),
-            transform: Transform::from_matrix(matrix)
+            transform: Transform::from_matrix(base_matrix)
+                * Transform::from_matrix(matrix)
                 * Transform::from_scale(Vec3::new(0.1, 0.1, 0.1)),
             ..Default::default()
         });
 
         println!("Added {}", &mesh.name);
     }
+}
+
+fn get_transform<T: Trans>(trans: &T) -> &dyn Trans {
+    trans
+}
+
+fn map_matrix(m: &Matrix) -> Mat4 {
+    Mat4::from_cols_array(&[
+        m.m11,
+        m.m12,
+        m.m13,
+        m.m14,
+        m.m21,
+        m.m22,
+        m.m23,
+        m.m24,
+        m.m31,
+        m.m32,
+        m.m33,
+        m.m34,
+        m.m31,
+        m.m32,
+        m.m33,
+        m.m34,
+    ])
 }
