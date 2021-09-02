@@ -9,12 +9,23 @@ pub trait ObjectReadWrite {
 }
 
 pub(crate) fn load_object<T: MiloObject>(obj: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+    load_object_type(obj, reader, info)?;
+    load_object_rest(obj, reader, info)?;
+
+    Ok(())
+}
+
+pub(crate) fn load_object_type<T: MiloObject>(obj: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
     // Skip revision for now
     reader.read_uint32()?;
 
     // Read type
     obj.set_type(reader.read_prefixed_string()?);
 
+    Ok(())
+}
+
+pub(crate) fn load_object_rest<T: MiloObject>(obj: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
     // Read props
     let has_dtb = reader.read_boolean()?;
     if has_dtb {
