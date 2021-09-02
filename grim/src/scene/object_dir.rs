@@ -96,3 +96,36 @@ impl<'a> ObjectDir {
         Ok(())
     }
 }
+
+impl ObjectDir {
+    pub(crate) fn fix_class_name(version: u32, class_name: &mut String) {
+        if version >= 25 {
+            // Nothing to fix
+            return;
+        }
+
+        let new_name = match (version, class_name.as_str()) {
+            (0..=24, "RenderedTex") => Some("TexRenderer"),
+            (0..=24, "CompositeTexture") => Some("LayerDir"),
+            (0..=23, "BandFx") => Some("WorldFx"),
+            (0..=21, "Slider") => Some("BandSlider"),
+            (0..=20, "TextEntry") => Some("BandTextEntry"),
+            (0..=19, "Placer") => Some("BandPlacer"),
+            (0..=18, "ButtonEx") => Some("BandButton"),
+            (0..=18, "LabelEx") => Some("BandLabel"),
+            (0..=18, "PictureEx") => Some("BandPicture"),
+            (0..=17, "UIPanel") => Some("PanelDir"),
+            (0..=15, "WorldInstance") => Some("WorldObject"),
+            (0..=14, "View") => Some("Group"),
+            (0..=6, "String") => Some("Line"),
+            (0..=5, "MeshGenerator") => Some("Generator"),
+            (0..=4, "TexMovie") => Some("Movie"),
+            _ => None,
+        };
+
+        // Update name if needed
+        if let Some(name) = new_name {
+            *class_name = name.to_owned();
+        }
+    }
+}

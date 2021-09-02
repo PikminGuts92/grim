@@ -147,7 +147,7 @@ impl MiloArchive {
             return Err(Box::new(MiloUnpackError::UnsupportedDirectoryVersion { version }));
         }
 
-        let dir_type;
+        let mut dir_type;
         let dir_name;
 
         if version >= 24 {
@@ -156,6 +156,9 @@ impl MiloArchive {
             dir_name = reader.read_prefixed_string()?;
 
             reader.seek(SeekFrom::Current(8))?; // Skip extra nums
+
+            // Update class name
+            ObjectDir::fix_class_name(version, &mut dir_type);
         } else {
             dir_type = String::new();
             dir_name = String::new();
