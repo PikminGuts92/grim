@@ -37,10 +37,12 @@ impl Default for GroupObject {
             override_include_in_depth_only_pass: OverrideIncludeInDepthOnlyPass::default(),
 
             // Group object
-            environ: String::default(),
             objects: Vec::new(),
-            lod_width: 0.0,
-            lod_height: 0.0,
+            environ: String::default(),
+            draw_only: String::default(),
+            lod: String::default(),
+            lod_screen_size: 0.0,
+            sort_in_world: false,
         }
     }
 }

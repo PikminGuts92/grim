@@ -4,23 +4,15 @@ use quote::quote;
 
 pub fn get_group_tokens() -> ObjectTokens {
     let struct_fields = [
-        quote! { pub environ: String }.into(),
         quote! { pub objects: Vec<String> }.into(),
-        quote! { pub lod_width: f32 }.into(),
-        quote! { pub lod_height: f32 }.into(),
+        quote! { pub environ: String }.into(),
+        quote! { pub draw_only: String }.into(),
+        quote! { pub lod: String }.into(),
+        quote! { pub lod_screen_size: f32 }.into(),
+        quote! { pub sort_in_world: bool }.into(),
     ];
 
     let trait_impl = quote! {
-        fn get_environ(&self) -> &String {
-            &self.environ
-        }
-        fn get_environ_mut(&mut self) -> &mut String {
-            &mut self.environ
-        }
-        fn set_environ(&mut self, environ: String) {
-            self.environ = environ;
-        }
-
         fn get_objects(&self) -> &Vec<String> {
             &self.objects
         }
@@ -31,18 +23,48 @@ pub fn get_group_tokens() -> ObjectTokens {
             self.objects = objects;
         }
 
-        fn get_lod_width(&self) -> f32 {
-            self.lod_width
+        fn get_environ(&self) -> &String {
+            &self.environ
         }
-        fn set_lod_width(&mut self, lod_width: f32) {
-            self.lod_width = lod_width;
+        fn get_environ_mut(&mut self) -> &mut String {
+            &mut self.environ
+        }
+        fn set_environ(&mut self, environ: String) {
+            self.environ = environ;
         }
 
-        fn get_lod_height(&self) -> f32 {
-            self.lod_height
+        fn get_draw_only(&self) -> &String {
+            &self.draw_only
         }
-        fn set_lod_height(&mut self, lod_height: f32) {
-            self.lod_height = lod_height;
+        fn get_draw_only_mut(&mut self) -> &mut String {
+            &mut self.draw_only
+        }
+        fn set_draw_only(&mut self, draw_only: String) {
+            self.draw_only = draw_only;
+        }
+
+        fn get_lod(&self) -> &String {
+            &self.lod
+        }
+        fn get_lod_mut(&mut self) -> &mut String {
+            &mut self.lod
+        }
+        fn set_lod(&mut self, lod: String) {
+            self.lod = lod;
+        }
+
+        fn get_lod_screen_size(&self) -> f32 {
+            self.lod_screen_size
+        }
+        fn set_lod_screen_size(&mut self, lod_screen_size: f32) {
+            self.lod_screen_size = lod_screen_size;
+        }
+
+        fn get_sort_in_world(&self) -> bool {
+            self.sort_in_world
+        }
+        fn set_sort_in_world(&mut self, sort_in_world: bool) {
+            self.sort_in_world = sort_in_world;
         }
     };
 

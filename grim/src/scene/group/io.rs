@@ -6,7 +6,7 @@ use std::error::Error;
 
 fn is_version_supported(version: u32) -> bool {
     match version {
-        14 => true, // TBRB
+        14 => true, // TBRB/GDRB
         _ => false
     }
 }
@@ -33,17 +33,10 @@ impl ObjectReadWrite for GroupObject {
         }
 
         self.environ = reader.read_prefixed_string()?;
-        self.lod_height = reader.read_float32()?;
-        self.lod_width = reader.read_float32()?;
-
-        let end_data = match version {
-            13 => reader.read_bytes(4)?,
-            _ => reader.read_bytes(5)?,
-        };
-
-        if end_data.iter().any(|d| *d != 0) {
-            panic!("Unexpected Data: Ending bytes of Group object is {:?}", &end_data);
-        }
+        self.draw_only = reader.read_prefixed_string()?;
+        self.lod = reader.read_prefixed_string()?;
+        self.lod_screen_size = reader.read_float32()?;
+        self.sort_in_world = reader.read_boolean()?;
 
         Ok(())
     }
