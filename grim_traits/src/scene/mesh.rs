@@ -75,6 +75,7 @@ pub struct Vert {
     pub uv: UV,
     pub bones: [u16; 4],
     pub weights: [f32; 4],
+    pub tangent: Vector4,
 }
 
 pub trait RndMesh : Draw + MiloObject + Trans {

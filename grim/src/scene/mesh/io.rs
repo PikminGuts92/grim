@@ -75,8 +75,11 @@ impl ObjectReadWrite for MeshObject {
                 vec.bones[2] = reader.read_uint16()?;
                 vec.bones[3] = reader.read_uint16()?;
 
-                // Skip unknown data for now
-                reader.seek(SeekFrom::Current(16))?;
+                // Tangent?
+                vec.tangent.x = reader.read_float32()?;
+                vec.tangent.y = reader.read_float32()?;
+                vec.tangent.z = reader.read_float32()?;
+                vec.tangent.w = reader.read_float32()?;
             } else {
                 let uv_check = reader.read_int32()?;
 
