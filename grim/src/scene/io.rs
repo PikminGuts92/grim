@@ -114,22 +114,18 @@ pub (crate) fn save_matrix(mat: &Matrix, writer: &mut Box<BinaryStream>) -> Resu
     writer.write_float32(mat.m11)?;
     writer.write_float32(mat.m12)?;
     writer.write_float32(mat.m13)?;
-    writer.write_float32(mat.m14)?;
 
     writer.write_float32(mat.m21)?;
     writer.write_float32(mat.m22)?;
     writer.write_float32(mat.m23)?;
-    writer.write_float32(mat.m24)?;
 
     writer.write_float32(mat.m31)?;
     writer.write_float32(mat.m32)?;
     writer.write_float32(mat.m33)?;
-    writer.write_float32(mat.m34)?;
 
     writer.write_float32(mat.m41)?;
     writer.write_float32(mat.m42)?;
     writer.write_float32(mat.m43)?;
-    writer.write_float32(mat.m44)?;
 
     Ok(())
 }
