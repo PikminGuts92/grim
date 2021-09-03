@@ -41,7 +41,7 @@ impl ObjectReadWrite for MeshObject {
 
         // If next gen, read stride + 1 constant
         if is_ng {
-            reader.seek(SeekFrom::Current(8))?; // (true, 36, 1)
+            reader.seek(SeekFrom::Current(8))?; // (36, 1)
         }
 
         self.vertices.clear();
