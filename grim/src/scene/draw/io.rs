@@ -15,12 +15,13 @@ impl ObjectReadWrite for DrawObject {
     fn load(&mut self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
         let mut reader = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
 
-        load_draw(self, &mut reader, info, true)?;
-        Ok(())
+        load_draw(self, &mut reader, info, true)
     }
 
     fn save(&self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
-        todo!()
+        let mut writer = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
+
+        save_draw(self, &mut writer, info, true)
     }
 }
 
@@ -39,8 +40,28 @@ pub(crate) fn load_draw<T: Draw>(draw: &mut T, reader: &mut Box<BinaryStream>, i
     load_sphere(draw.get_sphere_mut(), reader)?;
     draw.set_draw_order(reader.read_float32()?);
 
-    if version >= 4{
+    if version >= 4 {
         draw.set_override_include_in_depth_only_pass(reader.read_uint32()?.into());
+    }
+
+    Ok(())
+}
+
+pub(crate) fn save_draw<T: Draw>(draw: &T, writer: &mut Box<BinaryStream>, info: &SystemInfo, write_meta: bool)  -> Result<(), Box<dyn Error>> {
+    // TODO: Get version from system info
+    let version = 4;
+    writer.write_uint32(version)?;
+
+    if write_meta {
+        save_object(draw, writer, info)?;
+    }
+
+    writer.write_boolean(draw.get_showing())?;
+    save_sphere(draw.get_sphere(), writer)?;
+    writer.write_float32(draw.get_draw_order())?;
+
+    if version >= 4 {
+        writer.write_uint32(*draw.get_override_include_in_depth_only_pass() as u32)?;
     }
 
     Ok(())

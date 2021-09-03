@@ -1,6 +1,7 @@
 use super::{MiloObject, Sphere};
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(u32)]
 pub enum OverrideIncludeInDepthOnlyPass {
     kOverrideIncludeInDepthOnlyPass_None,

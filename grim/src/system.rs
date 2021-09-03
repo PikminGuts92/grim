@@ -49,4 +49,11 @@ impl SystemInfo {
             endian,
         }
     }
+
+    pub fn is_next_gen(&self) -> bool {
+        match self.platform {
+            Platform::PS3 | Platform::X360 => true,
+            _ => false,
+        }
+    }
 }

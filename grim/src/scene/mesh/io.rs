@@ -1,3 +1,4 @@
+use crate::Platform;
 use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::scene::*;
 use crate::SystemInfo;
@@ -157,14 +158,145 @@ impl ObjectReadWrite for MeshObject {
 
         self.keep_mesh_data = reader.read_boolean()?;
         if version >= 37 {
-            self.set_exclude_from_self_shadow(reader.read_boolean()?);
+            self.exclude_from_self_shadow = reader.read_boolean()?;
         }
 
         Ok(())
     }
 
     fn save(&self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
-        todo!()
+        let mut stream = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
+
+        // TODO: Get version from system info
+        let version = 34;
+        let is_ng = info.is_next_gen();
+
+        stream.write_uint32(version)?;
+
+        save_object(self, &mut stream, info)?;
+        save_trans(self, &mut stream, info, false)?;
+        save_draw(self, &mut stream, info, false)?;
+
+        stream.write_prefixed_string(&self.mat)?;
+        stream.write_prefixed_string(&self.geom_owner)?;
+
+        stream.write_uint32(self.mutable as u32)?;
+        stream.write_uint32(self.volume as u32)?;
+
+        // TODO: Figure out what bsp? Although it's not really used at all...
+        stream.write_uint8(0)?;
+
+        stream.write_uint32(self.vertices.len() as u32)?;
+
+        if version >= 36 {
+            stream.write_boolean(is_ng)?;
+
+            if is_ng {
+                // TODO: Determine if value changes after v37
+                let vert_spread = 36;
+
+                stream.write_uint32(1)?; // Some constant
+                stream.write_uint32(vert_spread)?;
+            }
+        }
+
+        // Write vertices
+        // TODO: Separate into functions and use conditionals before loop iteration
+        for v in &self.vertices {
+            // Position
+            stream.write_float32(v.pos.x)?;
+            stream.write_float32(v.pos.y)?;
+            stream.write_float32(v.pos.z)?;
+            if version == 34 {
+                stream.write_float32(v.pos.w)?;
+            }
+
+            if version < 35 || !is_ng {
+                // Normals
+                stream.write_float32(v.normals.x)?;
+                stream.write_float32(v.normals.y)?;
+                stream.write_float32(v.normals.z)?;
+                if version == 34 {
+                    stream.write_float32(v.normals.w)?;
+                }
+
+                // Weights
+                stream.write_float32(v.weights[0])?;
+                stream.write_float32(v.weights[1])?;
+                stream.write_float32(v.weights[2])?;
+                stream.write_float32(v.weights[3])?;
+
+                // UVs
+                stream.write_float32(v.uv.u)?;
+                stream.write_float32(v.uv.v)?;
+
+                if version >= 34 {
+                    // Bone indices
+                    stream.write_uint16(v.bones[0])?;
+                    stream.write_uint16(v.bones[1])?;
+                    stream.write_uint16(v.bones[2])?;
+                    stream.write_uint16(v.bones[3])?;
+
+                    // Tangent?
+                    stream.write_float32(v.tangent.x)?;
+                    stream.write_float32(v.tangent.y)?;
+                    stream.write_float32(v.tangent.z)?;
+                    stream.write_float32(v.tangent.w)?;
+                }
+            } else {
+                todo!("Figure out how ng verts are packed in v36 meshes");
+            }
+        }
+
+        stream.write_uint32(self.faces.len() as u32)?;
+        for f in &self.faces {
+            stream.write_uint16(f[0])?;
+            stream.write_uint16(f[1])?;
+            stream.write_uint16(f[2])?;
+        }
+
+        stream.write_uint32(self.face_groups.len() as u32)?;
+        stream.write_bytes(self.face_groups.as_slice())?;
+
+        if version >= 34 {
+            // Write n-bones
+            stream.write_uint32(self.bones.len() as u32)?;
+
+            for b in &self.bones {
+                stream.write_prefixed_string(&b.name)?;
+                save_matrix(&b.trans, &mut stream)?;
+            }
+        } else {
+            if self.bones.is_empty() {
+                // Write 0 bones
+                stream.write_uint32(0)?;
+            } else {
+                // Write 4 bones
+                for i in 0..4 {
+                    if let Some(b) = self.bones.get(i) {
+                        // Write bone
+                        stream.write_prefixed_string(&b.name)?;
+                        save_matrix(&b.trans, &mut stream)?;
+                    } else {
+                        // Write empty bone
+                        stream.write_uint32(0)?;
+                        save_matrix(&Matrix::indentity(), &mut stream)?;
+                    }
+                }
+
+                todo!("Figure out how to calculate additional group info");
+            }
+        }
+
+        if version >= 36 {
+            stream.write_boolean(self.keep_mesh_data)?;
+        }
+
+        if version >= 37 {
+            stream.write_boolean(self.exclude_from_self_shadow)?;
+        }
+
+        Ok(())
     }
 }
 

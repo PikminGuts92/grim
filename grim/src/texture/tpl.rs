@@ -1,8 +1,8 @@
 use super::*;
 
 #[allow(non_camel_case_types)]
-#[repr(u32)]
 #[derive(Clone, Copy)]
+#[repr(u32)]
 pub enum TPLEncoding {
     RGBA8     =  64, //  6
     CMP       =  72, // 14

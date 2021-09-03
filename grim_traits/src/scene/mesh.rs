@@ -1,6 +1,7 @@
 use super::{Color4, Draw, Matrix, MiloObject, Trans, Vector4};
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(u32)]
 pub enum Volume {
     kVolumeEmpty,
@@ -29,6 +30,7 @@ impl From<u32> for Volume {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(u32)]
 pub enum Mutable {
     kMutableNone = 0,

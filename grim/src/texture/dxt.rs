@@ -1,8 +1,8 @@
 use super::*;
 
 #[allow(non_camel_case_types)]
-#[repr(u32)]
 #[derive(Clone, Copy)]
+#[repr(u32)]
 pub enum DXGI_Encoding {
     DXGI_FORMAT_BC1_UNORM =  8, // DXT1
     DXGI_FORMAT_BC3_UNORM = 24, // DXT5

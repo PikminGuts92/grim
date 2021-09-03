@@ -523,6 +523,16 @@ impl<'a> BinaryStream<'a> {
 
 // Writer implementation
 impl<'a> BinaryStream<'a> {
+    // Write boolean
+    pub fn write_boolean(&mut self, value: bool) -> Result<(), Box<dyn Error>> {
+        let data = match value {
+            true => 1u8,
+            _ => 0u8,
+        };
+
+        self.write_uint8(data)
+    }
+
     // Write signed integers
     pub fn write_int8(&mut self, value: i8) -> Result<(), Box<dyn Error>> {
         let data = match self.endian {

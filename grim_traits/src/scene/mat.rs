@@ -1,6 +1,7 @@
 use super::{Color3, Matrix, MiloObject};
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(u32)]
 pub enum Blend {
     kBlendDest,
@@ -35,6 +36,7 @@ impl From<u32> for Blend {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(u32)]
 pub enum PerPixel {
     kPerPixelOff,
@@ -63,6 +65,7 @@ impl From<u32> for PerPixel {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(u32)]
 pub enum ShaderVariation {
     kShaderVariationNone,
@@ -89,6 +92,7 @@ impl From<u32> for ShaderVariation {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(u32)]
 pub enum StencilMode {
     kStencilIgnore,
@@ -115,6 +119,7 @@ impl From<u32> for StencilMode {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(u32)]
 pub enum TexGen {
     kTexGenNone,
@@ -147,6 +152,7 @@ impl From<u32> for TexGen {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(u32)]
 pub enum TexWrap {
     kTexWrapClamp,
@@ -177,6 +183,7 @@ impl From<u32> for TexWrap {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(u32)]
 pub enum ZMode {
     kZModeDisable,
