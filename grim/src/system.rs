@@ -24,6 +24,8 @@ impl SystemInfo {
                 Some("milo_ps3") => Platform::PS3,
                 Some("milo_wii") => Platform::Wii,
                 Some("milo_xbox") => Platform::X360,
+                Some("rnd_ps2") => Platform::PS2,
+                Some("gh") => Platform::PS2,
                 _ => Platform::X360,
             },
             None => Platform::X360,

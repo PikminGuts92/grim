@@ -87,6 +87,7 @@ fn main() {
             ..Default::default()
         })
         .add_event::<UpdateState>()
+        .insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Msaa { samples: 8 })
         .insert_resource(app_state)
         .insert_resource(app_settings)
@@ -397,7 +398,7 @@ fn setup(
     }
 
     // plane
-    commands.spawn_bundle(PbrBundle {
+    /*commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Plane { size: 5.0 })),
         material: materials.add(StandardMaterial {
             base_color: Color::rgb(0.3, 0.5, 0.3),
@@ -406,7 +407,7 @@ fn setup(
             ..Default::default()
         }),
         ..Default::default()
-    });
+    });*/
 
     /*
     commands.spawn_bundle(PbrBundle {
@@ -498,7 +499,9 @@ fn setup_args(
             state.root = Some(create_ark_tree(&ark));
             state.ark = Some(ark);
         }
-    } else if ext.contains("milo") {
+    } else if ext.contains("milo")
+        || ext.contains("gh")
+        || ext.contains("rnd") { // TODO: Break out into static regex
         // Open milo
         println!("Opening milo from \"{}\"", arg0);
 
