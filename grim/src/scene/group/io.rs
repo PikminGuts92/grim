@@ -6,6 +6,7 @@ use std::error::Error;
 
 fn is_version_supported(version: u32) -> bool {
     match version {
+        12 => true, // GH2/GH2 360
         14 => true, // TBRB/GDRB
         _ => false
     }
@@ -33,10 +34,26 @@ impl ObjectReadWrite for GroupObject {
         }
 
         self.environ = reader.read_prefixed_string()?;
-        self.draw_only = reader.read_prefixed_string()?;
-        self.lod = reader.read_prefixed_string()?;
-        self.lod_screen_size = reader.read_float32()?;
-        self.sort_in_world = reader.read_boolean()?;
+
+        if version <= 12 {
+            let lod_width = reader.read_float32()?;
+            let lod_height = reader.read_float32()?;
+
+            // Calculate ratio
+            if lod_height != 0.0 {
+                self.lod_screen_size = lod_width / lod_height;
+            } else {
+                self.lod_screen_size = 0.0;
+            }
+        } else {
+            self.draw_only = reader.read_prefixed_string()?;
+            self.lod = reader.read_prefixed_string()?;
+            self.lod_screen_size = reader.read_float32()?;
+
+            if version >= 14 {
+                self.sort_in_world = reader.read_boolean()?;
+            }
+        }
 
         Ok(())
     }
