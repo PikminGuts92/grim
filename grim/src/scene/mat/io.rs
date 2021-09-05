@@ -59,10 +59,11 @@ impl ObjectReadWrite for MatObject {
         self.specular_map = reader.read_prefixed_string()?;
 
         if version < 51 {
-            let some_string = reader.read_prefixed_string()?;
-            if !some_string.is_empty() {
+            // Seems to match diffuse_tex
+            let _some_string = reader.read_prefixed_string()?;
+            /*if !some_string.is_empty() {
                 panic!("Some string is note empty with value: {}", &some_string);
-            }
+            }*/
         }
 
         self.environ_map = reader.read_prefixed_string()?;
