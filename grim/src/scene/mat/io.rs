@@ -131,7 +131,7 @@ impl ObjectReadWrite for MatObject {
 
             if version < 42 {
                 // Ignore 5 floats
-                reader.seek(SeekFrom::Current(20));
+                reader.seek(SeekFrom::Current(20))?;
             }
 
             self.norm_detail_map = reader.read_prefixed_string()?;
