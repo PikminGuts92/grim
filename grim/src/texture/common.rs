@@ -122,11 +122,15 @@ pub fn unpack_indicies(packed: &[u8], indicies: &mut [u8; 16]) {
 }
 
 pub fn unpack_indicies_360(packed: &[u8], indicies: &mut [u8; 16]) {
+    const proxy_idx: [usize; 4] = [1, 0, 3, 2];
+
     for (i, ind) in indicies.chunks_mut(4).enumerate() {
-        ind[1] =  packed[i] & 0b00_00_00_11;
-        ind[0] = (packed[i] & 0b00_00_11_00) >> 2;
-        ind[3] = (packed[i] & 0b00_11_00_00) >> 4;
-        ind[2] = (packed[i] & 0b11_00_00_00) >> 6;
+        let i = proxy_idx[i];
+
+        ind[0] =  packed[i] & 0b00_00_00_11;
+        ind[1] = (packed[i] & 0b00_00_11_00) >> 2;
+        ind[2] = (packed[i] & 0b00_11_00_00) >> 4;
+        ind[3] = (packed[i] & 0b11_00_00_00) >> 6;
     }
 }
 
