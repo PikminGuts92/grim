@@ -105,7 +105,7 @@ impl ObjectReadWrite for MatObject {
 
         if version >= 34 && version < 49 {
             // Ignore bool, color, alpha
-            reader.seek(SeekFrom::Current(17));
+            reader.seek(SeekFrom::Current(17))?;
 
             if version > 34 {
                 let some_string = reader.read_prefixed_string()?;
