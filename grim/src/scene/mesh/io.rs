@@ -7,8 +7,9 @@ use std::error::Error;
 
 fn is_version_supported(version: u32) -> bool {
     match version {
+        28 => true, // GH2/GH2 360
         34 => true, // RB1/RB2
-        36..=37 => true, // TBRB/GDRB
+        36 | 37 => true, // TBRB/GDRB
         _ => false
     }
 }
@@ -158,15 +159,45 @@ impl ObjectReadWrite for MeshObject {
         let group_count = reader.read_uint32()?;
         self.face_groups = reader.read_bytes(group_count as usize)?;
 
-        let bone_count = reader.read_uint32()?;
+        // Read bones
         self.bones.clear();
-        for _ in 0..bone_count {
-            let mut bone = BoneTrans::default();
+        if version >= 34 {
+            let bone_count = reader.read_uint32()?;
 
-            bone.name = reader.read_prefixed_string()?;
-            load_matrix(&mut bone.trans, &mut reader)?;
+            for _ in 0..bone_count {
+                let mut bone = BoneTrans::default();
 
-            self.bones.push(bone);
+                bone.name = reader.read_prefixed_string()?;
+                load_matrix(&mut bone.trans, &mut reader)?;
+
+                self.bones.push(bone);
+            }
+        } else {
+            // Should be 0 or 4 bones
+            let mut bones = Vec::new();
+
+            // Read bone names
+            for i in 0..4 {
+                let name = reader.read_prefixed_string()?;
+                if i == 0 && name.is_empty() {
+                    break;
+                }
+
+                bones.push(BoneTrans {
+                    name,
+                    ..Default::default()
+                });
+            }
+
+            // Read bone transforms
+            for mut bone in bones {
+                load_matrix(&mut bone.trans, &mut reader)?;
+
+                // Add bone if it has name
+                if !bone.name.is_empty() {
+                    self.bones.push(bone);
+                }
+            }
         }
 
         if version >= 36 {
@@ -176,6 +207,8 @@ impl ObjectReadWrite for MeshObject {
         if version >= 37 {
             self.exclude_from_self_shadow = reader.read_boolean()?;
         }
+
+        // TODO: Parse extra data from previous gen platforms
 
         Ok(())
     }
