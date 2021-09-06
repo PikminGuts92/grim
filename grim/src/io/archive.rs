@@ -169,8 +169,11 @@ impl MiloArchive {
 
         // Parse entry types + names
         for _ in 0..entry_count {
-            let entry_type = reader.read_prefixed_string()?;
+            let mut entry_type = reader.read_prefixed_string()?;
             let entry_name = reader.read_prefixed_string()?;
+
+            // Update class name
+            ObjectDir::fix_class_name(version, &mut entry_type);
 
             packed_entries.push(PackedObject {
                 name: entry_name,
