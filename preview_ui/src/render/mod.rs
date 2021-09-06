@@ -117,7 +117,7 @@ pub fn render_milo(
         }
     }
 
-    println!("Found {} meshes, {} textures, and {} materials", meshes.len(), textures.len(), mats.len());
+    println!("Found {} groups, {} meshes, {} textures, and {} materials", groups.len(), meshes.len(), textures.len(), mats.len());
 
     for mesh in meshes {
         // Ignore meshes without geometry (used mostly in GH1)
@@ -154,15 +154,11 @@ pub fn render_milo(
         bevy_mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
 
         // Get base matrix
-        let base_matrix = match mesh.get_constraint() {
-            TransConstraint::kConstraintParentWorld
-                => transforms
-                    .iter()
-                    .find(|t| t.get_name().eq(mesh.get_parent()))
-                    .and_then(|p| Some(map_matrix(p.get_world_xfm())))
-                    .unwrap_or(Mat4::IDENTITY),
-            _ => map_matrix(mesh.get_world_xfm())
-        };
+        let base_matrix = transforms
+            .iter()
+            .find(|t| t.get_name().eq(mesh.get_parent()))
+            .and_then(|p| Some(map_matrix(p.get_world_xfm())))
+            .unwrap_or(map_matrix(mesh.get_world_xfm()));
 
         // Translate to bevy coordinate system
         let matrix = Mat4::from_cols_array(&[
