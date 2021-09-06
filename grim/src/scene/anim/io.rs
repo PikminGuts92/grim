@@ -42,11 +42,12 @@ pub(crate) fn load_anim<T: Anim>(anim: &mut T, reader: &mut Box<BinaryStream>, i
         for _ in 0..anim_count {
             // TODO: Collect into struct field
             reader.read_prefixed_string()?;
+            reader.seek(SeekFrom::Current(8))?; // Skip 2 floats
         }
 
-        // Reads child animatables 2 (not sure difference)
-        let anim_count = reader.read_uint32()?;
-        for _ in 0..anim_count {
+        // Reads strings
+        let some_count = reader.read_uint32()?;
+        for _ in 0..some_count {
             // TODO: Collect into struct field
             reader.read_prefixed_string()?;
         }
