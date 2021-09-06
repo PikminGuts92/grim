@@ -120,6 +120,11 @@ pub fn render_milo(
     println!("Found {} meshes, {} textures, and {} materials", meshes.len(), textures.len(), mats.len());
 
     for mesh in meshes {
+        // Ignore meshes without geometry (used mostly in GH1)
+        if mesh.vertices.is_empty() {
+            continue;
+        }
+
         let mut bevy_mesh = Mesh::new(bevy::render::pipeline::PrimitiveTopology::TriangleList);
 
         let mut positions = Vec::new();
