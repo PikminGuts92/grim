@@ -37,19 +37,21 @@ pub(crate) fn load_anim<T: Anim>(anim: &mut T, reader: &mut Box<BinaryStream>, i
     }
 
     if version < 4 {
-        // Reads child animatables
-        let anim_count = reader.read_uint32()?;
-        for _ in 0..anim_count {
+        // Reads anim entries
+        let anim_entry_count = reader.read_uint32()?;
+        for _ in 0..anim_entry_count {
             // TODO: Collect into struct field
             reader.read_prefixed_string()?;
             reader.seek(SeekFrom::Current(8))?; // Skip 2 floats
         }
 
-        // Reads strings
-        let some_count = reader.read_uint32()?;
-        for _ in 0..some_count {
-            // TODO: Collect into struct field
-            reader.read_prefixed_string()?;
+        let anim_objects = anim.get_anim_objects_mut();
+        anim_objects.clear();
+
+        // Reads anim objects
+        let anim_count = reader.read_uint32()?;
+        for _ in 0..anim_count {
+            anim_objects.push(reader.read_prefixed_string()?);
         }
     } else {
         anim.set_frame(reader.read_float32()?);

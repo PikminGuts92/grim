@@ -31,6 +31,10 @@ pub trait Draw : MiloObject {
     fn get_showing(&self) -> bool;
     fn set_showing(&mut self, showing: bool);
 
+    fn get_draw_objects(&self) -> &Vec<String>;
+    fn get_draw_objects_mut(&mut self) -> &mut Vec<String>;
+    fn set_draw_objects(&mut self, draw_objects: Vec<String>);
+
     fn get_sphere(&self) -> &Sphere;
     fn get_sphere_mut(&mut self) -> &mut Sphere;
     fn set_sphere(&mut self, sphere: Sphere);

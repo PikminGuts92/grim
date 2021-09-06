@@ -4,6 +4,7 @@ use quote::quote;
 
 pub fn get_draw_tokens() -> ObjectTokens {
     let struct_fields = [
+        quote! { pub draw_objects: Vec<String> }.into(),
         quote! { pub showing: bool }.into(),
         quote! { pub sphere: grim_traits::scene::Sphere }.into(),
         quote! { pub draw_order: f32 }.into(),
@@ -17,6 +18,16 @@ pub fn get_draw_tokens() -> ObjectTokens {
 
         fn set_showing(&mut self, showing: bool) {
             self.showing = showing;
+        }
+
+        fn get_draw_objects(&self) -> &Vec<String> {
+            &self.draw_objects
+        }
+        fn get_draw_objects_mut(&mut self) -> &mut Vec<String> {
+            &mut self.draw_objects
+        }
+        fn set_draw_objects(&mut self, draw_objects: Vec<String>) {
+            self.draw_objects = draw_objects;
         }
 
         fn get_sphere(&self) -> &grim_traits::scene::Sphere {

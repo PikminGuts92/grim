@@ -30,6 +30,10 @@ impl From<u32> for AnimRate {
 }
 
 pub trait Anim : MiloObject {
+    fn get_anim_objects(&self) -> &Vec<String>;
+    fn get_anim_objects_mut(&mut self) -> &mut Vec<String>;
+    fn set_anim_objects(&mut self, anim_objects: Vec<String>);
+
     fn get_frame(&self) -> f32;
     fn set_frame(&mut self, frame: f32);
 

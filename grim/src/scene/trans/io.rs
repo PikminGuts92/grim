@@ -41,11 +41,13 @@ pub(crate) fn load_trans<T: Trans>(trans: &mut T, reader: &mut Box<BinaryStream>
     load_matrix(trans.get_world_xfm_mut(), reader)?;
 
     if version <= 8 {
-        // Reads child transforms
+        let trans_objects = trans.get_trans_objects_mut();
+        trans_objects.clear();
+
+        // Reads trans objects
         let trans_count = reader.read_uint32()?;
         for _ in 0..trans_count {
-            // TODO: Collect into struct field
-            reader.read_prefixed_string()?;
+            trans_objects.push(reader.read_prefixed_string()?);
         }
     }
 

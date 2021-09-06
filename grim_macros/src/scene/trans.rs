@@ -6,6 +6,7 @@ pub fn get_trans_tokens() -> ObjectTokens {
     let struct_fields = [
         quote! { pub local_xfm: grim_traits::scene::Matrix }.into(),
         quote! { pub world_xfm: grim_traits::scene::Matrix }.into(),
+        quote! { pub trans_objects: Vec<String> }.into(),
         quote! { pub constraint: grim_traits::scene::TransConstraint }.into(),
         quote! { pub target: String }.into(),
         quote! { pub preserve_scale: bool }.into(),
@@ -31,6 +32,16 @@ pub fn get_trans_tokens() -> ObjectTokens {
         }
         fn set_world_xfm(&mut self, xfm: grim_traits::scene::Matrix) {
             self.world_xfm = xfm;
+        }
+
+        fn get_trans_objects(&self) -> &Vec<String> {
+            &self.trans_objects
+        }
+        fn get_trans_objects_mut(&mut self) -> &mut Vec<String> {
+            &mut self.trans_objects
+        }
+        fn set_trans_objects(&mut self, trans_objects: Vec<String>) {
+            self.trans_objects = trans_objects;
         }
 
         fn get_constraint(&self) -> &grim_traits::scene::TransConstraint {

@@ -2,6 +2,7 @@ use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::scene::*;
 use crate::SystemInfo;
 use grim_traits::scene::*;
+use std::collections::HashSet;
 use std::error::Error;
 
 fn is_version_supported(version: u32) -> bool {
@@ -33,6 +34,25 @@ impl ObjectReadWrite for GroupObject {
             let object_count = reader.read_uint32()?;
             for _ in 0..object_count {
                 self.objects.push(reader.read_prefixed_string()?);
+            }
+        } else {
+            // Copy anim/draw/trans objects from legacy version
+            let mut obj_strings = HashSet::new();
+
+            for anim in self.get_anim_objects() {
+                obj_strings.insert(anim.to_owned());
+            }
+
+            for draw in self.get_draw_objects() {
+                obj_strings.insert(draw.to_owned());
+            }
+
+            for trans in self.get_trans_objects() {
+                obj_strings.insert(trans.to_owned());
+            }
+
+            for obj in obj_strings {
+                self.objects.push(obj);
             }
         }
 

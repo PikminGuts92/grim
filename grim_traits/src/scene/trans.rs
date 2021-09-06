@@ -48,6 +48,10 @@ pub trait Trans : MiloObject {
     fn get_world_xfm_mut(&mut self) -> &mut Matrix;
     fn set_world_xfm(&mut self, transform: Matrix);
 
+    fn get_trans_objects(&self) -> &Vec<String>;
+    fn get_trans_objects_mut(&mut self) -> &mut Vec<String>;
+    fn set_trans_objects(&mut self, trans_objects: Vec<String>);
+
     fn get_constraint(&self) -> &TransConstraint;
     fn get_constraint_mut(&mut self) -> &mut TransConstraint;
     fn set_constraint(&mut self, constraint: TransConstraint);

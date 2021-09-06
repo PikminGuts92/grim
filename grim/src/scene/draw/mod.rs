@@ -17,6 +17,7 @@ impl Default for DrawObject {
 
             // Draw object
             showing: true,
+            draw_objects: Vec::new(),
             sphere: Sphere::default(),
             draw_order: 0.0,
             override_include_in_depth_only_pass: OverrideIncludeInDepthOnlyPass::default(),

@@ -4,11 +4,22 @@ use quote::quote;
 
 pub fn get_anim_tokens() -> ObjectTokens {
     let struct_fields = [
+        quote! { pub anim_objects: Vec<String> }.into(),
         quote! { pub frame: f32 }.into(),
         quote! { pub rate: grim_traits::scene::AnimRate }.into(),
     ];
 
     let trait_impl = quote! {
+        fn get_anim_objects(&self) -> &Vec<String> {
+            &self.anim_objects
+        }
+        fn get_anim_objects_mut(&mut self) -> &mut Vec<String> {
+            &mut self.anim_objects
+        }
+        fn set_anim_objects(&mut self, anim_objects: Vec<String>) {
+            self.anim_objects = anim_objects;
+        }
+
         fn get_frame(&self) -> f32 {
             self.frame
         }

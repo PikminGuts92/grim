@@ -19,6 +19,8 @@ impl Default for TransObject {
             local_xfm: Matrix::default(),
             world_xfm: Matrix::default(),
 
+            trans_objects: Vec::new(),
+
             constraint: TransConstraint::default(),
             target: String::default(),
 

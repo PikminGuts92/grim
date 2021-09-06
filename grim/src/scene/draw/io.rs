@@ -40,11 +40,13 @@ pub(crate) fn load_draw<T: Draw>(draw: &mut T, reader: &mut Box<BinaryStream>, i
     draw.set_showing(reader.read_boolean()?);
 
     if version < 3 {
-        // Reads child drawables
+        let draw_objects = draw.get_draw_objects_mut();
+        draw_objects.clear();
+
+        // Reads draw objects
         let draw_count = reader.read_uint32()?;
         for _ in 0..draw_count {
-            // TODO: Collect into struct field
-            reader.read_prefixed_string()?;
+            draw_objects.push(reader.read_prefixed_string()?);
         }
     }
 

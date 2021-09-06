@@ -16,6 +16,7 @@ impl Default for AnimObject {
             note: String::default(),
 
             // Anim object
+            anim_objects: Vec::new(),
             frame: 0.0,
             rate: AnimRate::default(),
         }
