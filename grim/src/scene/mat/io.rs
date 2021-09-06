@@ -6,6 +6,7 @@ use std::error::Error;
 
 fn is_version_supported(version: u32) -> bool {
     match version {
+        21 => true,      // GH1
         27 | 28 => true, // GH2/GH2 360
         41 | 47 => true, // RB1/RB2
         55 | 56 => true, // TBRB/GDRB
@@ -25,9 +26,42 @@ impl ObjectReadWrite for MatObject {
 
         load_object(self, &mut reader, info)?;
 
+        if version <= 21 {
+            // Read tex entries
+            let tex_count = reader.read_uint32()?;
+
+            for _ in 0..tex_count {
+                reader.read_uint32()?; // Skip unknown
+
+                let map_type = reader.read_uint32()?;
+
+                if map_type == 0 {
+                    load_matrix(&mut self.tex_xfm, &mut reader)?;
+                    self.tex_wrap = reader.read_uint32()?.into();
+                } else {
+                    // Skip transform + tex_wrap
+                    reader.seek(SeekFrom::Current(48))?;
+                    reader.seek(SeekFrom::Current(4))?;
+                }
+
+                // Set name
+                let name = reader.read_prefixed_string()?;
+                match map_type {
+                    0 => self.diffuse_tex = name,
+                    2 => self.environ_map = name,
+                    _ => continue,
+                };
+            }
+        }
+
         self.blend = reader.read_uint32()?.into();
         load_color3(&mut self.color, &mut reader)?;
         self.alpha = reader.read_float32()?;
+
+        if version <= 21 {
+            // TODO: Parse other info
+            return Ok(());
+        }
 
         self.prelit = reader.read_boolean()?;
         self.use_environ = reader.read_boolean()?;

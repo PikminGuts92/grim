@@ -9,6 +9,11 @@ pub trait ObjectReadWrite {
 }
 
 pub(crate) fn load_object<T: MiloObject>(obj: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+    if info.version < 24 {
+        // Don't read metadata
+        return Ok(());
+    }
+    
     load_object_type(obj, reader, info)?;
     load_object_rest(obj, reader, info)?;
 
