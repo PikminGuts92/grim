@@ -6,9 +6,9 @@ use std::error::Error;
 
 fn is_version_supported(version: u32) -> bool {
     match version {
-        0..=8 => false,
-        9 => true, // GH2 TODO: Update to "9.." once adopted in rust stable
-        _ => true
+        8 => true, // GH1
+        9 => true,  // GH2/RB1/RB2/TBRB/GDRB
+        _ => false
     }
 }
 
@@ -39,6 +39,15 @@ pub(crate) fn load_trans<T: Trans>(trans: &mut T, reader: &mut Box<BinaryStream>
 
     load_matrix(trans.get_local_xfm_mut(), reader)?;
     load_matrix(trans.get_world_xfm_mut(), reader)?;
+
+    if version <= 8 {
+        // Reads child transforms
+        let trans_count = reader.read_uint32()?;
+        for _ in 0..trans_count {
+            // TODO: Collect into struct field
+            reader.read_prefixed_string()?;
+        }
+    }
 
     trans.set_constraint(reader.read_uint32()?.into());
     trans.set_target(reader.read_prefixed_string()?);

@@ -6,7 +6,8 @@ use std::error::Error;
 
 fn is_version_supported(version: u32) -> bool {
     match version {
-        4 => true, // TBRB
+        0 => true, // GH1
+        4 => true, // GH2/TBRB
         _ => false
     }
 }
@@ -35,8 +36,24 @@ pub(crate) fn load_anim<T: Anim>(anim: &mut T, reader: &mut Box<BinaryStream>, i
         load_object(anim, reader, info)?;
     }
 
-    anim.set_frame(reader.read_float32()?);
-    anim.set_rate(reader.read_uint32()?.into());
+    if version < 4 {
+        // Reads child animatables
+        let anim_count = reader.read_uint32()?;
+        for _ in 0..anim_count {
+            // TODO: Collect into struct field
+            reader.read_prefixed_string()?;
+        }
+
+        // Reads child animatables 2 (not sure difference)
+        let anim_count = reader.read_uint32()?;
+        for _ in 0..anim_count {
+            // TODO: Collect into struct field
+            reader.read_prefixed_string()?;
+        }
+    } else {
+        anim.set_frame(reader.read_float32()?);
+        anim.set_rate(reader.read_uint32()?.into());
+    }
 
     Ok(())
 }

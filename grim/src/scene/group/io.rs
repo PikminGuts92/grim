@@ -6,6 +6,7 @@ use std::error::Error;
 
 fn is_version_supported(version: u32) -> bool {
     match version {
+         7 => true, // GH1
         12 => true, // GH2/GH2 360
         14 => true, // TBRB/GDRB
         _ => false
@@ -27,10 +28,12 @@ impl ObjectReadWrite for GroupObject {
         load_trans(self, &mut reader, info, false)?;
         load_draw(self, &mut reader, info, false)?;
 
-        let object_count = reader.read_uint32()?;
         self.objects.clear();
-        for _ in 0..object_count {
-            self.objects.push(reader.read_prefixed_string()?);
+        if version >= 11 {
+            let object_count = reader.read_uint32()?;
+            for _ in 0..object_count {
+                self.objects.push(reader.read_prefixed_string()?);
+            }
         }
 
         self.environ = reader.read_prefixed_string()?;
