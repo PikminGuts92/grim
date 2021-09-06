@@ -253,9 +253,9 @@ fn map_matrix(m: &Matrix) -> Mat4 {
         m.m32,
         m.m33,
         m.m34,
-        m.m31,
-        m.m32,
-        m.m33,
-        m.m34,
+        m.m41,
+        m.m42,
+        m.m43,
+        m.m44,
     ])
 }
