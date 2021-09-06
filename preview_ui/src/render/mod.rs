@@ -34,6 +34,16 @@ pub fn render_milo(
 ) {
     let entries = milo.get_entries();
 
+    let groups = entries
+        .iter()
+        .map(|o| match o {
+            Object::Group(grp) => Some(grp),
+            _ => None,
+        })
+        .filter(|o| o.is_some())
+        .map(|o| o.unwrap())
+        .collect::<Vec<_>>();
+
     let mats = entries
         .iter()
         .map(|o| match o {
@@ -67,6 +77,7 @@ pub fn render_milo(
     let transforms = entries
         .iter()
         .map(|o| match o {
+            Object::Group(grp) => Some(get_transform(grp)),
             Object::Mesh(mesh) => Some(get_transform(mesh)),
             Object::Trans(trans) => Some(get_transform(trans)),
             _ => None,
