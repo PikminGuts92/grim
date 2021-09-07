@@ -24,6 +24,7 @@ use crate::render::open_and_unpack_milo;
 
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const PROJECT_NAME: &str = env!("CARGO_PKG_NAME");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     let app_state = load_state();
@@ -31,7 +32,7 @@ fn main() {
 
     App::build()
         .insert_resource(WindowDescriptor {
-            title: String::from("Preview"),
+            title: format!("Preview v{}", VERSION),
             width: app_settings.window_width,
             height: app_settings.window_height,
             mode: WindowMode::Windowed,
