@@ -1,70 +1,14 @@
+mod ark;
+mod toolbar;
+
+use ark::*;
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, CtxRef, Pos2, Ui}};
-use grim::ark::{Ark, ArkOffsetEntry};
 use super::{AppSettings, AppState, ArkDirNode, AppEvent};
+use toolbar::*;
 
 pub fn render_gui(ctx: &mut &CtxRef, settings: &mut AppSettings, state: &mut AppState) {
     // Top Toolbar
-    egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-        // ui.heading("Main");
-
-        egui::menu::bar(ui, |ui| {
-            // File dropdown
-            egui::menu::menu(ui, "File", |ui| {
-                ui.set_min_width(80.0);
-
-                ui.button("Open");
-                ui.separator();
-
-                ui.button("Save");
-                ui.button("Save As...");
-                ui.separator();
-
-                ui.button("Close");
-                ui.separator();
-
-                if ui.button("Exit").clicked() {
-                    // Close app
-                    //event_writer.send(bevy::app::AppExit);
-                    state.add_event(AppEvent::Exit);
-                }
-            });
-
-            // Edit dropdown
-            egui::menu::menu(ui, "Edit", |ui| {
-                ui.set_min_width(80.0);
-
-                ui.button("Undo");
-                ui.button("Redo");
-            });
-
-            // View dropdown
-            egui::menu::menu(ui, "View", |ui| {
-                ui.set_min_width(80.0);
-
-                if ui.checkbox(&mut settings.show_controls, "Controls").changed() {
-                    state.save_settings(&settings);
-                }
-            });
-
-            // Tools dropdown
-            egui::menu::menu(ui, "Tools", |ui| {
-                ui.set_min_width(80.0);
-
-                if ui.button("Options").clicked() {
-                    state.show_options = true;
-                }
-            });
-
-            // Help dropdown
-            egui::menu::menu(ui, "Help", |ui| {
-                ui.set_min_width(120.0);
-
-                ui.button("About");
-                ui.separator();
-                ui.button("Check for Updates");
-            });
-        });
-    });
+    render_toolbar(ctx, settings, state);
 
     //ctx.set_visuals(egui::Visuals::light());
 
@@ -247,39 +191,4 @@ pub fn render_gui(ctx: &mut &CtxRef, settings: &mut AppSettings, state: &mut App
                 });*/
             });
     }
-}
-
-fn draw_ark_tree(state: &mut AppState, ctx: &mut &CtxRef, ui: &mut Ui) {
-    if let Some(root) = &state.root {
-        let entries = &state.ark.as_ref().unwrap().entries;
-
-        draw_node(root, entries, ctx, ui);
-    }
-}
-
-fn draw_node(node: &ArkDirNode, entries: &Vec<ArkOffsetEntry>, ctx: &mut &CtxRef, ui: &mut Ui) {
-    egui::CollapsingHeader::new(&node.name)
-        .id_source(format!("dir_{}", &node.path))
-        .default_open(false)
-        .show(ui, |ui| {
-            for child in &node.dirs {
-                draw_node(child, entries, ctx, ui);
-            }
-
-            egui::Grid::new(format!("files_{}", &node.path)).striped(true).show(ui, |ui| {
-                for file_idx in &node.files {
-                    let ark_entry = &entries[*file_idx];
-                    let file_name = get_file_name(&ark_entry.path);
-
-                    ui.selectable_label(false, file_name);
-                    ui.end_row();
-
-                    //ui.small_button(file_name);
-                }
-            });
-        });
-}
-
-pub fn get_file_name(path: &str) -> &str {
-    path.split('/').last().unwrap_or(path)
 }
