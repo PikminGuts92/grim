@@ -1,9 +1,14 @@
 // Hide console if release build
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod events;
+mod gui;
 mod render;
 mod settings;
+mod state;
 
+use events::*;
+use gui::*;
 use render::render_milo;
 use settings::*;
 use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{WindowMode, WindowResized}};
@@ -12,65 +17,13 @@ use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
+use state::*;
 use std::{env::args, path::{Path, PathBuf}};
-use itertools::Itertools;
 
 use crate::render::open_and_unpack_milo;
 
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const PROJECT_NAME: &str = env!("CARGO_PKG_NAME");
-
-#[derive(Default)]
-pub struct AppState {
-    pub ark: Option<Ark>,
-    pub root: Option<ArkDirNode>,
-    pub system_info: Option<SystemInfo>,
-    pub milo: Option<ObjectDir>,
-    pub settings_path: PathBuf,
-    pub show_options: bool,
-}
-
-enum UpdateState {
-    RefreshMilo,
-}
-
-impl AppState {
-    pub fn save_settings(&self, settings: &AppSettings) {
-        settings.save_to_file(&self.settings_path);
-        println!("Saved settings to \"{}\"", &self.settings_path.to_str().unwrap());
-    }
-}
-
-#[derive(Debug)]
-pub struct ArkDirNode {
-    pub name: String,
-    pub path: String,
-    pub dirs: Vec<ArkDirNode>,
-    pub files: Vec<usize>,
-    pub loaded: bool,
-}
-
-impl ArkDirNode {
-    pub fn expand(&mut self, ark: &Ark) {
-        if self.loaded {
-            return;
-        }
-
-        let (mut dirs, mut files) = get_dirs_and_files(&self.path, ark);
-        self.dirs.append(&mut dirs);
-        self.files.append(&mut files);
-        self.loaded = true;
-
-        // TODO: Rely on lazy load
-        for c in &mut self.dirs {
-            c.expand(ark);
-        }
-    }
-}
-
-pub fn get_file_name(path: &str) -> &str {
-    path.split('/').last().unwrap_or(path)
-}
 
 fn main() {
     let app_state = load_state();
@@ -86,15 +39,15 @@ fn main() {
             resizable: true,
             ..Default::default()
         })
-        .add_event::<UpdateState>()
-        .insert_resource(ClearColor(Color::BLACK))
+        .add_event::<AppEvent>()
+        //.insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Msaa { samples: 8 })
         .insert_resource(app_state)
         .insert_resource(app_settings)
         .add_plugins(DefaultPlugins)
         .add_plugin(EguiPlugin)
         .add_plugin(FlyCameraPlugin)
-        .add_system(ui_example.system())
+        .add_system(render_gui_system.system())
         .add_system(control_camera.system())
         .add_system(drop_files.system())
         .add_system(window_resized.system())
@@ -104,283 +57,15 @@ fn main() {
         .run();
 }
 
-fn ui_example(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<bevy::app::AppExit>) {
-    let ctx = &mut egui_ctx.ctx();
+fn render_gui_system(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<AppEvent>) {
+    render_gui(&mut egui_ctx.ctx(), &mut *settings, &mut *state);
 
-    // Top Toolbar
-    egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-        // ui.heading("Main");
+    let mut test = Vec::new();
+    test.push("Test");
 
-        egui::menu::bar(ui, |ui| {
-            // File dropdown
-            egui::menu::menu(ui, "File", |ui| {
-                ui.set_min_width(80.0);
-
-                ui.button("Open");
-                ui.separator();
-
-                ui.button("Save");
-                ui.button("Save As...");
-                ui.separator();
-
-                ui.button("Close");
-                ui.separator();
-
-                if ui.button("Exit").clicked() {
-                    // Close app
-                    event_writer.send(bevy::app::AppExit);
-                }
-            });
-
-            // Edit dropdown
-            egui::menu::menu(ui, "Edit", |ui| {
-                ui.set_min_width(80.0);
-
-                ui.button("Undo");
-                ui.button("Redo");
-            });
-
-            // View dropdown
-            egui::menu::menu(ui, "View", |ui| {
-                ui.set_min_width(80.0);
-
-                if ui.checkbox(&mut settings.show_controls, "Controls").changed() {
-                    state.save_settings(&settings);
-                }
-            });
-
-            // Tools dropdown
-            egui::menu::menu(ui, "Tools", |ui| {
-                ui.set_min_width(80.0);
-
-                if ui.button("Options").clicked() {
-                    state.show_options = true;
-                }
-            });
-
-            // Help dropdown
-            egui::menu::menu(ui, "Help", |ui| {
-                ui.set_min_width(120.0);
-
-                ui.button("About");
-                ui.separator();
-                ui.button("Check for Updates");
-            });
-        });
+    state.consume_events(|ev| {
+        event_writer.send(ev);
     });
-
-    //ctx.set_visuals(egui::Visuals::light());
-
-    // Side panel
-    egui::SidePanel::left("side_panel").min_width(400.0).resizable(true).show(ctx, |ui| {
-        egui::ScrollArea::auto_sized().show_viewport(ui, |ui, _viewport| {
-            //ui.horizontal(|ui| {
-                if settings.show_side_panel {
-                    //ui.set_min_width(300.0);
-
-                    ui.vertical(|ui| {
-                        draw_ark_tree(&state, ctx, ui);
-
-                        ui.group(|ui| {
-                            ui.heading("Options");
-                            ui.label("Do something 1");
-                            ui.label("Do something 2");
-
-                            let popup_id = ui.make_persistent_id("popup_id");
-                            let popup_btn = ui.button("Show popup");
-
-                            if popup_btn.clicked() {
-                                ui.memory().toggle_popup(popup_id);
-                            }
-
-                            egui::popup::popup_below_widget(ui, popup_id, &popup_btn, |ui| {
-                                ui.group(|ui| {
-                                    ui.label("Some more info, or things you can select:");
-                                    ui.label("…");
-                                });
-                            });
-                        });
-                    });
-
-                    ui.separator();
-                }
-
-                ui.style_mut().spacing.interact_size = bevy_egui::egui::Vec2::default();
-
-                ui.vertical(|ui| {
-                    ui.style_mut().spacing.item_spacing = bevy_egui::egui::Vec2::default();
-
-                    if ui.checkbox(&mut settings.show_side_panel, "").changed() {
-                        state.save_settings(&settings);
-                    }
-                });
-            //});
-        });
-    });
-
-    /*let mut frame = egui::Frame::default();
-    frame.fill = Color32::from_rgba_premultiplied(0, 128, 128, 16);
-
-    egui::CentralPanel::default().frame(frame).show(ctx, |ui| {
-        ui.label("Hello world");
-    });*/
-
-/*
-    let frame = egui::Frame::none().fill(Color32::GREEN).multiply_with_opacity(0.1);
-    egui::CentralPanel::default().frame(frame).show(ctx, |_| {});
-*/
-    // Hide menu shadow
-    let mut style: egui::Style = (*ctx.style()).clone();
-    let shadow_color = style.visuals.window_shadow.color;
-    style.visuals.window_shadow.color = shadow_color.linear_multiply(0.0);
-    ctx.set_style(style);
-
-    /*egui::Window::new("Hello").show(ctx, |ui| {
-        // let mut style = ui.style_mut();
-        // style.visuals.code_bg_color = style.visuals.code_bg_color.linear_multiply(0.1);
-
-        ui.label("world");
-    });*/
-
-    let size = ctx.used_size();
-    let _size_pos = Pos2::new(size.x, size.y);
-
-    // Camera controls
-    if settings.show_controls {
-        egui::Window::new("Controls").resizable(false).collapsible(false).anchor(bevy_egui::egui::Align2::RIGHT_BOTTOM, bevy_egui::egui::Vec2::new(-10.0, -10.0)).show(ctx, |ui| {
-            egui::Grid::new("grid_controls").striped(true).show(ui, |ui| {
-                ui.label("Move");
-                ui.label("W/A/S/D");
-                ui.end_row();
-
-                ui.label("Up");
-                ui.label("Space");
-                ui.end_row();
-
-                ui.label("Down");
-                ui.label("L-Shift");
-                ui.end_row();
-
-                ui.label("View");
-                ui.label("L-Click + Mouse");
-                ui.end_row();
-            });
-        });
-    }
-
-    // Bottom Toolbar
-    egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
-        ui.label("Created by PikminGuts92");
-    });
-
-    if state.show_options {
-        egui::Window::new("Options")
-            //.id("options_window")
-            .collapsible(false)
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-            .fixed_size(bevy_egui::egui::Vec2::new(600.0, 400.0))
-            .open(&mut state.show_options)
-            .show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    ui.group(|ui| {
-                        egui::Grid::new("options_list")
-                            .striped(true)
-                            .min_col_width(120.0)
-                            .show(ui, |ui| {
-                                ui.label("General");
-                                ui.end_row();
-
-                                ui.label("Ark Paths");
-                                ui.end_row();
-
-                                ui.label("Preferences");
-                                ui.end_row();
-                        });
-                    });
-
-                    ui.separator();
-
-                    ui.vertical_centered_justified(|ui| {
-                        ui.heading("Ark Paths");
-
-                        egui::Grid::new("ark_paths")
-                            .striped(true)
-                            .show(ui, |ui| {
-                                for g in settings.game_paths.iter() {
-                                    ui.label(&g.game.to_string());
-                                    ui.label(&g.platform.to_string());
-                                    ui.label(&g.path);
-
-                                    ui.end_row();
-                                }
-                            });
-
-                        ui.add_space(500.0);
-                    });
-                });
-
-                /*ui.columns(2, |cols| {
-                    egui::Grid::new("options_list")
-                        .striped(true)
-                        .show(&mut cols[0], |ui| {
-                            ui.label("Ark Paths");
-                            ui.end_row();
-
-                            ui.label("Preferences");
-                            ui.end_row();
-                        });
-
-                    let ui = &mut cols[1];
-                    ui.add(egui::Separator::default().vertical());
-
-                    ui.group(|ui| {
-                        ui.vertical_centered_justified(|ui| {
-                            ui.heading("Ark Paths");
-
-                            ui.add_space(500.0);
-                        });
-                    });
-
-                    /*egui::Grid::new("options_view")
-                        .striped(true)
-                        .show(&mut cols[1], |ui| {
-                            ui.label("Options view goes here");
-                            ui.end_row();
-                        });*/
-                });*/
-            });
-    }
-}
-
-fn draw_ark_tree(state: &ResMut<AppState>, ctx: &mut &CtxRef, ui: &mut Ui) {
-    if let Some(root) = &state.root {
-        let entries = &state.ark.as_ref().unwrap().entries;
-
-        draw_node(root, entries, ctx, ui);
-    }
-}
-
-fn draw_node(node: &ArkDirNode, entries: &Vec<ArkOffsetEntry>, ctx: &mut &CtxRef, ui: &mut Ui) {
-    egui::CollapsingHeader::new(&node.name)
-        .id_source(format!("dir_{}", &node.path))
-        .default_open(false)
-        .show(ui, |ui| {
-            for child in &node.dirs {
-                draw_node(child, entries, ctx, ui);
-            }
-
-            egui::Grid::new(format!("files_{}", &node.path)).striped(true).show(ui, |ui| {
-                for file_idx in &node.files {
-                    let ark_entry = &entries[*file_idx];
-                    let file_name = get_file_name(&ark_entry.path);
-
-                    ui.selectable_label(false, file_name);
-                    ui.end_row();
-
-                    //ui.small_button(file_name);
-                }
-            });
-        });
 }
 
 fn setup(
@@ -477,7 +162,7 @@ fn load_settings(settings_path: &Path) -> AppSettings {
 
 fn setup_args(
     mut state: ResMut<AppState>,
-    mut ev_update_state: EventWriter<UpdateState>,
+    mut ev_update_state: EventWriter<AppEvent>,
 ) {
     let args = args().skip(1).collect::<Vec<String>>();
     if args.is_empty() {
@@ -512,7 +197,7 @@ fn setup_args(
                 state.milo = Some(milo);
                 state.system_info = Some(info);
 
-                ev_update_state.send(UpdateState::RefreshMilo);
+                ev_update_state.send(AppEvent::RefreshMilo);
             },
             Err(_err) => {
                 // TODO: Log error
@@ -528,12 +213,21 @@ fn update_state(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut textures: ResMut<Assets<Texture>>,
-    mut update_events: EventReader<UpdateState>,
+    mut update_events: EventReader<AppEvent>,
+    mut event_writer: EventWriter<bevy::app::AppExit>,
     state: Res<AppState>,
 ) {
     for e in update_events.iter() {
         match e {
-            UpdateState::RefreshMilo => {
+            AppEvent::Exit => {
+                event_writer.send(bevy::app::AppExit);
+            }
+            AppEvent::SelectMiloEntry(entry_name) => {
+
+            },
+            AppEvent::RefreshMilo => {
+                return;
+
                 if let Some(milo) = &state.milo {
                     let info = state.system_info.as_ref().unwrap();
                     render_milo(
@@ -568,68 +262,6 @@ fn create_ark_tree(ark: &Ark) -> ArkDirNode {
 
     root.expand(ark);
     root
-}
-
-fn get_dirs_and_files(dir: &str, ark: &Ark) -> (Vec<ArkDirNode>, Vec<usize>) {
-    let is_root = match dir {
-        "" | "." => true,
-        _ => false,
-    };
-
-    if is_root {
-        let files = ark.entries
-            .iter()
-            .enumerate()
-            .filter(|(_i, e)| !e.path.contains('/')
-                || (e.path.starts_with("./") && e.path.matches(|c: char | c.eq(&'/')).count() == 1))
-            .map(|(i, _)| i)
-            .collect::<Vec<usize>>();
-
-        let dirs = ark.entries
-            .iter()
-            .filter(|e| e.path.contains('/'))
-            .map(|e| e.path.split('/').next().unwrap())
-            .unique()
-            .filter(|s| !s.eq(&"."))
-            .map(|s| ArkDirNode {
-                name: s.to_owned(),
-                path: s.to_owned(),
-                dirs: Vec::new(),
-                files: Vec::new(),
-                loaded: false,
-            })
-            .collect::<Vec<ArkDirNode>>();
-
-        return (dirs, files);
-    }
-
-    let dir_path = format!["{}/", dir];
-    let slash_count = dir_path.matches(|c: char| c.eq(&'/')).count();
-
-    let files = ark.entries
-        .iter()
-        .enumerate()
-        .filter(|(_i, e)| e.path.starts_with(&dir_path)
-            && e.path.matches(|c: char| c.eq(&'/')).count() == slash_count)
-        .map(|(i, _)| i)
-        .collect::<Vec<usize>>();
-
-    let dirs = ark.entries
-        .iter()
-        .filter(|e| e.path.starts_with(&dir_path)
-            && e.path.matches(|c: char| c.eq(&'/')).count() > slash_count)
-        .map(|e| e.path.split('/').nth(slash_count).unwrap())
-        .unique()
-        .map(|s| ArkDirNode {
-            name: s.to_owned(),
-            path: format!("{}{}", dir_path, s),
-            dirs: Vec::new(),
-            files: Vec::new(),
-            loaded: false,
-        })
-        .collect::<Vec<ArkDirNode>>();
-
-    (dirs, files)
 }
 
 fn control_camera(
