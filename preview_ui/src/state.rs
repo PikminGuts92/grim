@@ -8,6 +8,12 @@ use std::{env::args, path::{Path, PathBuf}};
 type ConsumeEventFn = fn(AppEvent);
 
 #[derive(Default)]
+pub struct MiloView {
+    pub filter: String,
+    pub class_filter: Option<String>,
+}
+
+#[derive(Default)]
 pub struct AppState {
     pub ark: Option<Ark>,
     pub root: Option<ArkDirNode>,
@@ -16,6 +22,8 @@ pub struct AppState {
     pub settings_path: PathBuf,
     pub show_options: bool,
     pub pending_events: Vec<AppEvent>,
+    pub side_bar_tab_index: usize,
+    pub milo_view: MiloView,
 }
 
 impl AppState {
