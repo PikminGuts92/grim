@@ -85,6 +85,28 @@ pub fn render_milo_entry(
         bevy_mesh.set_attribute(Mesh::ATTRIBUTE_TANGENT, tangents);
         bevy_mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
 
+        // Load textures
+        let tex_names = loader.get_mat(&mesh.mat)
+            .map(|mat| (
+                mat.diffuse_tex.to_owned(),
+                mat.normal_map.to_owned(),
+                mat.emissive_map.to_owned(),
+            ));
+
+        let (diffuse, normal, emissive) = tex_names
+            .map(|(diffuse, normal, emissive)| (
+                get_texture(&mut loader, &diffuse, system_info)
+                    .map(map_texture)
+                    .map(|t| bevy_textures.add(t)),
+                get_texture(&mut loader, &normal, system_info)
+                    .map(map_texture)
+                    .map(|t| bevy_textures.add(t)),
+                get_texture(&mut loader, &emissive, system_info)
+                    .map(map_texture)
+                    .map(|t| bevy_textures.add(t)),
+            ))
+            .unwrap_or_default();
+
         let bevy_mat = match loader.get_mat(&mesh.mat) {
             Some(mat) => StandardMaterial {
                 base_color: Color::rgba(
@@ -95,10 +117,13 @@ pub fn render_milo_entry(
                 ),
                 double_sided: true,
                 unlit: true,
+                base_color_texture: diffuse,
+                normal_map: normal,
+                emissive_texture: emissive,
                 /*base_color_texture: get_texture(&mut loader, &mat.diffuse_tex, system_info)
                     .and_then(map_texture)
-                    .and_then(|t| Some(bevy_textures.add(t))),*/
-                /*normal_map: get_texture(&mut loader, &mat.norm_detail_map, system_info)
+                    .and_then(|t| Some(bevy_textures.add(t))),
+                normal_map: get_texture(&mut loader, &mat.norm_detail_map, system_info)
                     .and_then(map_texture)
                     .and_then(|t| Some(bevy_textures.add(t))),
                 emissive_texture: get_texture(&mut loader, &mat.emissive_map, system_info)
@@ -113,6 +138,8 @@ pub fn render_milo_entry(
                 ..Default::default()
             },
         };
+
+        //if let Some()
 
         // Add mesh
         commands.spawn_bundle(PbrBundle {
@@ -209,38 +236,33 @@ fn get_object_meshes<'a>(
     meshes
 }
 
-fn get_texture<'a>(loader: &'a mut MiloLoader<'a>, tex_name: &'a str, system_info: &SystemInfo) -> Option<(&'a Bitmap, &'a Vec<u8>)> {
-    // Get bitmap
-    let bitmap = loader.get_texture(tex_name)
-        .and_then(|t| t.bitmap.as_ref());
-
+fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_info: &SystemInfo) -> Option<&'b (&'a Tex, Vec<u8>)> {
     // Check for cached texture
-    if let Some(bitmap) = bitmap {
-        return loader.get_cached_texture(tex_name)
-            .and_then(|r| Some((bitmap, r)));
+    if let Some(cached) = loader.get_cached_texture(tex_name) {
+        // TODO: Figure out why commented out line doesn't work (stupid lifetimes)
+        //return Some(cached);
+        return loader.get_cached_texture(tex_name);
     }
 
-    // Decode texture
-    let rgba = bitmap
-        .and_then(|b| b.unpack_rgba(system_info).ok());
-
-    // Cache decoded texture
-    if let Some(rgba) = rgba {
-        loader.set_cached_texture(tex_name, rgba);
-        return loader.get_cached_texture(tex_name)
-            .and_then(|r| Some((bitmap.unwrap(), r)));
-    }
-
-    None
+    // Get bitmap and decode texture
+    // TODO: Check for external textures
+    loader.get_texture(tex_name)
+        .and_then(|t| t.bitmap.as_ref())
+        .and_then(|b| b.unpack_rgba(system_info).ok())
+        .and_then(move |rgba| {
+            // Cache decoded texture
+            loader.set_cached_texture(tex_name, rgba);
+            loader.get_cached_texture(tex_name)
+        })
 }
 
-fn map_texture(tex: (&Bitmap, &Vec<u8>)) -> Option<Texture> {
+fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>)) -> Texture {
     let (bitmap, rgba) = tex;
 
     // TODO: Figure out how bevy can support mip maps
     let tex_size = (bitmap.width as usize) * (bitmap.height as usize) * 4;
 
-    Some(Texture::new_fill(
+    Texture::new_fill(
         Extent3d {
             width: bitmap.width.into(),
             height: bitmap.height.into(),
@@ -249,5 +271,5 @@ fn map_texture(tex: (&Bitmap, &Vec<u8>)) -> Option<Texture> {
         TextureDimension::D2,
         &rgba[..tex_size],
         TextureFormat::Rgba8UnormSrgb,
-    ))
+    )
 }

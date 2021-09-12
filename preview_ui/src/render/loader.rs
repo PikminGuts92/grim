@@ -13,7 +13,7 @@ pub struct MiloLoader<'a> {
     mats: HashMap<&'a str, &'a MatObject>,
     meshes: HashMap<&'a str, &'a MeshObject>,
     textures: HashMap<&'a str, &'a Tex>,
-    cached_textures: HashMap<&'a str, Vec<u8>>,
+    cached_textures: HashMap<&'a str, (&'a Tex, Vec<u8>)>,
     transforms: HashMap<&'a str, &'a dyn Trans>,
 }
 
@@ -107,12 +107,14 @@ impl<'a> MiloLoader<'a> {
             .and_then(|o| Some(*o))
     }
 
-    pub fn get_cached_texture(&self, name: &str) -> Option<&Vec<u8>> {
+    pub fn get_cached_texture(&self, name: &str) -> Option<&(&'a Tex, Vec<u8>)> {
         self.cached_textures.get(name)
     }
 
-    pub fn set_cached_texture(&mut self, name: &'a str, rgba: Vec<u8>) {
-        self.cached_textures.insert(name, rgba);
+    pub fn set_cached_texture(&mut self, name: &str, rgba: Vec<u8>) {
+        let tex = self.get_texture(name).unwrap();
+
+        self.cached_textures.insert(tex.get_name().as_str(), (tex, rgba));
     }
 
     pub fn get_transform(&self, name: &str) -> Option<&'a dyn Trans> {
