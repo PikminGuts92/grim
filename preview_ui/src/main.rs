@@ -9,7 +9,7 @@ mod state;
 
 use events::*;
 use gui::*;
-use render::render_milo;
+use render::{render_milo, render_milo_entry};
 use settings::*;
 use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{WindowMode, WindowResized}};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, CtxRef, Pos2, Ui}};
@@ -25,6 +25,10 @@ use crate::render::open_and_unpack_milo;
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const PROJECT_NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub struct WorldMesh {
+    name: String,
+}
 
 fn main() {
     let app_state = load_state();
@@ -216,7 +220,8 @@ fn update_state(
     mut textures: ResMut<Assets<Texture>>,
     mut update_events: EventReader<AppEvent>,
     mut event_writer: EventWriter<bevy::app::AppExit>,
-    state: Res<AppState>,
+    mut world_meshes: Query<(Entity, &WorldMesh)>,
+    mut state: ResMut<AppState>,
 ) {
     for e in update_events.iter() {
         match e {
@@ -224,7 +229,37 @@ fn update_state(
                 event_writer.send(bevy::app::AppExit);
             }
             AppEvent::SelectMiloEntry(entry_name) => {
+                let render_entry = match &state.milo_view.selected_entry {
+                    Some(name) => name.ne(entry_name),
+                    None => true,
+                };
 
+                // Clear everything
+                let mut i = 0;
+                for (entity, _) in world_meshes.iter() {
+                    i += 1;
+                    commands.entity(entity).despawn_recursive();
+                }
+                if i > 0 {
+                    println!("Removed {} meshes in scene", i);
+                }
+
+                if render_entry {
+                    let milo = state.milo.as_ref().unwrap();
+                    let info = state.system_info.as_ref().unwrap();
+
+                    render_milo_entry(
+                        &mut commands,
+                        &mut meshes,
+                        &mut materials,
+                        &mut textures,
+                        milo,
+                        entry_name.to_owned(),
+                        info
+                    );
+                }
+
+                state.milo_view.selected_entry = Some(entry_name.to_owned());
             },
             AppEvent::RefreshMilo => {
                 return;

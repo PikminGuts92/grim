@@ -11,6 +11,7 @@ type ConsumeEventFn = fn(AppEvent);
 pub struct MiloView {
     pub filter: String,
     pub class_filter: Option<String>,
+    pub selected_entry: Option<String>,
 }
 
 #[derive(Default)]

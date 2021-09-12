@@ -49,7 +49,16 @@ pub fn draw_milo_tree(state: &mut AppState, ctx: &mut &CtxRef, ui: &mut Ui) {
 
         egui::Grid::new("milo_tree").min_col_width(200.0).striped(true).show(ui, |ui| {
             for entry in entries.iter() {
-                ui.selectable_label(false, entry.get_name());
+                let entry_name = entry.get_name();
+                let mut checked = false;
+
+                if let Some(selected) = &state.milo_view.selected_entry {
+                    checked = selected.eq(entry_name);
+                }
+
+                if ui.selectable_label(checked, entry_name).clicked() {
+                    state.add_event(AppEvent::SelectMiloEntry(entry_name.to_owned()));
+                }
                 ui.end_row();
             }
 

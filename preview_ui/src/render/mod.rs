@@ -1,5 +1,11 @@
+mod loader;
+mod milo_entry;
+
 use bevy::prelude::*;
 use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
+
+pub use loader::*;
+pub use milo_entry::*;
 
 use std::collections::HashMap;
 use std::error::Error;
@@ -235,7 +241,7 @@ fn get_transform<T: Trans>(trans: &T) -> &dyn Trans {
     trans
 }
 
-fn map_matrix(m: &Matrix) -> Mat4 {
+pub fn map_matrix(m: &Matrix) -> Mat4 {
     Mat4::from_cols_array(&[
         m.m11,
         m.m12,
