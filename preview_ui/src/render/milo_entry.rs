@@ -51,6 +51,12 @@ pub fn render_milo_entry(
     // Scale down
     let scale_mat = Mat4::from_scale(Vec3::new(0.1, 0.1, 0.1));
 
+    // Root transform
+    let root_entity = commands.spawn()
+        .insert(Transform::from_matrix(trans_mat * scale_mat))
+        .insert(GlobalTransform::from_matrix(trans_mat * scale_mat))
+        .id();
+
     for (mesh, mat) in meshes {
         // Ignore meshes without geometry (used mostly in GH1)
         if mesh.vertices.is_empty() {
@@ -139,17 +145,18 @@ pub fn render_milo_entry(
             },
         };
 
-        //if let Some()
-
         // Add mesh
-        commands.spawn_bundle(PbrBundle {
-            mesh: bevy_meshes.add(bevy_mesh),
-            material: materials.add(bevy_mat),
-            transform: Transform::from_matrix(mat * trans_mat * scale_mat),
-            ..Default::default()
-        }).insert(WorldMesh {
-            name: mesh.name.to_owned(),
-        });
+        commands.entity(root_entity)
+            .with_children(|parent| {
+                parent.spawn_bundle(PbrBundle {
+                    mesh: bevy_meshes.add(bevy_mesh),
+                    material: materials.add(bevy_mat),
+                    transform: Transform::from_matrix(mat),
+                    ..Default::default()
+                }).insert(WorldMesh {
+                    name: mesh.name.to_owned(),
+                });
+            });
     }
 }
 
@@ -167,11 +174,11 @@ fn get_object_meshes<'a>(
 
     match milo_object {
         Object::Group(grp) => {
-            let transform = loader
+            /*let transform = loader
                 .get_transform(&grp.parent)
                 .unwrap_or(grp as &dyn Trans);
 
-            let world_mat = map_matrix(transform.get_world_xfm());
+            let world_mat = map_matrix(transform.get_world_xfm());*/
 
             // Iterate sub objects
             for obj_name in &grp.objects {
@@ -197,12 +204,15 @@ fn get_object_meshes<'a>(
             }
         },
         Object::Mesh(mesh) => {
-            let transform = loader
+            /*let transform = loader
                 .get_transform(&mesh.parent)
                 .unwrap_or(mesh as &dyn Trans);
 
             let world_mat = map_matrix(transform.get_world_xfm());
-            meshes.push((mesh, world_mat));
+            meshes.push((mesh, world_mat));*/
+
+            let mat = get_computed_mat(mesh as &dyn Trans, loader);
+            meshes.push((mesh, mat));
 
             // Iterate sub meshes
             for sub_draw_name in &mesh.draw_objects {
@@ -234,6 +244,59 @@ fn get_object_meshes<'a>(
 
     // Return meshes
     meshes
+}
+
+fn get_computed_mat<'a>(
+    milo_object: &'a dyn Trans,
+    loader: &mut MiloLoader<'a>,
+) -> Mat4 {
+    let parent_name = milo_object.get_parent();
+    if parent_name.eq(milo_object.get_name()) {
+        // References self, use own world transform
+        return map_matrix(milo_object.get_world_xfm());
+    }
+
+    // Use relative transform
+    if let Some(parent) = loader.get_transform(parent_name) {
+        let parent_mat = get_computed_mat(parent, loader);
+        let local_mat = map_matrix(milo_object.get_local_xfm());
+
+        return parent_mat * local_mat;
+    }
+
+    // Fallback on identity
+    //Mat4::IDENTITY
+
+    if parent_name.is_empty() {
+        println!("Can't find trans for {}", parent_name);
+    }
+
+    map_matrix(milo_object.get_world_xfm())
+}
+
+fn get_product_local_mat<'a>(
+    milo_object: &'a dyn Trans,
+    loader: &mut MiloLoader<'a>,
+) -> Mat4 {
+    let parent_name = milo_object.get_parent();
+    if parent_name.eq(milo_object.get_name()) {
+        // References self, use own local transform
+        return map_matrix(milo_object.get_local_xfm());
+    }
+
+    // Use relative transform
+    if let Some(parent) = loader.get_transform(parent_name) {
+        let parent_mat = get_product_local_mat(parent, loader);
+        let local_mat = map_matrix(milo_object.get_local_xfm());
+
+        return parent_mat * local_mat;
+    }
+
+    if parent_name.is_empty() {
+        println!("Can't find trans for {}", parent_name);
+    }
+
+    map_matrix(milo_object.get_local_xfm())
 }
 
 fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_info: &SystemInfo) -> Option<&'b (&'a Tex, Vec<u8>)> {
