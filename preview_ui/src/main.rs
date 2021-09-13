@@ -202,7 +202,33 @@ fn setup_args(
                 state.milo = Some(milo);
                 state.system_info = Some(info);
 
-                ev_update_state.send(AppEvent::RefreshMilo);
+                //ev_update_state.send(AppEvent::RefreshMilo);
+
+                const name_prefs: [&str; 5] = ["venue", "top", "lod0", "lod1", "lod2"];
+
+                let groups = state.milo
+                    .as_ref()
+                    .unwrap()
+                    .get_entries()
+                    .iter()
+                    .filter(|o| o.get_type() == "Group")
+                    .collect::<Vec<_>>();
+
+                let mut selected_entry = None;
+                for name in name_prefs {
+                    let group = groups
+                        .iter()
+                        .find(|g| g.get_name().starts_with(name));
+
+                    if let Some(grp) = group {
+                        selected_entry = Some(grp.get_name().to_owned());
+                        break;
+                    }
+                }
+
+                if let Some(entry) = selected_entry {
+                    ev_update_state.send(AppEvent::SelectMiloEntry(entry));
+                }
             },
             Err(_err) => {
                 // TODO: Log error
