@@ -17,6 +17,11 @@ pub enum BitmapError {
     UnsupportedBitmapBpp {
         bpp: u8
     },
+    #[error("Unsupported resolution of {width}x{height}")]
+    UnsupportedResolution {
+        width: u16,
+        height: u16
+    },
 }
 
 impl Bitmap {
@@ -47,6 +52,13 @@ impl Bitmap {
     }
 
     pub fn unpack_rgba(&self, info: &SystemInfo) -> Result<Vec<u8>, Box<dyn Error>> {
+        if self.width == 0 || self.height == 0 {
+            return Err(Box::new(BitmapError::UnsupportedResolution {
+                width: self.width,
+                height: self.height,
+            }));
+        }
+
         if info.platform == Platform::PS2 && self.encoding == 3 {
             // Decode PS2 bitmap
             let mut rgba = vec![0u8; self.calc_rgba_size()];
