@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
+use bevy::render::texture::{AddressMode, Extent3d, TextureDimension, TextureFormat};
 
 use itertools::*;
 
@@ -325,7 +325,7 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>)) -> Texture {
     // TODO: Figure out how bevy can support mip maps
     let tex_size = (bitmap.width as usize) * (bitmap.height as usize) * 4;
 
-    Texture::new_fill(
+    let mut texture = Texture::new_fill(
         Extent3d {
             width: bitmap.width.into(),
             height: bitmap.height.into(),
@@ -334,5 +334,11 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>)) -> Texture {
         TextureDimension::D2,
         &rgba[..tex_size],
         TextureFormat::Rgba8UnormSrgb,
-    )
+    );
+
+    // Update texture wrap mode
+    texture.sampler.address_mode_u = AddressMode::Repeat;
+    texture.sampler.address_mode_v = AddressMode::Repeat;
+
+    texture
 }
