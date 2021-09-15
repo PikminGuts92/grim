@@ -9,6 +9,7 @@ fn is_version_supported(version: u32) -> bool {
     match version {
          7 => true, // GH1
         12 => true, // GH2/GH2 360
+        13 => true, // RB1
         14 => true, // TBRB/GDRB
         _ => false
     }
