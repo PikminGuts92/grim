@@ -35,7 +35,7 @@ pub fn render_gui(ctx: &mut &CtxRef, settings: &mut AppSettings, state: &mut App
                         _ => todo!()
                     };
 
-                    ui.group(|ui| {
+                    /*ui.group(|ui| {
                         ui.heading("Options");
                         ui.label("Do something 1");
                         ui.label("Do something 2");
@@ -53,7 +53,7 @@ pub fn render_gui(ctx: &mut &CtxRef, settings: &mut AppSettings, state: &mut App
                                 ui.label("…");
                             });
                         });
-                    });
+                    });*/
                 });
 
                 ui.separator();
