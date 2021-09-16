@@ -57,7 +57,7 @@ pub fn draw_milo_tree(state: &mut AppState, ctx: &mut &CtxRef, ui: &mut Ui) {
                 }
 
                 if ui.selectable_label(checked, entry_name).clicked() {
-                    state.add_event(AppEvent::SelectMiloEntry(entry_name.to_owned()));
+                    state.add_event(AppEvent::SelectMiloEntry(Some(entry_name.to_owned())));
                 }
                 ui.end_row();
             }

@@ -130,10 +130,10 @@ fn setup(
         ..Default::default()
     });*/
     // light
-    commands.spawn_bundle(LightBundle {
+    /*commands.spawn_bundle(LightBundle {
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..Default::default()
-    });
+    });*/
     // camera
     let mut camera = PerspectiveCameraBundle::new_3d();
     camera.transform = Transform::from_xyz(-2.0, 2.5, 5.0)
@@ -215,7 +215,7 @@ fn setup_args(
                     .collect::<Vec<_>>();
 
                 let mut selected_entry = None;
-                for name in name_prefs {
+                /*for name in name_prefs {
                     let group = groups
                         .iter()
                         .find(|g| g.get_name().starts_with(name));
@@ -224,11 +224,9 @@ fn setup_args(
                         selected_entry = Some(grp.get_name().to_owned());
                         break;
                     }
-                }
+                }*/
 
-                if let Some(entry) = selected_entry {
-                    ev_update_state.send(AppEvent::SelectMiloEntry(entry));
-                }
+                ev_update_state.send(AppEvent::SelectMiloEntry(selected_entry));
             },
             Err(_err) => {
                 // TODO: Log error
@@ -255,10 +253,10 @@ fn update_state(
                 event_writer.send(bevy::app::AppExit);
             }
             AppEvent::SelectMiloEntry(entry_name) => {
-                let render_entry = match &state.milo_view.selected_entry {
+                /*let render_entry = match &state.milo_view.selected_entry {
                     Some(name) => name.ne(entry_name),
                     None => true,
-                };
+                };*/
 
                 // Clear everything
                 let mut i = 0;
@@ -270,7 +268,7 @@ fn update_state(
                     println!("Removed {} meshes in scene", i);
                 }
 
-                if render_entry {
+                /*if render_entry {
                     let milo = state.milo.as_ref().unwrap();
                     let info = state.system_info.as_ref().unwrap();
 
@@ -280,12 +278,28 @@ fn update_state(
                         &mut materials,
                         &mut textures,
                         milo,
-                        entry_name.to_owned(),
+                        Some(entry_name.to_owned()),
                         info
                     );
-                }
+                }*/
 
-                state.milo_view.selected_entry = Some(entry_name.to_owned());
+                let milo = state.milo.as_ref().unwrap();
+                let info = state.system_info.as_ref().unwrap();
+
+                // Render everything for now
+                render_milo_entry(
+                    &mut commands,
+                    &mut meshes,
+                    &mut materials,
+                    &mut textures,
+                    milo,
+                    entry_name.to_owned(),
+                    info
+                );
+
+                state.milo_view.selected_entry = entry_name.to_owned();
+
+                println!("Updated milo");
             },
             AppEvent::RefreshMilo => {
                 return;

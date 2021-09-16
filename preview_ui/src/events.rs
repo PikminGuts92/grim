@@ -1,5 +1,5 @@
 pub enum AppEvent {
     Exit,
     RefreshMilo,
-    SelectMiloEntry(String),
+    SelectMiloEntry(Option<String>),
 }

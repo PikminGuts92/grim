@@ -23,22 +23,31 @@ pub fn render_milo_entry(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     bevy_textures: &mut ResMut<Assets<Texture>>,
     milo: &ObjectDir,
-    milo_entry: String,
+    milo_entry: Option<String>,
     system_info: &SystemInfo,
 ) {
     let mut loader = MiloLoader::new(milo);
-    let milo_object = loader.get_object(&milo_entry).unwrap();
 
-    let meshes = get_object_meshes(
-        commands,
-        bevy_meshes,
-        materials,
-        bevy_textures,
-        &milo_object,
-        &mut loader,
-        system_info,
-        0,
-    );
+    // Get meshes for single object or return all meshes
+    // TODO: Make less hacky
+    let meshes = match milo_entry {
+        Some(entry) => {
+            let milo_object = loader.get_object(&entry).unwrap();
+            get_object_meshes(
+                milo_object,
+                &mut loader,
+            )
+        },
+        None => milo.get_entries()
+            .iter()
+            .map(|e| match e {
+                Object::Mesh(m) => Some(m),
+                _ => None,
+            })
+            .filter(|e| e.is_some())
+            .map(|e| e.unwrap())
+            .collect::<Vec<_>>()
+    };
 
     // Translate to bevy coordinate system
     let trans_mat = Mat4::from_cols_array(&[
@@ -57,11 +66,14 @@ pub fn render_milo_entry(
         .insert(GlobalTransform::from_matrix(trans_mat * scale_mat))
         .id();
 
-    for (mesh, mat) in meshes {
+    for mesh in meshes {
         // Ignore meshes without geometry (used mostly in GH1)
-        if mesh.vertices.is_empty() {
+        if mesh.vertices.is_empty() || mesh.name.starts_with("shadow") {
             continue;
         }
+
+        // Get transform
+        let mat = get_computed_mat(mesh as &dyn Trans, &mut loader);
 
         let mut bevy_mesh = Mesh::new(bevy::render::pipeline::PrimitiveTopology::TriangleList);
 
@@ -126,6 +138,7 @@ pub fn render_milo_entry(
                 base_color_texture: diffuse,
                 normal_map: normal,
                 emissive_texture: emissive,
+                roughness: 0.8,
                 /*base_color_texture: get_texture(&mut loader, &mat.diffuse_tex, system_info)
                     .and_then(map_texture)
                     .and_then(|t| Some(bevy_textures.add(t))),
@@ -161,25 +174,13 @@ pub fn render_milo_entry(
 }
 
 fn get_object_meshes<'a>(
-    commands: &mut Commands,
-    bevy_meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-    bevy_textures: &mut ResMut<Assets<Texture>>,
     milo_object: &'a Object,
     loader: &mut MiloLoader<'a>,
-    system_info: &SystemInfo,
-    index: u32,
-) -> Vec<(&'a MeshObject, Mat4)> {
+) -> Vec<&'a MeshObject> {
     let mut meshes = Vec::new();
 
     match milo_object {
         Object::Group(grp) => {
-            /*let transform = loader
-                .get_transform(&grp.parent)
-                .unwrap_or(grp as &dyn Trans);
-
-            let world_mat = map_matrix(transform.get_world_xfm());*/
-
             // Iterate sub objects
             for obj_name in &grp.objects {
                 let child_object = loader.get_object(&obj_name);
@@ -187,15 +188,59 @@ fn get_object_meshes<'a>(
                     continue;
                 }
 
-                let child_meshes = get_object_meshes(
-                    commands,
-                    bevy_meshes,
-                    materials,
-                    bevy_textures,
+                let mut child_meshes = get_object_meshes(
                     child_object.unwrap(),
                     loader,
-                    system_info,
-                    index + 1,
+                );
+
+                meshes.append(&mut child_meshes);
+            }
+        },
+        Object::Mesh(mesh) => {
+            meshes.push(mesh);
+
+            // Iterate sub meshes
+            for sub_draw_name in &mesh.draw_objects {
+                let child_draw = loader.get_object(&sub_draw_name);
+                if child_draw.is_none() {
+                    continue;
+                }
+
+                let mut child_meshes = get_object_meshes(
+                    child_draw.unwrap(),
+                    loader,
+                );
+
+                meshes.append(&mut child_meshes);
+            }
+        },
+        _ => {
+
+        }
+    };
+
+    // Return meshes
+    meshes
+}
+
+fn get_object_meshes_with_transform<'a>(
+    milo_object: &'a Object,
+    loader: &mut MiloLoader<'a>,
+) -> Vec<(&'a MeshObject, Mat4)> {
+    let mut meshes = Vec::new();
+
+    match milo_object {
+        Object::Group(grp) => {
+            // Iterate sub objects
+            for obj_name in &grp.objects {
+                let child_object = loader.get_object(&obj_name);
+                if child_object.is_none() {
+                    continue;
+                }
+
+                let child_meshes = get_object_meshes_with_transform(
+                    child_object.unwrap(),
+                    loader,
                 );
 
                 for (mesh, mat) in child_meshes {
@@ -204,13 +249,6 @@ fn get_object_meshes<'a>(
             }
         },
         Object::Mesh(mesh) => {
-            /*let transform = loader
-                .get_transform(&mesh.parent)
-                .unwrap_or(mesh as &dyn Trans);
-
-            let world_mat = map_matrix(transform.get_world_xfm());
-            meshes.push((mesh, world_mat));*/
-
             let mat = get_computed_mat(mesh as &dyn Trans, loader);
             meshes.push((mesh, mat));
 
@@ -221,15 +259,9 @@ fn get_object_meshes<'a>(
                     continue;
                 }
 
-                let child_meshes = get_object_meshes(
-                    commands,
-                    bevy_meshes,
-                    materials,
-                    bevy_textures,
+                let child_meshes = get_object_meshes_with_transform(
                     child_draw.unwrap(),
                     loader,
-                    system_info,
-                    index + 1,
                 );
 
                 for (mesh, mat) in child_meshes {
@@ -264,10 +296,7 @@ fn get_computed_mat<'a>(
         return parent_mat * local_mat;
     }
 
-    // Fallback on identity
-    //Mat4::IDENTITY
-
-    if parent_name.is_empty() {
+    if !parent_name.is_empty() {
         println!("Can't find trans for {}", parent_name);
     }
 
