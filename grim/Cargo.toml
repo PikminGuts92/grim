@@ -18,4 +18,9 @@ regex = { version = "1.5.4", default-features = false, features = [ "std" ] }
 thiserror = "1.0.26"
 
 [dev-dependencies]
+criterion = "0.3"
 rstest = "0.7" # Need old version to avoid conflict w/ bevy 0.5
+
+[[bench]]
+name = "texture_benchmark"
+harness = false
