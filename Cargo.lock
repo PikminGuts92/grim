@@ -2021,6 +2021,7 @@ dependencies = [
  "itertools",
  "lazy_static",
  "nalgebra",
+ "rayon",
  "regex",
  "rstest",
  "thiserror",

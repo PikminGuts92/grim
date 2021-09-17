@@ -1,4 +1,10 @@
+use rayon::prelude::*;
 use super::*;
+
+struct ValuesPtr(*mut [u8]);
+
+unsafe impl Send for ValuesPtr {}
+unsafe impl Sync for ValuesPtr {}
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy)]
@@ -40,22 +46,7 @@ fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
 
     // Get block counts
     let block_x = width >> 2;
-    let block_y = calculate_texture_height(dx_img.len(), width, bpp) >> 2;
     let block_size = ((16 * bpp) / 8) as usize;
-
-    let mut packed_0;
-    let mut packed_1;
-
-    let mut color_0 = [0u8; 4];
-    let mut color_1 = [0u8; 4];
-    let mut color_2 = [0u8; 4];
-    let mut color_3 = [0u8; 4];
-
-    let mut indicies = [0u8; 16];
-
-    let mut i = 0usize; // Block index
-    let mut x;
-    let mut y;
 
     let read_u16: fn(&[u8]) -> u16;
     let unpack_ind: fn(&[u8], &mut [u8; 16]);
@@ -68,14 +59,28 @@ fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
         unpack_ind = unpack_indicies;
     }
 
-    for by in 0..block_y {
-        for bx in 0..block_x {
-            x = bx << 2;
-            y = by << 2;
+    let rgba = ValuesPtr(rgba);
+
+    dx_img
+        .par_chunks_exact(block_size)
+        .enumerate()
+        .for_each(|(i, block) | {
+            let bx = i % block_x as usize;
+            let by = i / block_x as usize;
+
+            let x = (bx << 2) as u32;
+            let y = (by << 2) as u32;
+
+            let mut color_0 = [0u8; 4];
+            let mut color_1 = [0u8; 4];
+            let mut color_2 = [0u8; 4];
+            let mut color_3 = [0u8; 4];
+
+            let mut indicies = [0u8; 16];
 
             // Read packed bytes
-            packed_0 = read_u16(&dx_img[i..(i + 2)]);
-            packed_1 = read_u16(&dx_img[(i + 2)..(i + 4)]);
+            let packed_0 = read_u16(&block[..2]);
+            let packed_1 = read_u16(&block[2..4]);
 
             // Unpack colors to rgba
             unpack_rgb565(packed_0, &mut color_0);
@@ -93,15 +98,16 @@ fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
             }
 
             // Unpack color indicies
-            unpack_ind(&dx_img[(i + 4)..(i + 8)], &mut indicies);
+            unpack_ind(&block[4..8], &mut indicies);
 
             // Copy colors to pixel data
             let colors = [&color_0, &color_1, &color_2, &color_3];
-            copy_unpacked_pixels(rgba, &colors, &indicies, x, y, width);
 
-            i += block_size;
-        }
-    }
+            unsafe {
+                let ptr = &mut *rgba.0;
+                copy_unpacked_pixels(ptr, &colors, &indicies, x, y, width);
+            }
+        });
 }
 
 fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
