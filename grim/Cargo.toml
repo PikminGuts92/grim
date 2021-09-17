@@ -24,3 +24,6 @@ rstest = "0.7" # Need old version to avoid conflict w/ bevy 0.5
 [[bench]]
 name = "texture_benchmark"
 harness = false
+
+[lib]
+bench = false
