@@ -37,7 +37,7 @@ pub fn decode_dx_image(dx_img: &[u8], rgba: &mut [u8], width: u32, encoding: DXG
     match &encoding {
         DXGI_Encoding::DXGI_FORMAT_BC1_UNORM => decode_dxt1_image(dx_img, rgba, width, is_360),
         DXGI_Encoding::DXGI_FORMAT_BC3_UNORM => decode_dxt5_image(dx_img, rgba, width, is_360),
-        DXGI_Encoding::DXGI_FORMAT_BC5_UNORM => todo!("Implement BC5 texture decoding"),
+        DXGI_Encoding::DXGI_FORMAT_BC5_UNORM => decode_ati2_image(dx_img, rgba, width, is_360),
     };
 }
 
@@ -186,6 +186,65 @@ fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
             }
         });
 }
+
+fn decode_ati2_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
+    let bpp = get_dx_bpp(&DXGI_Encoding::DXGI_FORMAT_BC5_UNORM) as u32;
+
+    // Get block counts
+    let block_x = width >> 2;
+    let block_size = ((16 * bpp) / 8) as usize;
+
+    let interp_normals: fn(&[u8], &mut [u8; 8]);
+    let unpack_normals: fn(&[u8], &mut [u8; 16]);
+
+    if is_360 {
+        interp_normals = interpolate_alphas_be;
+        unpack_normals = unpack_alpha_indicies_360;
+    } else {
+        interp_normals = interpolate_alphas;
+        unpack_normals = unpack_alpha_indicies;
+    }
+
+    let rgba = ValuesPtr(rgba);
+
+    dx_img
+        .par_chunks_exact(block_size)
+        .enumerate()
+        .for_each(|(i, block) | {
+            let bx = i % block_x as usize;
+            let by = i / block_x as usize;
+
+            let x = (bx << 2) as u32;
+            let y = (by << 2) as u32;
+
+            let mut reds = [0u8; 8];
+            let mut greens = [0u8; 8];
+
+            let mut red_indicies = [0u8; 16];
+            let mut green_indicies = [0u8; 16];
+
+            // Read reds
+            interp_normals(&block[..2], &mut reds);
+            unpack_normals(&block[2..8], &mut red_indicies);
+
+            // Read greens
+            interp_normals(&block[8..10], &mut greens);
+            unpack_normals(&block[10..16], &mut green_indicies);
+
+            unsafe {
+                let rgba = &mut *rgba.0;
+
+                // Copy red/green channels to pixel data
+                copy_unpacked_channels(rgba, &reds, &red_indicies, x, y, width, 0);
+                copy_unpacked_channels(rgba, &greens, &green_indicies, x, y, width, 1);
+
+                // Set blues/alphas to 0xFF
+                set_channels_value(rgba, x, y, width, 2, 0xFF);
+                set_channels_value(rgba, x, y, width, 3, 0xFF);
+            }
+        });
+}
+
 
 fn get_dx_bpp(encoding: &DXGI_Encoding) -> u8 {
     match encoding {

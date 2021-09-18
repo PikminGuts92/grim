@@ -69,9 +69,8 @@ impl Bitmap {
             // Decode next gen texture
             let dx_enc = match self.encoding {
                  8 => DXGI_Encoding::DXGI_FORMAT_BC1_UNORM,
-                // TODO: Implement these encodings
                 24 => DXGI_Encoding::DXGI_FORMAT_BC3_UNORM,
-                /*32 => DXGI_Encoding::DXGI_FORMAT_BC5_UNORM,*/
+                32 => DXGI_Encoding::DXGI_FORMAT_BC5_UNORM,
                 _ => {
                     return Err(Box::new(BitmapError::UnsupportedEncoding {
                         version: self.encoding,

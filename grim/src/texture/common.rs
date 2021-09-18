@@ -163,6 +163,10 @@ pub fn copy_unpacked_pixels(rgba: &mut [u8], colors: &[&[u8; 4]; 4], indicies: &
 }
 
 pub fn copy_unpacked_alphas(rgba: &mut [u8], alphas: &[u8; 8], indicies: &[u8; 16], x: u32, y: u32, width: u32) {
+    copy_unpacked_channels(rgba, alphas, indicies, x, y, width, 3);
+}
+
+pub fn copy_unpacked_channels(rgba: &mut [u8], channels: &[u8; 8], indicies: &[u8; 16], x: u32, y: u32, width: u32, i: usize) {
     let x = x as usize;
     let y = y as usize;
     let w = width as usize;
@@ -170,7 +174,20 @@ pub fn copy_unpacked_alphas(rgba: &mut [u8], alphas: &[u8; 8], indicies: &[u8; 1
     for (y_i, y_inds) in indicies.chunks(4).enumerate() {
         for (x_i, ind) in y_inds.iter().enumerate() {
             let rgba_offset = linear_offset(x + x_i, y + y_i, w);
-            rgba[rgba_offset + 3] = alphas[*ind as usize];
+            rgba[rgba_offset + i] = channels[*ind as usize];
+        }
+    }
+}
+
+pub fn set_channels_value(rgba: &mut [u8], x: u32, y: u32, width: u32, i: usize, value: u8) {
+    let x = x as usize;
+    let y = y as usize;
+    let w = width as usize;
+
+    for by in 0..4 {
+        for bx in 0..4 {
+            let rgba_offset = linear_offset(x + bx, y + by, w);
+            rgba[rgba_offset + i] = value;
         }
     }
 }
