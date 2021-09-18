@@ -104,8 +104,8 @@ fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
             let colors = [&color_0, &color_1, &color_2, &color_3];
 
             unsafe {
-                let ptr = &mut *rgba.0;
-                copy_unpacked_pixels(ptr, &colors, &indicies, x, y, width);
+                let rgba = &mut *rgba.0;
+                copy_unpacked_pixels(rgba, &colors, &indicies, x, y, width);
             }
         });
 }
@@ -115,24 +115,7 @@ fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
 
     // Get block counts
     let block_x = width >> 2;
-    let block_y = calculate_texture_height(dx_img.len(), width, bpp) >> 2;
     let block_size = ((16 * bpp) / 8) as usize;
-
-    let mut packed_0;
-    let mut packed_1;
-
-    let mut color_0 = [0u8; 4];
-    let mut color_1 = [0u8; 4];
-    let mut color_2 = [0u8; 4];
-    let mut color_3 = [0u8; 4];
-    let mut alphas = [0u8; 8];
-
-    let mut indicies = [0u8; 16];
-    let mut alpha_indicies = [0u8; 16];
-
-    let mut i = 0usize; // Block index
-    let mut x;
-    let mut y;
 
     let interp_alphas: fn(&[u8], &mut [u8; 8]);
     let unpack_alphas: fn(&[u8], &mut [u8; 16]);
@@ -151,18 +134,34 @@ fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
         unpack_ind = unpack_indicies;
     }
 
-    for by in 0..block_y {
-        for bx in 0..block_x {
-            x = bx << 2;
-            y = by << 2;
+    let rgba = ValuesPtr(rgba);
 
-            interp_alphas(&dx_img[i..(i + 2)], &mut alphas);
-            unpack_alphas(&dx_img[(i + 2)..(i + 8)], &mut alpha_indicies);
-            i += block_size >> 1;
+    dx_img
+        .par_chunks_exact(block_size)
+        .enumerate()
+        .for_each(|(i, block) | {
+            let bx = i % block_x as usize;
+            let by = i / block_x as usize;
+
+            let x = (bx << 2) as u32;
+            let y = (by << 2) as u32;
+
+            let mut color_0 = [0u8; 4];
+            let mut color_1 = [0u8; 4];
+            let mut color_2 = [0u8; 4];
+            let mut color_3 = [0u8; 4];
+
+            let mut alphas = [0u8; 8];
+
+            let mut indicies = [0u8; 16];
+            let mut alpha_indicies = [0u8; 16];
+
+            interp_alphas(&block[..2], &mut alphas);
+            unpack_alphas(&block[2..8], &mut alpha_indicies);
 
             // Read packed bytes
-            packed_0 = read_u16(&dx_img[i..(i + 2)]);
-            packed_1 = read_u16(&dx_img[(i + 2)..(i + 4)]);
+            let packed_0 = read_u16(&block[8..10]);
+            let packed_1 = read_u16(&block[10..12]);
 
             // Unpack colors to rgba
             unpack_rgb565(packed_0, &mut color_0);
@@ -173,18 +172,19 @@ fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
             mix_colors_66_33(&color_1, &color_0, &mut color_3);
 
             // Unpack color indicies
-            unpack_ind(&dx_img[(i + 4)..(i + 8)], &mut indicies);
+            unpack_ind(&block[12..16], &mut indicies);
 
-            // Copy colors to pixel data
-            let colors = [&color_0, &color_1, &color_2, &color_3];
-            copy_unpacked_pixels(rgba, &colors, &indicies, x, y, width);
+            unsafe {
+                let rgba = &mut *rgba.0;
 
-            // Copy alphas to pixel data
-            copy_unpacked_alphas(rgba, &alphas, &alpha_indicies, x, y, width);
+                // Copy colors to pixel data
+                let colors = [&color_0, &color_1, &color_2, &color_3];
+                copy_unpacked_pixels(rgba, &colors, &indicies, x, y, width);
 
-            i += block_size >> 1;
-        }
-    }
+                // Copy alphas to pixel data
+                copy_unpacked_alphas(rgba, &alphas, &alpha_indicies, x, y, width);
+            }
+        });
 }
 
 fn get_dx_bpp(encoding: &DXGI_Encoding) -> u8 {
