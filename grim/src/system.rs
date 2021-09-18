@@ -16,6 +16,16 @@ pub struct SystemInfo {
     pub endian: IOEndian, 
 }
 
+impl Default for SystemInfo {
+    fn default() -> SystemInfo {
+        SystemInfo {
+            version: 25,
+            platform: Platform::X360,
+            endian: IOEndian::Big,
+        }
+    }
+}
+
 impl SystemInfo {
     pub fn guess_system_info(milo: &MiloArchive, milo_path: &Path) -> SystemInfo {
         let platform = match milo_path.extension() {

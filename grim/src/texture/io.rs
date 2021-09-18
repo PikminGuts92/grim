@@ -191,7 +191,7 @@ fn calc_rgba_size(mut w: u16, mut h: u16, mut mips: u8) -> usize {
 }
 
 
-fn decode_from_bitmap(bitmap: &Bitmap, _info: &SystemInfo, rgba: &mut [u8]) -> Result<(), Box<dyn Error>> {
+pub fn decode_from_bitmap(bitmap: &Bitmap, _info: &SystemInfo, rgba: &mut [u8]) -> Result<(), Box<dyn Error>> {
     let Bitmap { bpp, raw_data: data, .. } = bitmap;
 
     if *bpp == 4 || *bpp == 8 {
