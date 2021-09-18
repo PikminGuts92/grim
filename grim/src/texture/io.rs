@@ -98,7 +98,7 @@ impl Bitmap {
                 let rgba_size = (width as usize) * (height as usize) * 4;
                 let rgba_img = &mut rgba.as_mut_slice()[start_rgba..(start_rgba + rgba_size)];
 
-                decode_dx_image(dxt_img, rgba_img, self.width as u32, dx_enc, is_360);
+                decode_dx_image(dxt_img, rgba_img, width as u32, dx_enc, is_360);
 
                 if mips == 0 {
                     break;
@@ -143,7 +143,7 @@ impl Bitmap {
                 let rgba_size = (width as usize) * (height as usize) * 4;
                 let rgba_img = &mut rgba.as_mut_slice()[start_rgba..(start_rgba + rgba_size)];
 
-                decode_tpl_image(tpl_img, rgba_img, self.width as u32, tpl_enc);
+                decode_tpl_image(tpl_img, rgba_img, width as u32, tpl_enc);
                 //decode_dx_image(tpl_img, rgba_img, self.width as u32, DXGI_Encoding::DXGI_FORMAT_BC1_UNORM);
 
                 if mips == 0 {
