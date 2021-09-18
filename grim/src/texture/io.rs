@@ -3,6 +3,7 @@ use crate::texture::{Bitmap, decode_dx_image, decode_tpl_image, DXGI_Encoding, T
 use crate::system::{Platform, SystemInfo};
 use image::{ImageBuffer, RgbaImage};
 
+use rayon::prelude::*;
 use std::error::Error;
 use std::path::Path;
 use thiserror::Error as ThisError;
@@ -222,26 +223,20 @@ pub fn decode_from_bitmap(bitmap: &Bitmap, _info: &SystemInfo, rgba: &mut [u8]) 
             }
         } else { // 8 bpp
             // Each byte encodes single color as palette index
-            let mut p1;
-            let mut enc;
+            rgba
+                .par_chunks_exact_mut(4)
+                .zip(encoded)
+                .for_each(|(pixel, enc)| {
+                    // Palette index
+                    // Swaps bits 3 and 4 with eachother
+                    // Ex: 0110 1011 -> 0111 0011
+                    let p1 = (((*enc & 0b1110_0111)
+                        | ((*enc & 0b0000_1000) << 1)
+                        | ((*enc & 0b0001_0000) >> 1)) as usize) << 2;
 
-            while i < rgba.len() {
-                enc = encoded[e];
-
-                // Palette index
-                // Swaps bits 3 and 4 with eachother
-                // Ex: 0110 1011 -> 0111 0011
-                p1 = (((enc & 0b1110_0111)
-                    | ((enc & 0b0000_1000) << 1)
-                    | ((enc & 0b0001_0000) >> 1)) as usize) << 2;
-
-                // Copy color from palette into rgba array
-                rgba[i..(i + 4)].clone_from_slice(&palette[p1..(p1 + 4)]);
-
-                // Increment index
-                e += 1;
-                i += 4; // 1 pixel
-            }
+                    // Copy color from palette into rgba array
+                    pixel.clone_from_slice(&palette[p1..(p1 + 4)]);
+                });
         }
 
     } else {
