@@ -1,9 +1,35 @@
-use grim::texture::{decode_dx_image, DXGI_Encoding};
+use grim::texture::{Bitmap, decode_dx_image, decode_from_bitmap, DXGI_Encoding};
 use criterion::{BenchmarkId, black_box, Criterion, criterion_group, criterion_main};
 
-fn from_elem(c: &mut Criterion) {
+fn benchmark_texture(c: &mut Criterion) {
+    let widths = [32, 64, 128, 256, 512, 1024, 2048];
+
+    // Bitmap
+    let mut group = c.benchmark_group("decode_bitmap_8bpp");
+    for width in widths {
+        let bitmap = Bitmap {
+            bpp: 8,
+            raw_data: vec![0u8; 1024 + (width * width)], // Palette + pixel indicies
+            ..Bitmap::new()
+        };
+
+        let mut rgba = vec![0u8; (width * width) * 4];
+
+        group.bench_function(width.to_string().as_str(), |b| {
+            b.iter(|| {
+                decode_from_bitmap(
+                    &bitmap,
+                    &Default::default(),
+                    rgba.as_mut_slice(),
+                ).unwrap();
+            });
+        });
+    }
+    group.finish();
+
+    // DXT1
     let mut group = c.benchmark_group("decode_dxt1");
-    for width in [32, 64, 128, 256, 512, 1024, 2048] {
+    for width in widths {
         let packed_data = vec![0u8; (width * width) / 2]; // 4bpp
         let mut rgba = vec![0u8; (width * width) * 4];
 
@@ -22,5 +48,5 @@ fn from_elem(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, from_elem);
+criterion_group!(benches, benchmark_texture);
 criterion_main!(benches);
