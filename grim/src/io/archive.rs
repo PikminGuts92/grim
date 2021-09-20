@@ -192,8 +192,16 @@ impl MiloArchive {
             }
         } else {
             // TODO: Parse directory info (entry)
-            let entry_size = self.guess_entry_size(&mut reader)?.unwrap();
-            reader.seek(SeekFrom::Current((entry_size + 4) as i64))?;
+            /*let entry_size = self.guess_entry_size(&mut reader)?.unwrap();
+            reader.seek(SeekFrom::Current((entry_size + 4) as i64))?;*/
+
+            // Hacky way to read directory entry
+            // Only works if no sub dirs
+            packed_entries.insert(0, PackedObject {
+                name: dir_name.to_owned(),
+                object_type: dir_type.to_owned(),
+                data: Vec::new()
+            });
         }
 
         // Get data for entries
