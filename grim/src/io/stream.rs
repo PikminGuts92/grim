@@ -372,6 +372,11 @@ impl<'a> BinaryStream<'a> {
 
         Ok(None)
     }
+
+    // Setters
+    pub fn set_endian(&mut self, endian: IOEndian) {
+        self.endian = endian;
+    }
 }
 
 // Reader implementation

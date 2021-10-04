@@ -301,19 +301,47 @@ impl MiloArchive {
         }
     }
 
-    pub fn from_object_dir(obj_dir: &ObjectDir, info: &SystemInfo) -> Result<MiloArchive, Box<dyn Error>> {
+    pub fn from_object_dir(obj_dir: &ObjectDir, info: &SystemInfo, block_type: Option<BlockType>) -> Result<MiloArchive, Box<dyn Error>> {
         // Create stream
         let mut data = Vec::<u8>::new();
         let mut stream = MemoryStream::from_vector_as_read_write(&mut data);
-        let mut writer = BinaryStream::from_stream(&mut stream);
+        let mut writer = BinaryStream::from_stream_with_endian(&mut stream, info.endian);
 
         let mut entries: Vec<&Object> = obj_dir.get_entries().iter().collect();
-        entries.sort_by(MiloArchive::compare_entries_by_type_and_name);
 
+        // Write version
         writer.write_uint32(info.version)?;
+
+        let mut dir_entry_op = None;
+        if info.version >= 24 {
+            // TODO: Refactor and get from field instead of hacky entries
+            let dir_entry = entries.swap_remove(0); // Faster than remove(), will sort anyways
+
+            // Write directory name + type
+            let dir_type = dir_entry.get_type();
+            let dir_name = dir_entry.get_name();
+
+            writer.write_prefixed_string(dir_type)?;
+            writer.write_prefixed_string(dir_name)?;
+
+            // Compute values for string table
+            let hash_count = (entries.len() + 1) * 2;
+            let blob_size = entries
+                .iter()
+                .map(|o| o.get_name().len() + 1)
+                .sum::<usize>() + (dir_name.len() + 1);
+
+            // Write string table values
+            writer.write_uint32(hash_count as u32)?;
+            writer.write_uint32(blob_size as u32)?;
+
+            dir_entry_op = Some(dir_entry);
+        }
+
         writer.write_uint32(entries.len() as u32)?;
 
         // Write types + names
+        entries.sort_by(MiloArchive::compare_entries_by_type_and_name);
         for entry in entries.iter() {
             let obj_type = entry.get_type();
             let obj_name = entry.get_name();
@@ -325,6 +353,15 @@ impl MiloArchive {
         if info.version == 10 {
             // TODO: Determine external dependencies or get from directory property
             writer.write_uint32(0)?;
+        } else {
+            // Hacky way to write directory entry
+            let dir_entry = dir_entry_op.unwrap();
+
+            if let Object::Packed(packed) = dir_entry {
+                writer.write_bytes(&packed.data.as_slice())?;
+            }
+
+            writer.write_bytes(&ADDE_PADDING)?;
         }
 
         let mut block_sizes = Vec::new();
@@ -360,7 +397,7 @@ impl MiloArchive {
 
         Ok(MiloArchive {
             structure: MiloArchiveStructure::Blocked(BlockInfo {
-                block_type: BlockType::TypeB,
+                block_type: block_type.unwrap_or(BlockType::TypeB),
                 start_offset: 2064,
                 block_sizes
             }),
@@ -407,13 +444,23 @@ impl MiloArchive {
                 let mut block_offset = 0;
                 let mut deflate_sizes = Vec::new();
                 for block_size in info.block_sizes.iter() {
-                    let compressed_data = deflate_zlib_block(&self.data[block_offset..(block_offset + *block_size)], &mut buffer)?;
+                    let block_data = &self.data[block_offset..(block_offset + *block_size)];
 
-                    // Write compressed block to stream
-                    writer.write_bytes(&compressed_data[..])?;
+                    if let BlockType::TypeA = &info.block_type {
+                        // Write uncompressed block to stream
+                        writer.write_bytes(block_data)?;
 
-                    // Add compressed size
-                    deflate_sizes.push(compressed_data.len());
+                        // Add uncompressed size
+                        deflate_sizes.push(block_data.len());
+                    } else {
+                        let compressed_data = &deflate_zlib_block(block_data, &mut buffer)?[..];
+
+                        // Write compressed block to stream
+                        writer.write_bytes(compressed_data)?;
+
+                        // Add compressed size
+                        deflate_sizes.push(compressed_data.len());
+                    }
 
                     // Update current offset
                     block_offset += *block_size;

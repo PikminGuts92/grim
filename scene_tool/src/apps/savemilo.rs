@@ -2,7 +2,7 @@ use crate::apps::{GameOptions, SubApp};
 use clap::{Clap};
 use std::cmp::Ordering;
 use std::error::Error;
-use std::fs;
+use std::{arch, fs};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -22,6 +22,8 @@ pub struct SaveMiloApp {
     pub milo_version: Option<u32>,
     #[clap(short = 'b' , long, about = "Use big endian serialization")]
     pub big_endian: Option<bool>,
+    #[clap(short = 'u' , long, about = "Leave output milo archive uncompressed")]
+    pub uncompressed: bool,
 }
 
 impl SubApp for SaveMiloApp {
@@ -44,6 +46,10 @@ impl SubApp for SaveMiloApp {
             platform: Platform::guess_platform(out_milo_path),
             ..in_sys_info
         };
+
+        if in_sys_info.platform.ne(&out_sys_info.platform) && out_sys_info.platform.eq(&Platform::Wii) {
+            todo!("Converting milo to wii is not currently supported!");
+        }
 
         if out_sys_info.platform.eq(&Platform::PS3) {
             // Force big endian if ps3
@@ -81,6 +87,18 @@ impl SubApp for SaveMiloApp {
 
         if in_sys_info.version.ne(&out_sys_info.version) {
             println!("Converting milo version from {:?} to {:?}", in_sys_info.version, out_sys_info.version);
+        }
+
+        // Write to new milo archive
+        let block_type = self.uncompressed.then(|| BlockType::TypeA);
+        let archive = MiloArchive::from_object_dir(&obj_dir, &out_sys_info, block_type)?;
+
+        let mut stream = FileStream::from_path_as_read_write_create(out_milo_path)?;
+        archive.write_to_stream(&mut stream)?;
+
+        if let Some(file_name) = out_milo_path.file_name() {
+            let file_name = file_name.to_str().unwrap();
+            println!("Successfully wrote {}", file_name);
         }
 
         Ok(())
