@@ -5,8 +5,10 @@ use grim::SystemInfo;
 
 mod dir2milo;
 mod milo2dir;
-pub use self::milo2dir::*;
+mod savemilo;
 pub use self::dir2milo::*;
+pub use self::milo2dir::*;
+pub use self::savemilo::*;
 
 // From Cargo.toml
 const PKG_NAME: &str = env!("CARGO_PKG_NAME");
@@ -29,6 +31,8 @@ enum SubCommand {
     Dir2Milo(Dir2MiloApp),
     #[clap(name = "milo2dir", about = "Extracts content of milo scene to directory")]
     Milo2Dir(Milo2DirApp),
+    #[clap(name = "savemilo", about = "Save milo")]
+    SaveMilo(SaveMiloApp),
 }
 
 #[derive(Debug)]
@@ -46,7 +50,8 @@ impl SceneTool {
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         match &mut self.options.commands {
             SubCommand::Dir2Milo(app) => app.process(),
-            SubCommand::Milo2Dir(app) => app.process()
+            SubCommand::Milo2Dir(app) => app.process(),
+            SubCommand::SaveMilo(app) => app.process(),
         }
     }
 }

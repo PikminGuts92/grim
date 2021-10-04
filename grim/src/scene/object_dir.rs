@@ -84,6 +84,12 @@ impl<'a> ObjectDir {
         }
     }
 
+    pub fn get_entries_mut(&'a mut self) -> &'a mut Vec<Object> {
+        match self {
+            ObjectDir::ObjectDir(dir) => &mut dir.entries
+        }
+    }
+
     pub fn unpack_entries(&'a mut self, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
         if let ObjectDir::ObjectDir(obj_dir) = self {
             for entry in obj_dir.entries.iter_mut() {

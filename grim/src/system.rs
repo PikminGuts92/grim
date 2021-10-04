@@ -26,9 +26,9 @@ impl Default for SystemInfo {
     }
 }
 
-impl SystemInfo {
-    pub fn guess_system_info(milo: &MiloArchive, milo_path: &Path) -> SystemInfo {
-        let platform = match milo_path.extension() {
+impl Platform {
+    pub fn guess_platform(milo_path: &Path) -> Platform {
+        match milo_path.extension() {
             Some(ext) => match ext.to_str() {
                 Some("milo_ps2") => Platform::PS2,
                 Some("milo_ps3") => Platform::PS3,
@@ -39,7 +39,13 @@ impl SystemInfo {
                 _ => Platform::X360,
             },
             None => Platform::X360,
-        };
+        }
+    }
+}
+
+impl SystemInfo {
+    pub fn guess_system_info(milo: &MiloArchive, milo_path: &Path) -> SystemInfo {
+        let platform = Platform::guess_platform(milo_path);
 
         // Default: Big endian - RB1
         let mut endian = IOEndian::Big;

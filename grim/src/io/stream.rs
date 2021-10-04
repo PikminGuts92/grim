@@ -5,7 +5,7 @@ pub use std::io::SeekFrom;
 use std::path::Path;
 pub use half::f16;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IOEndian {
     Little,
     Big,
