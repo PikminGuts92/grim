@@ -77,7 +77,7 @@ impl SubApp for SaveMiloApp {
 
         // Unpack milo
         let mut obj_dir = milo.unpack_directory(&in_sys_info)?;
-        obj_dir.unpack_entries(&in_sys_info).unwrap();
+        unpack_entries(&mut obj_dir, &in_sys_info, false);
 
         if in_sys_info.platform.ne(&out_sys_info.platform) {
             println!("Converting platform from {:?} to {:?}", in_sys_info.platform, out_sys_info.platform);
@@ -102,6 +102,24 @@ impl SubApp for SaveMiloApp {
         }
 
         Ok(())
+    }
+}
+
+fn unpack_entries(milo_dir: &mut ObjectDir, info: &SystemInfo, all: bool) {
+    if all {
+        milo_dir.unpack_entries(info).unwrap();
+        return;
+    }
+
+    for entry in milo_dir.get_entries_mut() {
+        match entry.get_type() {
+            "Mesh" | "Tex" => {},
+            _ => continue,
+        };
+
+        if let Some(new_entry) = entry.unpack(info) {
+            *entry = new_entry;
+        }
     }
 }
 
