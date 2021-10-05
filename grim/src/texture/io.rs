@@ -1,4 +1,5 @@
 use crate::io::{BinaryStream, SeekFrom, Stream};
+use crate::scene::ObjectReadWrite;
 use crate::texture::{Bitmap, decode_dx_image, decode_tpl_image, DXGI_Encoding, TPLEncoding};
 use crate::system::{Platform, SystemInfo};
 use image::{ImageBuffer, RgbaImage};
@@ -28,28 +29,7 @@ pub enum BitmapError {
 impl Bitmap {
     pub fn from_stream(stream: &mut dyn Stream, info: &SystemInfo) -> Result<Bitmap, Box<dyn Error>> {
         let mut bitmap = Bitmap::new();
-        let mut reader = BinaryStream::from_stream_with_endian(stream, info.endian);
-
-        let _byte_1 = reader.read_uint8()?; // TODO: Verify always 1
-
-        bitmap.bpp = reader.read_uint8()?;
-        bitmap.encoding = reader.read_uint32()?;
-        bitmap.mip_maps = reader.read_uint8()?;
-
-        bitmap.width = reader.read_uint16()?;
-        bitmap.height = reader.read_uint16()?;
-        bitmap.bpl = reader.read_uint16()?;
-
-        reader.seek(SeekFrom::Current(19))?; // Skip empty bytes
-
-        // TODO: Calculate expected data size and verify against actual
-        let current_pos = reader.pos();
-        let stream_len = reader.len()?;
-        let rem_bytes = stream_len - current_pos as usize;
-
-        bitmap.raw_data = reader.read_bytes(rem_bytes)?;
-
-        Ok(bitmap)
+        bitmap.load(stream, info).and(Ok(bitmap))
     }
 
     pub fn unpack_rgba(&self, info: &SystemInfo) -> Result<Vec<u8>, Box<dyn Error>> {
@@ -169,6 +149,53 @@ impl Bitmap {
     fn calc_rgba_size(&self) -> usize {
         let Bitmap { width: w, height: h, mip_maps: mips, ..} = self;
         calc_rgba_size(*w, *h, *mips)
+    }
+}
+
+impl ObjectReadWrite for Bitmap {
+    fn load(&mut self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+        let mut reader = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
+
+        let _byte_1 = reader.read_uint8()?; // TODO: Verify always 1
+
+        self.bpp = reader.read_uint8()?;
+        self.encoding = reader.read_uint32()?;
+        self.mip_maps = reader.read_uint8()?;
+
+        self.width = reader.read_uint16()?;
+        self.height = reader.read_uint16()?;
+        self.bpl = reader.read_uint16()?;
+
+        reader.seek(SeekFrom::Current(19))?; // Skip empty bytes
+
+        // TODO: Calculate expected data size and verify against actual
+        let current_pos = reader.pos();
+        let stream_len = reader.len()?;
+        let rem_bytes = stream_len - current_pos as usize;
+
+        self.raw_data = reader.read_bytes(rem_bytes)?;
+
+        Ok(())
+    }
+
+    fn save(&self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+        let mut stream = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
+
+        // TODO: Figure out if this changes per milo version
+        stream.write_boolean(true)?;
+
+        stream.write_uint8(self.bpp)?;
+        stream.write_uint32(self.encoding)?;
+        stream.write_uint8(self.mip_maps)?;
+
+        stream.write_uint16(self.width)?;
+        stream.write_uint16(self.height)?;
+        stream.write_uint16(self.bpl)?;
+
+        stream.write_bytes(&[0u8; 19])?;
+        stream.write_bytes(&self.raw_data)?;
+
+        Ok(())
     }
 }
 

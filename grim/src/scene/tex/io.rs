@@ -1,6 +1,6 @@
 use crate::{SystemInfo};
 use crate::io::{BinaryStream, SeekFrom, Stream};
-use crate::scene::Tex;
+use crate::scene::{ObjectReadWrite, save_object, Tex};
 use crate::texture::Bitmap;
 use thiserror::Error as ThisError;
 use std::error::Error;
@@ -40,7 +40,13 @@ impl Tex {
 
     pub fn from_stream(stream: &mut dyn Stream, info: &SystemInfo) -> Result<Tex, Box<dyn Error>> {
         let mut tex = Tex::new();
-        let mut reader = BinaryStream::from_stream_with_endian(stream, info.endian);
+        tex.load(stream, info).and(Ok(tex))
+    }
+}
+
+impl ObjectReadWrite for Tex {
+    fn load(&mut self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+        let mut reader = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
 
         let magic = reader.read_uint32()?;
 
@@ -63,25 +69,57 @@ impl Tex {
             reader.read_boolean()?;
         }
 
-        tex.width = reader.read_uint32()?;
-        tex.height = reader.read_uint32()?;
-        tex.bpp = reader.read_uint32()?;
+        self.width = reader.read_uint32()?;
+        self.height = reader.read_uint32()?;
+        self.bpp = reader.read_uint32()?;
 
-        tex.ext_path = reader.read_prefixed_string()?;
-        tex.index_f = reader.read_float32()?;
-        tex.index = reader.read_int32()?;
+        self.ext_path = reader.read_prefixed_string()?;
+        self.index_f = reader.read_float32()?;
+        self.index = reader.read_int32()?;
 
-        tex.use_ext_path = reader.read_boolean()?;
+        self.use_ext_path = reader.read_boolean()?;
 
         if reader.pos() == reader.len()? as u64 {
-            return Ok(tex);
+            return Ok(());
         }
 
-        tex.bitmap = match Bitmap::from_stream(&mut reader, info) {
+        self.bitmap = match Bitmap::from_stream(reader.as_mut(), info) {
             Ok(bitmap) => Some(bitmap),
             Err(_) => None,
         };
 
-        Ok(tex)
+        Ok(())
+    }
+
+    fn save(&self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+        let mut stream = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
+
+        // TODO: Get version from system info
+        let version = 11;
+
+        stream.write_uint32(version)?;
+
+        save_object(self, &mut stream, info)?;
+
+        if version >= 11 {
+            // TODO: Write actual boolean value
+            stream.write_boolean(false)?;
+        }
+
+        stream.write_uint32(self.width)?;
+        stream.write_uint32(self.height)?;
+        stream.write_uint32(self.bpp)?;
+
+        stream.write_prefixed_string(&self.ext_path)?;
+        stream.write_float32(self.index_f)?;
+        stream.write_int32(self.index)?;
+
+        stream.write_boolean(self.use_ext_path && self.bitmap.is_some())?;
+
+        if let Some(bitmap) = &self.bitmap {
+            bitmap.save(stream.as_mut(), info)?;
+        }
+
+        Ok(())
     }
 }
