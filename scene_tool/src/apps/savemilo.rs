@@ -137,8 +137,8 @@ fn transcode_texture(tex: &mut Tex, in_sys_info: &SystemInfo, out_sys_info: &Sys
             (32, &Platform::X360, _) => {},
             (_, &Platform::PS3, &Platform::X360) | (_, &Platform::X360, &Platform::PS3) => {
                 // Just swap bytes to save time
-                if bitmap.raw_data.len() > 32 {
-                    swap_image_bytes(&mut bitmap.raw_data[32..]);
+                if !bitmap.raw_data.is_empty() {
+                    swap_image_bytes(&mut bitmap.raw_data);
                     println!("Swapped bytes for \"{}\"", tex.name.as_str());
                 }
                 return;
