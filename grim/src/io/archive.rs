@@ -370,20 +370,38 @@ impl MiloArchive {
         // Write data for entries
         for entry in entries.iter() {
             // Get packed entry
-            let data = match entry {
-                Object::Packed(packed) => &packed.data,
+            match entry {
+                Object::Packed(packed) => {
+                    let data = &packed.data;
+
+                    // Write to stream
+                    writer.write_bytes(&data[..])?;
+                    writer.write_bytes(&ADDE_PADDING)?;
+
+                    // Update block size
+                    current_size += data.len() + 4;
+                },
                 _ => {
-                    // TODO: Handle this better
-                    continue;
+                    // Pack entry
+                    let data = entry
+                        .pack(info)
+                        .and_then(|o| match o {
+                            Object::Packed(p) => Some(p.data),
+                            _ => None
+                        });
+
+                    if let Some(data) = &data {
+                        // Write to stream
+                        writer.write_bytes(&data[..])?;
+                        writer.write_bytes(&ADDE_PADDING)?;
+
+                        // Update block size
+                        current_size += data.len() + 4;
+                    } else {
+                        continue;
+                    }
                 }
             };
-
-            // Write to stream
-            writer.write_bytes(&data[..])?;
-            writer.write_bytes(&ADDE_PADDING)?;
-
-            // Update block size
-            current_size += data.len() + 4;
 
             if current_size >= MAX_BLOCK_SIZE {
                 block_sizes.push(current_size);

@@ -47,6 +47,45 @@ impl Object {
         }
     }
 
+    pub fn is_packed(&self) -> bool {
+        match self {
+            Object::Packed(_) => true,
+            _ => false
+        }
+    }
+
+    pub fn pack(&self, info: &SystemInfo) -> Option<Object> {
+        if self.is_packed() {
+            todo!("Already packed");
+        }
+
+        let obj: &dyn ObjectReadWrite  = match &self {
+            Object::Anim(obj) => obj,
+            Object::Draw(obj) => obj,
+            Object::Group(obj) => obj,
+            Object::Mat(obj) => obj,
+            Object::Mesh(obj) => obj,
+            Object::Tex(obj) => obj,
+            Object::Trans(obj) => obj,
+            _ => todo!("Test"),
+        };
+
+        let mut data = Vec::new();
+        let mut stream = MemoryStream::from_vector_as_read_write(&mut data);
+
+        if obj.save(&mut stream, info).is_err() {
+            println!("ERROR: Unable to pack {} with type {}", self.get_name(), self.get_type());
+            return None;
+        }
+
+        // Return packed object
+        Some(Object::Packed(PackedObject {
+            name: self.get_name().to_owned(),
+            object_type: self.get_type().to_owned(),
+            data,
+        }))
+    }
+
     pub fn unpack(&self, info: &SystemInfo) -> Option<Object> {
         match self {
             Object::Packed(packed) => {
