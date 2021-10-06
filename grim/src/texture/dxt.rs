@@ -1,3 +1,5 @@
+use image::ImageDecoder;
+use image::codecs::dxt::{DxtDecoder, DxtEncoder, DXTVariant};
 use rayon::prelude::*;
 use super::*;
 
@@ -39,6 +41,25 @@ pub fn decode_dx_image(dx_img: &[u8], rgba: &mut [u8], width: u32, encoding: DXG
         DXGI_Encoding::DXGI_FORMAT_BC3_UNORM => decode_dxt5_image(dx_img, rgba, width, is_360),
         DXGI_Encoding::DXGI_FORMAT_BC5_UNORM => decode_ati2_image(dx_img, rgba, width, is_360),
     };
+}
+
+pub fn encode_dx_image(rgba: &[u8], dx_img: &mut [u8], width: u32, encoding: DXGI_Encoding, is_360: bool) {
+    match &encoding {
+        DXGI_Encoding::DXGI_FORMAT_BC3_UNORM => encode_dxt5_image(rgba, dx_img, width, is_360),
+        _ => todo!("Implement other encodings")
+    };
+}
+
+fn encode_dxt5_image(rgba: &[u8], dx_img: &mut [u8], width: u32, is_360: bool) {
+    let height = calculate_texture_height(rgba.len(), width, 32);
+
+    let encoder = DxtEncoder::new(dx_img);
+    //drop(encoder);
+    encoder.encode(rgba, width, height, DXTVariant::DXT5).unwrap();
+
+    if is_360 {
+        //swap_image_bytes(dx_img);
+    }
 }
 
 fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {

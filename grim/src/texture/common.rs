@@ -195,3 +195,25 @@ pub fn set_channels_value(rgba: &mut [u8], x: u32, y: u32, width: u32, i: usize,
 fn linear_offset(x: usize, y: usize, w: usize) -> usize {
     (y * (w << 2)) + (x << 2)
 }
+
+pub fn swap_image_bytes(data: &mut [u8]) {
+    let mut tmp: u8;
+
+    for d in data.chunks_exact_mut(8) {
+        tmp = d[0];
+        d[0] = d[1];
+        d[1] = tmp;
+
+        tmp = d[2];
+        d[2] = d[3];
+        d[3] = tmp;
+
+        tmp = d[4];
+        d[4] = d[5];
+        d[5] = tmp;
+
+        tmp = d[6];
+        d[6] = d[7];
+        d[7] = tmp;
+    }
+}

@@ -9,7 +9,7 @@ use thiserror::Error;
 use grim::{Platform, SystemInfo};
 use grim::io::*;
 use grim::scene::{Object, ObjectDir, ObjectReadWrite, PackedObject, Tex};
-use grim::texture::{write_rgba_to_file};
+use grim::texture::{Bitmap, Image, swap_image_bytes, write_rgba_to_file};
 
 
 #[derive(Clap, Debug)]
@@ -149,28 +149,13 @@ fn transcode_texture(tex: &mut Tex, in_sys_info: &SystemInfo, out_sys_info: &Sys
         // Decode proper
         if let Some(rgba) = bitmap.unpack_rgba(in_sys_info).ok() {
             println!("Successfully decoded \"{}\"", tex.name.as_str());
+
+            *bitmap = Bitmap::from_image(Image::FromRGBA {
+                rgba: rgba.as_slice(),
+                width: bitmap.width,
+                height: bitmap.height,
+                mips: 0,
+            }, out_sys_info);
         }
-    }
-}
-
-fn swap_image_bytes(data: &mut [u8]) {
-    let mut tmp: u8;
-
-    for d in data.chunks_exact_mut(8) {
-        tmp = d[0];
-        d[0] = d[1];
-        d[1] = tmp;
-
-        tmp = d[2];
-        d[2] = d[3];
-        d[3] = tmp;
-
-        tmp = d[4];
-        d[4] = d[5];
-        d[5] = tmp;
-
-        tmp = d[6];
-        d[6] = d[7];
-        d[7] = tmp;
     }
 }
