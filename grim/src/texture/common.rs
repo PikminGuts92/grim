@@ -197,9 +197,12 @@ fn linear_offset(x: usize, y: usize, w: usize) -> usize {
 }
 
 pub fn swap_image_bytes(data: &mut [u8]) {
-    let mut tmp: u8;
+    use rayon::prelude::*;
 
-    for d in data.chunks_exact_mut(8) {
+    data.par_chunks_exact_mut(8)
+        .for_each(|d| {
+        let mut tmp: u8;
+
         tmp = d[0];
         d[0] = d[1];
         d[1] = tmp;
@@ -215,5 +218,5 @@ pub fn swap_image_bytes(data: &mut [u8]) {
         tmp = d[6];
         d[6] = d[7];
         d[7] = tmp;
-    }
+    });
 }
