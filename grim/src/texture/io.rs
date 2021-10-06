@@ -1,6 +1,6 @@
 use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::scene::ObjectReadWrite;
-use crate::texture::{Bitmap, decode_dx_image, decode_tpl_image, encode_dx_image, DXGI_Encoding, TPLEncoding};
+use crate::texture::{Bitmap, decode_dx_image, decode_tpl_image, encode_dx_image, get_dx_bpp, DXGI_Encoding, TPLEncoding};
 use crate::system::{Platform, SystemInfo};
 use image::{ImageBuffer, RgbaImage};
 
@@ -42,22 +42,37 @@ impl Bitmap {
         if let Image::FromRGBA { rgba, width, height, mips} = image {
             match info.platform {
                 Platform::X360 | Platform::PS3 => {
-                    let dx_img_size = (width * height) as usize;
-                    let mut dx_img = vec![0u8; dx_img_size];
                     let is_360 = info.platform.eq(&Platform::X360);
+
+                    // TODO: Support DXT1
+                    //  Can't right now because underlying image library expects RGB slice instead of RGBA
+                    let encoding = DXGI_Encoding::DXGI_FORMAT_BC3_UNORM;
+                    /*let mut encoding = DXGI_Encoding::DXGI_FORMAT_BC1_UNORM;
+
+                    // Use DXT5 encoding if alpha is used
+                    if rgba.len() >= 4 && rgba.iter().skip(3).any(|&a| a < u8::MAX) {
+                        encoding = DXGI_Encoding::DXGI_FORMAT_BC3_UNORM;
+                    }*/
+
+                    let (bpp, dx_img_size, bpl) = match encoding {
+                        DXGI_Encoding::DXGI_FORMAT_BC1_UNORM => (4, ((width as usize) * (height as usize)) / 2, width / 2),
+                        _ => (8, (width as usize) * (height as usize), width)
+                    };
+
+                    let mut dx_img = vec![0u8; dx_img_size];
 
                     // Encode without mip maps for now
                     let rgba = &rgba[..(width as usize * height as usize * 4)];
-                    encode_dx_image(rgba, &mut dx_img, width as u32, DXGI_Encoding::DXGI_FORMAT_BC3_UNORM, is_360);
+                    encode_dx_image(rgba, &mut dx_img, width as u32, encoding, is_360);
 
                     return Bitmap {
-                        bpp: 8,
-                        encoding: DXGI_Encoding::DXGI_FORMAT_BC3_UNORM as u32,
+                        bpp,
+                        encoding: encoding as u32,
                         mip_maps: 0,
 
                         width,
                         height,
-                        bpl: width, // Equal at 8bpp
+                        bpl,
 
                         raw_data: dx_img
                     }

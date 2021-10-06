@@ -268,7 +268,7 @@ fn decode_ati2_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
 }
 
 
-fn get_dx_bpp(encoding: &DXGI_Encoding) -> u8 {
+pub fn get_dx_bpp(encoding: &DXGI_Encoding) -> u8 {
     match encoding {
         DXGI_Encoding::DXGI_FORMAT_BC1_UNORM => 4,
         DXGI_Encoding::DXGI_FORMAT_BC3_UNORM => 8,
