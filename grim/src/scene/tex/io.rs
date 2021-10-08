@@ -95,7 +95,7 @@ impl ObjectReadWrite for Tex {
         let mut stream = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
 
         // TODO: Get version from system info
-        let version = 11;
+        let version = 10;
 
         stream.write_uint32(version)?;
 
