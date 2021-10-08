@@ -113,6 +113,7 @@ fn unpack_entries(milo_dir: &mut ObjectDir, info: &SystemInfo, all: bool) {
 
     let supported_types = [
         "Group",
+        "Mat",
         "Mesh",
         "Tex",
         "Trans"
