@@ -111,11 +111,16 @@ fn unpack_entries(milo_dir: &mut ObjectDir, info: &SystemInfo, all: bool) {
         return;
     }
 
+    let supported_types = [
+        "Mesh",
+        "Tex",
+        "Trans"
+    ];
+
     for entry in milo_dir.get_entries_mut() {
-        match entry.get_type() {
-            "Mesh" | "Tex" => {},
-            _ => continue,
-        };
+        if !supported_types.contains(&entry.get_type()) {
+            continue
+        }
 
         if let Some(new_entry) = entry.unpack(info) {
             *entry = new_entry;
