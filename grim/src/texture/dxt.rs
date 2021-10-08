@@ -59,7 +59,7 @@ pub fn encode_dx_image(rgba: &[u8], dx_img: &mut [u8], width: u32, encoding: DXG
 
 fn encode_dxt_with_lib(rgba: &[u8], dx_img: &mut [u8], width: u32, height: u32, enc: DXTVariant) {
     // Encode dxt image
-    let encoder = DxtEncoder::new(dx_img);
+    let mut encoder = DxtEncoder::new(dx_img);
     encoder.encode(rgba, width, height, enc).unwrap();
 }
 
