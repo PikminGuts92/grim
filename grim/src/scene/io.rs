@@ -39,8 +39,8 @@ pub(crate) fn load_object_type<T: MiloObject>(obj: &mut T, reader: &mut Box<Bina
 }
 
 pub(crate) fn save_object_type<T: MiloObject>(obj: &T, writer: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
-    // TODO: Get revision from system info
-    writer.write_uint32(2)?;
+    // Write revision
+    writer.write_uint32(info.get_revision())?;
 
     // Write type
     writer.write_prefixed_string(obj.get_type())?;

@@ -74,4 +74,12 @@ impl SystemInfo {
             _ => false,
         }
     }
+
+    pub fn get_revision(&self) -> u32 {
+        match (self.version, self.platform, self.endian) {
+            (0..=24, _, _) => 0,
+            (25, Platform::X360, IOEndian::Little) => 1,
+            _ => 2,
+        }
+    }
 }
