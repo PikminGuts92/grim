@@ -83,6 +83,44 @@ impl ObjectReadWrite for GroupObject {
     }
 
     fn save(&self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
-        todo!()
+        let mut stream = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
+
+        // TODO: Get version from system info
+        let version = 12;
+
+        stream.write_uint32(version)?;
+
+        save_object(self, &mut stream, info)?;
+        save_anim(self, &mut stream, info, false)?;
+        save_trans(self, &mut stream, info, false)?;
+        save_draw(self, &mut stream, info, false)?;
+
+        if version >= 11 {
+            // Write objects
+            stream.write_uint32(self.get_objects().len() as u32)?;
+            for obj in self.get_objects() {
+                stream.write_prefixed_string(obj)?;
+            }
+        }
+
+        // Write environ
+        stream.write_prefixed_string(&self.environ)?;
+
+        if version <= 12 {
+            // Write ratio
+            // TODO: Figure out how to extract from computed lod_screen_size
+            stream.write_float32(0.0)?; // Width
+            stream.write_float32(0.0)?; // Height
+        } else {
+            stream.write_prefixed_string(&self.draw_only)?;
+            stream.write_prefixed_string(&self.lod)?;
+            stream.write_float32(self.lod_screen_size)?;
+
+            if version >= 14 {
+                stream.write_boolean(self.sort_in_world)?;
+            }
+        }
+
+        Ok(())
     }
 }

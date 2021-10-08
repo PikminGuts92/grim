@@ -60,3 +60,29 @@ pub(crate) fn load_anim<T: Anim>(anim: &mut T, reader: &mut Box<BinaryStream>, i
 
     Ok(())
 }
+
+pub(crate) fn save_anim<T: Anim>(anim: &T, writer: &mut Box<BinaryStream>, info: &SystemInfo, write_meta: bool)  -> Result<(), Box<dyn Error>> {
+    // TODO: Get version from system info
+    let version = 4;
+    writer.write_uint32(version)?;
+
+    if write_meta {
+        save_object(anim, writer, info)?;
+    }
+
+    if version < 4 {
+        // TODO: Save anim entries and write
+        writer.write_uint32(0)?;
+
+        // Write anim objects
+        writer.write_uint32(anim.get_anim_objects().len() as u32)?;
+        for anim_obj in anim.get_anim_objects() {
+            writer.write_prefixed_string(anim_obj)?;
+        }
+    } else {
+        writer.write_float32(anim.get_frame())?;
+        writer.write_uint32(*anim.get_rate() as u32)?;
+    }
+
+    Ok(())
+}
