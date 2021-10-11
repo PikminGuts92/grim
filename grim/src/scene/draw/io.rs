@@ -65,7 +65,7 @@ pub(crate) fn load_draw<T: Draw>(draw: &mut T, reader: &mut Box<BinaryStream>, i
 
 pub(crate) fn save_draw<T: Draw>(draw: &T, writer: &mut Box<BinaryStream>, info: &SystemInfo, write_meta: bool)  -> Result<(), Box<dyn Error>> {
     // TODO: Get version from system info
-    let version = 4;
+    let version = 3;
     writer.write_uint32(version)?;
 
     if write_meta {
@@ -74,7 +74,10 @@ pub(crate) fn save_draw<T: Draw>(draw: &T, writer: &mut Box<BinaryStream>, info:
 
     writer.write_boolean(draw.get_showing())?;
     save_sphere(draw.get_sphere(), writer)?;
-    writer.write_float32(draw.get_draw_order())?;
+
+    if version >= 3 {
+        writer.write_float32(draw.get_draw_order())?;
+    }
 
     if version >= 4 {
         writer.write_uint32(*draw.get_override_include_in_depth_only_pass() as u32)?;

@@ -7,7 +7,7 @@ use std::error::Error;
 fn is_version_supported(version: u32) -> bool {
     match version {
         8 => true, // GH1
-        9 => true,  // GH2/RB1/RB2/TBRB/GDRB
+        9 => true, // GH2/RB1/RB2/TBRB/GDRB
         _ => false
     }
 }
