@@ -335,6 +335,7 @@ impl ObjectReadWrite for MatObject {
 
         if version > 27 {
             stream.write_uint32(self.stencil_mode as u32)?;
+        } else {
             return Ok(()); // Exit early
         }
 
