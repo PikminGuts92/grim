@@ -1,5 +1,6 @@
 mod anim;
 mod char_bones_samples;
+mod cube_tex;
 mod draw;
 mod group;
 mod io;
@@ -14,6 +15,7 @@ mod tex;
 mod trans;
 
 pub use anim::*;
+pub use cube_tex::*;
 pub use char_bones_samples::*;
 pub use draw::*;
 pub use group::*;

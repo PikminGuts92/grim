@@ -4,6 +4,7 @@ use crate::scene::*;
 
 pub enum Object {
     Anim(AnimObject),
+    CubeTex(CubeTexObject),
     Draw(DrawObject),
     Group(GroupObject),
     Mat(MatObject),
@@ -24,6 +25,7 @@ impl Object {
     pub fn get_name(&self) -> &str {
         match self {
             Object::Anim(anim) => &anim.name,
+            Object::CubeTex(cube) => &cube.name,
             Object::Draw(draw) => &draw.name,
             Object::Group(grp) => &grp.name,
             Object::Mat(mat) => &mat.name,
@@ -37,6 +39,7 @@ impl Object {
     pub fn get_type(&self) -> &str {
         match self {
             Object::Anim(_) => "Anim",
+            Object::CubeTex(_) => "CubeTex",
             Object::Draw(_) => "Draw",
             Object::Group(_) => "Group",
             Object::Mat(_) => "Mat",
@@ -61,6 +64,7 @@ impl Object {
 
         let obj: &dyn ObjectReadWrite  = match &self {
             Object::Anim(obj) => obj,
+            Object::CubeTex(obj) => obj,
             Object::Draw(obj) => obj,
             Object::Group(obj) => obj,
             Object::Mat(obj) => obj,
@@ -98,6 +102,16 @@ impl Object {
                         if anim.load(&mut stream, info).is_ok() {
                             anim.name = packed.name.to_owned();
                             Some(Object::Anim(anim))
+                        } else {
+                            None
+                        }
+                    },
+                    "CubeTex" => {
+                        let mut cube = CubeTexObject::default();
+
+                        if cube.load(&mut stream, info).is_ok() {
+                            cube.name = packed.name.to_owned();
+                            Some(Object::CubeTex(cube))
                         } else {
                             None
                         }
