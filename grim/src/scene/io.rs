@@ -1,11 +1,18 @@
-use crate::io::{BinaryStream, SeekFrom, Stream};
+use crate::io::{BinaryStream, FileStream, SeekFrom, Stream};
 use crate::SystemInfo;
 use grim_traits::scene::{Color3, Matrix, MiloObject, Sphere};
 use std::error::Error;
+use std::path::Path;
 
 pub trait ObjectReadWrite {
     fn load(&mut self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>>;
     fn save(&self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>>;
+}
+
+pub fn save_to_file<T: ObjectReadWrite, S: AsRef<Path>>(obj: &T, out_path: S, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+    // Write to file
+    let mut stream = FileStream::from_path_as_read_write_create(out_path.as_ref())?;
+    obj.save(&mut stream, info)
 }
 
 pub(crate) fn load_object<T: MiloObject>(obj: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
