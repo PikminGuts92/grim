@@ -2,7 +2,6 @@ use crate::apps::{SubApp};
 use clap::{Clap};
 
 use std::error::Error;
-use std::path::{Path};
 
 use grim::{Platform, SystemInfo};
 use grim::model::*;
