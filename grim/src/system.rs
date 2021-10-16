@@ -59,6 +59,8 @@ impl SystemInfo {
         } else if platform == Platform::PS2 {
             endian = IOEndian::Little;
             version = milo.get_version(endian).unwrap_or(24); // GH2
+        } else {
+            version = milo.get_version(endian).unwrap_or(version);
         }
 
         SystemInfo {

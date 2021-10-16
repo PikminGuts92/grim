@@ -5,6 +5,11 @@ use std::error::Error;
 
 
 pub fn inflate_zlib_block(data: &[u8], buffer: &mut [u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    if data.is_empty() {
+        // Fast exit
+        return Ok(Vec::new());
+    }
+
     let mut decompressor = Decompress::new(false);
     let status = decompressor.decompress(data, buffer, FlushDecompress::Finish)?;
 

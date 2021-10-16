@@ -82,11 +82,11 @@ impl MiloArchive {
             let block_count = reader.read_int32()?;
             let max_inflate_size = reader.read_int32()?;
 
-            let mut block_sizes: Vec<i32> = vec![0; block_count as usize];
+            let mut block_sizes: Vec<u32> = vec![0; block_count as usize];
 
             for size in block_sizes
                 .iter_mut() {
-                *size = reader.read_int32()?;
+                *size = reader.read_uint32()?;
             }
 
             // Advances to first block
@@ -96,13 +96,14 @@ impl MiloArchive {
             let mut buffer = vec![0u8; max_inflate_size as usize];
 
             for block_size in block_sizes.iter() {
-                let bytes = reader.read_bytes(*block_size as usize)?;
+                let bytes = reader.read_bytes((*block_size & 0xFFFFFF) as usize)?;
 
-                let mut data = match block_type {
-                    BlockType::TypeA => bytes, // No compression
-                    BlockType::TypeB => inflate_zlib_block(&bytes, &mut buffer[..])?,
-                    BlockType::TypeC => inflate_zlib_block(&bytes, &mut buffer[..])?, // TODO: Support gzip
-                    BlockType::TypeD => inflate_zlib_block(&bytes[4..], &mut buffer[..])?, // TODO: Determine if block is compressed
+                let mut data = match (block_type, ((*block_size & 0xFF000000) == 0)) {
+                    (BlockType::TypeA, _)
+                        | (BlockType::TypeD, false) => bytes, // No compression
+                    (BlockType::TypeB, _) => inflate_zlib_block(&bytes, &mut buffer[..])?,
+                    (BlockType::TypeC, _) => todo!("Gzip compression not supported!"), // TODO: Support gzip
+                    (BlockType::TypeD, true) => inflate_zlib_block(&bytes[4..], &mut buffer[..])?, // Skip 4-byte inflated size prefix
                 };
 
                 uncompressed.append(&mut data);
@@ -470,6 +471,16 @@ impl MiloArchive {
 
                         // Add uncompressed size
                         deflate_sizes.push(block_data.len());
+                    }
+                    else if let BlockType::TypeD = &info.block_type {
+                        let compressed_data = &deflate_zlib_block(block_data, &mut buffer)?[..];
+
+                        // Write compressed block to stream
+                        writer.write_uint32(block_data.len() as u32)?; // Write inflated size
+                        writer.write_bytes(compressed_data)?;
+
+                        // Add compressed size
+                        deflate_sizes.push(compressed_data.len() + 4);
                     } else {
                         let compressed_data = &deflate_zlib_block(block_data, &mut buffer)?[..];
 
@@ -487,6 +498,7 @@ impl MiloArchive {
                 // Go back to block sizes offset
                 writer.seek(SeekFrom::Start(block_sizes_offset))?;
 
+                // Write deflated sizes
                 for size in deflate_sizes.iter() {
                     writer.write_uint32(*size as u32)?;
                 }
