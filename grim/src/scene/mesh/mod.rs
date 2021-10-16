@@ -56,3 +56,21 @@ impl Default for MeshObject {
         }
     }
 }
+
+impl MeshObject {
+    pub fn recompute_face_groups(&mut self) {
+        self.face_groups.clear();
+
+        let mut face_count = self.faces.len() as u32;
+
+        while face_count > 0 {
+            if face_count < 255 {
+                self.face_groups.push(face_count as u8);
+                break;
+            }
+
+            self.face_groups.push(255);
+            face_count -= 255;
+        }
+    }
+}

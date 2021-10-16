@@ -167,7 +167,8 @@ impl GLTFImporter {
         let mut meshes = Vec::new();
 
         for prim in mesh.primitives() {
-            let mesh = self.read_primitive(&prim, &mesh_name_prefix);
+            let mut mesh = self.read_primitive(&prim, &mesh_name_prefix);
+            mesh.recompute_face_groups();
             meshes.push(mesh);
         }
 
@@ -265,10 +266,11 @@ impl GLTFImporter {
         };
 
         MeshObject {
-            name: mesh_name,
+            name: mesh_name.to_owned(),
             vertices: verts,
             faces,
             mat: mat_name,
+            geom_owner: mesh_name,
             parent: String::default(),
             ..MeshObject::default()
         }
