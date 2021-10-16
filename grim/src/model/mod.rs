@@ -1,60 +1,31 @@
-mod anim;
-mod draw;
+//mod anim;
+//mod draw;
 mod gltf;
-mod group;
-mod mat;
-mod mesh;
-mod tex;
-mod trans;
+//mod group;
+//mod mat;
+//mod mesh;
+mod tex_path;
+//mod trans;
 
 use std::{error::Error, fs::copy, path::Path};
 
-pub use self::anim::*;
-pub use self::draw::*;
+use crate::SystemInfo;
+use crate::scene::*;
 pub(crate) use self::gltf::*;
-pub use self::group::*;
-pub use self::mat::*;
-pub use self::mesh::*;
-pub use self::tex::*;
-pub use self::trans::*;
+pub use self::tex_path::*;
 
-#[derive(Debug)]
-pub struct Vertex {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-
-    pub nx: f32,
-    pub ny: f32,
-    pub nz: f32,
-
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-    pub a: f32,
-
-    pub u: f32,
-    pub v: f32,
-}
-
-#[derive(Debug)]
-pub struct Face {
-    pub v1: u16,
-    pub v2: u16,
-    pub v3: u16,
-}
-
-#[derive(Debug)]
 pub struct AssetManagager {
-    groups: Vec<Group>,
-    meshes: Vec<MiloMesh>,
-    materials: Vec<Mat>,
-    textures: Vec<Tex>,
+    info: SystemInfo,
+    groups: Vec<GroupObject>,
+    meshes: Vec<MeshObject>,
+    materials: Vec<MatObject>,
+    textures: Vec<TexPath>,
 }
 
 impl AssetManagager {
-    pub fn new() -> AssetManagager {
+    pub fn new(info: SystemInfo) -> AssetManagager {
         AssetManagager {
+            info,
             groups: Vec::new(),
             meshes: Vec::new(),
             materials: Vec::new(),
@@ -62,39 +33,39 @@ impl AssetManagager {
         }
     }
 
-    pub fn get_group(&self, name: &str) -> Option<&Group> {
+    pub fn get_group(&self, name: &str) -> Option<&GroupObject> {
         self.groups.iter().find(|g| g.name.eq(name))
     }
 
-    pub fn get_mesh(&self, name: &str) -> Option<&MiloMesh> {
+    pub fn get_mesh(&self, name: &str) -> Option<&MeshObject> {
         self.meshes.iter().find(|m| m.name.eq(name))
     }
 
-    pub fn get_material(&self, name: &str) -> Option<&Mat> {
+    pub fn get_material(&self, name: &str) -> Option<&MatObject> {
         self.materials.iter().find(|m| m.name.eq(name))
     }
 
-    pub fn get_texture(&self, name: &str) -> Option<&Tex> {
+    pub fn get_texture(&self, name: &str) -> Option<&TexPath> {
         self.textures.iter().find(|t| t.name.eq(name))
     }
 
-    pub fn add_group(&mut self, group: Group) {
+    pub fn add_group(&mut self, group: GroupObject) {
         self.groups.push(group);
     }
 
-    pub fn add_mesh(&mut self, mesh: MiloMesh) {
+    pub fn add_mesh(&mut self, mesh: MeshObject) {
         self.meshes.push(mesh);
     }
 
-    pub fn add_material(&mut self, mat: Mat) {
+    pub fn add_material(&mut self, mat: MatObject) {
         self.materials.push(mat);
     }
 
-    pub fn add_tex(&mut self, tex: Tex) {
+    pub fn add_tex(&mut self, tex: TexPath) {
         self.textures.push(tex);
     }
 
-    pub fn get_groups(&self) -> &Vec<Group> {
+    pub fn get_groups(&self) -> &Vec<GroupObject> {
         &self.groups
     }
 
@@ -105,13 +76,13 @@ impl AssetManagager {
         let groups = self.get_groups();
 
         for grp in groups {
-            let meshes: Vec<&MiloMesh> = (&grp.objects).iter().map(|m| self.get_mesh(m).unwrap()).collect();
+            let meshes: Vec<&MeshObject> = (&grp.objects).iter().map(|m| self.get_mesh(m).unwrap()).collect();
 
             for mesh in meshes {
                 // Write mat
                 let mat = self.get_material(&mesh.mat).unwrap();
                 let mat_path = out_dir.as_ref().join(&mat.name);
-                mat.write_to_file(&mat_path)?;
+                save_to_file(mat, &mat_path, &self.info)?;
                 println!("Wrote {}", &mat.name);
 
                 // Write diffuse tex
@@ -126,13 +97,13 @@ impl AssetManagager {
 
                 // Write mesh
                 let mesh_path = out_dir.as_ref().join(&mesh.name);
-                mesh.write_to_file(&mesh_path, 34)?;
+                save_to_file(mesh, &mesh_path, &self.info)?;
                 println!("Wrote {}", &mesh.name);
             }
 
             // Write group
             let group_path = out_dir.as_ref().join(&grp.name);
-            grp.write_to_file(&group_path)?;
+            save_to_file(grp, &group_path, &self.info)?;
             println!("Wrote {}", &grp.name);
         }
 
@@ -149,4 +120,9 @@ pub(crate) fn create_dir_if_not_exists<T>(dir_path: T) -> Result<(), Box<dyn Err
     }
 
     Ok(())
+}
+
+pub fn open_model<T>(model_path: T, info: SystemInfo) -> Result<AssetManagager, Box<dyn Error>> where T: AsRef<Path> {
+    let mut gltf_importer = GLTFImporter::new(&model_path)?;
+    gltf_importer.process(info)
 }
