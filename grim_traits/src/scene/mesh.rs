@@ -87,7 +87,13 @@ impl Default for Vert {
             uv: UV::default(),
             bones: [0, 1, 2, 3],
             weights: [1.0, 1.0, 1.0, 1.0],
-            tangent: Vector4::default() // TODO: Verify this is correct
+            tangent: Vector4 {
+                // TODO: Verify this is correct
+                x:  1.0,
+                y:  0.0,
+                z:  0.0,
+                w: -1.0,
+            }
         }
     }
 }
