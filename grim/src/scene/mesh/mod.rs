@@ -53,6 +53,7 @@ impl Default for MeshObject {
             bones: Vec::new(),
             keep_mesh_data: false,
             exclude_from_self_shadow: false,
+            has_ao_calculation: false,
         }
     }
 }

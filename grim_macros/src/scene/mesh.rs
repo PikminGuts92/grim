@@ -14,6 +14,7 @@ pub fn get_mesh_tokens() -> ObjectTokens {
         quote! { pub bones: Vec<grim_traits::scene::BoneTrans> }.into(),
         quote! { pub keep_mesh_data: bool }.into(),
         quote! { pub exclude_from_self_shadow: bool }.into(),
+        quote! { pub has_ao_calculation: bool }.into(),
     ];
 
     let trait_impl = quote! {
@@ -109,6 +110,13 @@ pub fn get_mesh_tokens() -> ObjectTokens {
         }
         fn set_exclude_from_self_shadow(&mut self, exclude: bool) {
             self.exclude_from_self_shadow = exclude;
+        }
+
+        fn get_has_ao_calculation(&self) -> bool {
+            self.has_ao_calculation
+        }
+        fn set_has_ao_calculation(&mut self, ao_calc: bool) {
+            self.has_ao_calculation = ao_calc;
         }
     };
 

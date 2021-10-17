@@ -224,8 +224,10 @@ impl ObjectReadWrite for MeshObject {
             self.keep_mesh_data = reader.read_boolean()?;
         }
 
-        if version >= 37 {
+        if version == 37 {
             self.exclude_from_self_shadow = reader.read_boolean()?;
+        } else if version >= 38 {
+            self.has_ao_calculation = reader.read_boolean()?;
         }
 
         // TODO: Parse extra data from previous gen platforms
@@ -369,8 +371,10 @@ impl ObjectReadWrite for MeshObject {
             stream.write_boolean(self.keep_mesh_data)?;
         }
 
-        if version >= 37 {
+        if version == 37 {
             stream.write_boolean(self.exclude_from_self_shadow)?;
+        } else if version >= 38 {
+            stream.write_boolean(self.has_ao_calculation)?;
         }
 
         Ok(())

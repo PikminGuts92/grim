@@ -136,4 +136,7 @@ pub trait RndMesh : Draw + MiloObject + Trans {
 
     fn get_exclude_from_self_shadow(&self) -> bool;
     fn set_exclude_from_self_shadow(&mut self, exclude: bool);
+
+    fn get_has_ao_calculation(&self) -> bool;
+    fn set_has_ao_calculation(&mut self, ao_calc: bool);
 }
