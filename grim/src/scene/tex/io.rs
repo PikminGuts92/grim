@@ -1,6 +1,6 @@
 use crate::{SystemInfo};
 use crate::io::{BinaryStream, SeekFrom, Stream};
-use crate::scene::{ObjectReadWrite, save_object, Tex};
+use crate::scene::{ObjectReadWrite, Tex, load_object, save_object};
 use crate::texture::Bitmap;
 use thiserror::Error as ThisError;
 use std::error::Error;
@@ -34,6 +34,11 @@ impl Tex {
                 11 => true, // GDRB
                 _ => false
             },
+            28 => match magic {
+                10 => true,
+                11 => true, // RB3
+                _ => false
+            },
             _ => false
         }
     }
@@ -57,14 +62,10 @@ impl ObjectReadWrite for Tex {
             }));
         }
 
-        // Skip meta for now
-        if magic >= 10 && info.version == 24 {
-            reader.seek(SeekFrom::Current(9))?;
-        } else if magic >= 10 {
-            reader.seek(SeekFrom::Current(13))?;
-        }
+        load_object(self, &mut reader, info)?;
 
-        if magic >= 11 {
+        // GDRB encoding
+        if magic >= 11 && info.version <= 25 {
             // TODO: Save boolean value
             reader.read_boolean()?;
         }
@@ -76,6 +77,12 @@ impl ObjectReadWrite for Tex {
         self.ext_path = reader.read_prefixed_string()?;
         self.index_f = reader.read_float32()?;
         self.index = reader.read_int32()?;
+
+        // RB3 encoding
+        if magic >= 11 && info.version > 25 {
+            // TODO: Save boolean value
+            reader.read_boolean()?;
+        }
 
         self.use_ext_path = reader.read_boolean()?;
 
@@ -101,7 +108,8 @@ impl ObjectReadWrite for Tex {
 
         save_object(self, &mut stream, info)?;
 
-        if version >= 11 {
+        // GDRB encoding
+        if version >= 11 && info.version <= 25 {
             // TODO: Write actual boolean value
             stream.write_boolean(false)?;
         }
@@ -113,6 +121,12 @@ impl ObjectReadWrite for Tex {
         stream.write_prefixed_string(&self.ext_path)?;
         stream.write_float32(self.index_f)?;
         stream.write_int32(self.index)?;
+
+        // RB3 encoding
+        if version >= 11 && info.version > 25 {
+            // TODO: Write actual boolean value
+            stream.write_boolean(false)?;
+        }
 
         stream.write_boolean(self.use_ext_path && self.bitmap.is_some())?;
 
