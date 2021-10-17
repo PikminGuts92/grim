@@ -19,6 +19,7 @@ fn is_version_supported(version: u32) -> bool {
         27 | 28 => true, // GH2/GH2 360
         41 | 47 => true, // RB1/RB2
         55 | 56 => true, // TBRB/GDRB
+        68 => true,      // RB3
         _ => false
     }
 }
@@ -118,16 +119,21 @@ impl ObjectReadWrite for MatObject {
         }*/
 
         if version > 25 {
-            if version <= 55 {
+            if version <= 55 || version > 56 {
                 // Read as boolean
                 self.per_pixel_lit = match reader.read_boolean()? {
                     false => PerPixel::kPerPixelOff,
                     _ => PerPixel::kPerPixelAllNgPlatforms,
                 }
             } else {
-                // Read as enum
+                // Read as enum for GDRB
                 self.per_pixel_lit = reader.read_uint32()?.into();
             }
+        }
+
+        // TODO: Reverse RB3 mat
+        if version >= 68 {
+            return Ok(());
         }
 
         if version >= 27 && version < 50 {
