@@ -78,6 +78,12 @@ impl ObjectReadWrite for MeshObject {
             }
 
             if version < 35 || !is_ng {
+                if version >= 38 {
+                    // Skip extra bytes
+                    // TODO: Figure out what this data is...
+                    reader.seek(SeekFrom::Current(16))?;
+                }
+
                 // Normals
                 vec.normals.x = reader.read_float32()?;
                 vec.normals.y = reader.read_float32()?;
@@ -86,15 +92,28 @@ impl ObjectReadWrite for MeshObject {
                     vec.normals.w = reader.read_float32()?;
                 }
 
-                // Weights
-                vec.weights[0] = reader.read_float32()?;
-                vec.weights[1] = reader.read_float32()?;
-                vec.weights[2] = reader.read_float32()?;
-                vec.weights[3] = reader.read_float32()?;
+                if version >= 38 {
+                    // Packed in different order?
+                    // UVs
+                    vec.uv.u = reader.read_float32()?;
+                    vec.uv.v = reader.read_float32()?;
 
-                // UVs
-                vec.uv.u = reader.read_float32()?;
-                vec.uv.v = reader.read_float32()?;
+                    // Weights
+                    vec.weights[0] = reader.read_float32()?;
+                    vec.weights[1] = reader.read_float32()?;
+                    vec.weights[2] = reader.read_float32()?;
+                    vec.weights[3] = reader.read_float32()?;
+                } else {
+                    // Weights
+                    vec.weights[0] = reader.read_float32()?;
+                    vec.weights[1] = reader.read_float32()?;
+                    vec.weights[2] = reader.read_float32()?;
+                    vec.weights[3] = reader.read_float32()?;
+
+                    // UVs
+                    vec.uv.u = reader.read_float32()?;
+                    vec.uv.v = reader.read_float32()?;
+                }
 
                 if version >= 34 {
                     // Bone indices
@@ -103,11 +122,17 @@ impl ObjectReadWrite for MeshObject {
                     vec.bones[2] = reader.read_uint16()?;
                     vec.bones[3] = reader.read_uint16()?;
 
-                    // Tangent?
-                    vec.tangent.x = reader.read_float32()?;
-                    vec.tangent.y = reader.read_float32()?;
-                    vec.tangent.z = reader.read_float32()?;
-                    vec.tangent.w = reader.read_float32()?;
+                    if version >= 38 {
+                        // Skip unknown bytes
+                        // TODO: Figure out what this data is...
+                        reader.seek(SeekFrom::Current(16))?;
+                    } else {
+                        // Tangent?
+                        vec.tangent.x = reader.read_float32()?;
+                        vec.tangent.y = reader.read_float32()?;
+                        vec.tangent.z = reader.read_float32()?;
+                        vec.tangent.w = reader.read_float32()?;
+                    }
                 }
             } else {
                 let uv_check = reader.read_int32()?;
