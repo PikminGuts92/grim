@@ -2,7 +2,16 @@ use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::scene::*;
 use crate::SystemInfo;
 use grim_traits::scene::*;
+use thiserror::Error as ThisError;
 use std::error::Error;
+
+#[derive(Debug, ThisError)]
+pub enum MatLoadError {
+    #[error("Mat version {version} is not supported")]
+    MatVersionNotSupported {
+        version: u32
+    },
+}
 
 fn is_version_supported(version: u32) -> bool {
     match version {
@@ -20,8 +29,9 @@ impl ObjectReadWrite for MatObject {
 
         let version = reader.read_uint32()?;
         if !is_version_supported(version) {
-            // TODO: Switch to custom error
-            panic!("Mat version \"{}\" is not supported!", version);
+            return Err(Box::new(MatLoadError::MatVersionNotSupported {
+                version
+            }));
         }
 
         load_object(self, &mut reader, info)?;
