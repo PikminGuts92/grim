@@ -11,6 +11,7 @@ fn is_version_supported(version: u32) -> bool {
         28 => true, // GH2/GH2 360
         34 => true, // RB1/RB2
         36 | 37 => true, // TBRB/GDRB
+        38 => true, // RB3
         _ => false
     }
 }
@@ -48,7 +49,7 @@ impl ObjectReadWrite for MeshObject {
 
             // If next gen, read stride + 1 constant
             if is_ng {
-                reader.seek(SeekFrom::Current(8))?; // (36, 1)
+                reader.seek(SeekFrom::Current(8))?; // (36, 1) | (40, 2)
             }
         }
 
@@ -151,6 +152,12 @@ impl ObjectReadWrite for MeshObject {
                     vec.bones[1] = reader.read_uint16()?;
                     vec.bones[2] = reader.read_uint16()?;
                     vec.bones[3] = reader.read_uint16()?;
+                }
+
+                if version >= 38 {
+                    // Skip extra bytes
+                    // TODO: Figure out what this data is...
+                    reader.seek(SeekFrom::Current(4))?;
                 }
             }
 
