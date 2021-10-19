@@ -1,4 +1,5 @@
 pub mod ark;
+pub mod dta;
 pub mod io;
 pub mod model;
 pub mod scene;
