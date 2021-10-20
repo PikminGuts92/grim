@@ -24,24 +24,41 @@ impl DataString {
     }
 }
 
+impl From<Vec<u8>> for DataString {
+    fn from(data: Vec<u8>) -> DataString {
+        DataString::from_vec(data)
+    }
+}
+
 pub enum DataArray {
-    Integer(u32),
+    Integer(i32),
     Float(f32),
     Variable(DataString),
     Object(DataString),
     Symbol(DataString),
     KDataUnhandled,
     IfDef(DataString),
-    Else(DataString),
-    EndIf(DataString),
+    Else,
+    EndIf,
     String(DataString),
     Define(DataString),
     Include(DataString),
     Merge(DataString),
     IfNDef(DataString),
-    Autorun(DataString),
+    Autorun,
     Undef(DataString),
     Array(Vec<DataArray>),
     Command(Vec<DataArray>),
     Property(Vec<DataArray>),
+}
+
+#[derive(Default)]
+pub struct RootData {
+    pub data: Vec<DataArray>,
+}
+
+impl RootData {
+    pub fn new() -> RootData {
+        RootData::default()
+    }
 }
