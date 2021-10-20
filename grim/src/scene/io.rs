@@ -1,3 +1,4 @@
+use crate::dta::*;
 use crate::io::{BinaryStream, FileStream, SeekFrom, Stream};
 use crate::SystemInfo;
 use grim_traits::scene::{Color3, Matrix, MiloObject, Sphere};
@@ -57,10 +58,9 @@ pub(crate) fn save_object_type<T: MiloObject>(obj: &T, writer: &mut Box<BinarySt
 
 pub(crate) fn load_object_rest<T: MiloObject>(obj: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
     // Read props
-    let has_dtb = reader.read_boolean()?;
-    if has_dtb {
-        todo!("Props parsing not supported!");
-    }
+    // Parse dtb data but don't save for now
+    let mut root = RootData::new();
+    root.load(reader)?;
 
     // Read note
     if info.version >= 25 {
