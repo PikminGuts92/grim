@@ -22,6 +22,10 @@ impl DataString {
     pub fn as_utf8(&self) -> String {
         String::from_utf8_lossy(&self.data).into_owned()
     }
+
+    pub fn get_raw(&self) -> &Vec<u8> {
+        &self.data
+    }
 }
 
 impl From<Vec<u8>> for DataString {
