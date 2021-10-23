@@ -2,7 +2,7 @@
 name = "grim"
 version = "0.1.0"
 authors = ["PikminGuts92"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 flate2 = "1.0.20"

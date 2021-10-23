@@ -87,6 +87,7 @@ fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
         .par_chunks_exact(block_size)
         .enumerate()
         .for_each(|(i, block) | {
+            let _ = &rgba;
             let bx = i % block_x as usize;
             let by = i / block_x as usize;
 
@@ -162,6 +163,7 @@ fn decode_dxt5_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
         .par_chunks_exact(block_size)
         .enumerate()
         .for_each(|(i, block) | {
+            let _ = &rgba;
             let bx = i % block_x as usize;
             let by = i / block_x as usize;
 
@@ -233,6 +235,7 @@ fn decode_ati2_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {
         .par_chunks_exact(block_size)
         .enumerate()
         .for_each(|(i, block) | {
+            let _ = &rgba;
             let bx = i % block_x as usize;
             let by = i / block_x as usize;
 
