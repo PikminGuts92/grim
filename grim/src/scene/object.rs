@@ -97,80 +97,18 @@ impl Object {
     pub fn unpack(&self, info: &SystemInfo) -> Option<Object> {
         match self {
             Object::Packed(packed) => {
-                let mut stream = MemoryStream::from_slice_as_read(packed.data.as_slice());
-
                 match packed.object_type.as_str() {
-                    "Anim" => {
-                        let mut anim = AnimObject::default();
-
-                        if anim.load(&mut stream, info).is_ok() {
-                            anim.name = packed.name.to_owned();
-                            Some(Object::Anim(anim))
-                        } else {
-                            None
-                        }
-                    },
-                    "Cam" => {
-                        let mut cam = CamObject::default();
-
-                        if cam.load(&mut stream, info).is_ok() {
-                            cam.name = packed.name.to_owned();
-                            Some(Object::Cam(cam))
-                        } else {
-                            None
-                        }
-                    },
-                    "CubeTex" => {
-                        let mut cube = CubeTexObject::default();
-
-                        if cube.load(&mut stream, info).is_ok() {
-                            cube.name = packed.name.to_owned();
-                            Some(Object::CubeTex(cube))
-                        } else {
-                            None
-                        }
-                    },
-                    "Draw" => {
-                        let mut draw = DrawObject::default();
-
-                        if draw.load(&mut stream, info).is_ok() {
-                            draw.name = packed.name.to_owned();
-                            Some(Object::Draw(draw))
-                        } else {
-                            None
-                        }
-                    },
-                    "Group" => {
-                        let mut group = GroupObject::default();
-
-                        if group.load(&mut stream, info).is_ok() {
-                            group.name = packed.name.to_owned();
-                            Some(Object::Group(group))
-                        } else {
-                            None
-                        }
-                    },
-                    "Mat" => {
-                        let mut mat = MatObject::default();
-
-                        if mat.load(&mut stream, info).is_ok() {
-                            mat.name = packed.name.to_owned();
-                            Some(Object::Mat(mat))
-                        } else {
-                            None
-                        }
-                    },
-                    "Mesh" => {
-                        let mut mesh = MeshObject::default();
-
-                        if mesh.load(&mut stream, info).is_ok() {
-                            mesh.name = packed.name.to_owned();
-                            Some(Object::Mesh(mesh))
-                        } else {
-                            None
-                        }
-                    },
+                    "Anim" => unpack_object(packed, info).map(|o| Object::Anim(o)),
+                    "Cam" => unpack_object(packed, info).map(|o| Object::Cam(o)),
+                    "CubeTex" => unpack_object(packed, info).map(|o| Object::CubeTex(o)),
+                    "Draw" => unpack_object(packed, info).map(|o| Object::Draw(o)),
+                    "Group" => unpack_object(packed, info).map(|o| Object::Group(o)),
+                    "Mat" => unpack_object(packed, info).map(|o| Object::Mat(o)),
+                    "Mesh" => unpack_object(packed, info).map(|o| Object::Mesh(o)),
                     "Tex" => {
+                        let mut stream = MemoryStream::from_slice_as_read(packed.data.as_slice());
+
+                        // TODO: Update tex to use same io traits
                         match Tex::from_stream(&mut stream, info) {
                             Ok(mut tex) => {
                                 tex.name = packed.name.to_owned();
@@ -179,20 +117,24 @@ impl Object {
                             Err(_) => None,
                         }
                     },
-                    "Trans" => {
-                        let mut trans = TransObject::default();
-
-                        if trans.load(&mut stream, info).is_ok() {
-                            trans.name = packed.name.to_owned();
-                            Some(Object::Trans(trans))
-                        } else {
-                            None
-                        }
-                    },
+                    "Trans" => unpack_object(packed, info).map(|o| Object::Trans(o)),
                     _ => None
                 }
             },
             _ => None
         }
     }
+}
+
+fn unpack_object<T: Default + MiloObject + ObjectReadWrite>(packed: &PackedObject, info: &SystemInfo) -> Option<T> {
+    let mut stream = MemoryStream::from_slice_as_read(packed.data.as_slice());
+
+    let mut obj = T::default();
+
+    if obj.load(&mut stream, info).is_ok() {
+        obj.set_name(packed.name.to_owned());
+        return Some(obj);
+    }
+
+    None
 }
