@@ -4,6 +4,7 @@ use crate::scene::*;
 
 pub enum Object {
     Anim(AnimObject),
+    Cam(CamObject),
     CubeTex(CubeTexObject),
     Draw(DrawObject),
     Group(GroupObject),
@@ -25,6 +26,7 @@ impl Object {
     pub fn get_name(&self) -> &str {
         match self {
             Object::Anim(anim) => &anim.name,
+            Object::Cam(cam) => &cam.name,
             Object::CubeTex(cube) => &cube.name,
             Object::Draw(draw) => &draw.name,
             Object::Group(grp) => &grp.name,
@@ -39,6 +41,7 @@ impl Object {
     pub fn get_type(&self) -> &str {
         match self {
             Object::Anim(_) => "Anim",
+            Object::Cam(_) => "Cam",
             Object::CubeTex(_) => "CubeTex",
             Object::Draw(_) => "Draw",
             Object::Group(_) => "Group",
@@ -64,6 +67,7 @@ impl Object {
 
         let obj: &dyn ObjectReadWrite  = match &self {
             Object::Anim(obj) => obj,
+            Object::Cam(obj) => obj,
             Object::CubeTex(obj) => obj,
             Object::Draw(obj) => obj,
             Object::Group(obj) => obj,
@@ -102,6 +106,16 @@ impl Object {
                         if anim.load(&mut stream, info).is_ok() {
                             anim.name = packed.name.to_owned();
                             Some(Object::Anim(anim))
+                        } else {
+                            None
+                        }
+                    },
+                    "Cam" => {
+                        let mut cam = CamObject::default();
+
+                        if cam.load(&mut stream, info).is_ok() {
+                            cam.name = packed.name.to_owned();
+                            Some(Object::Cam(cam))
                         } else {
                             None
                         }

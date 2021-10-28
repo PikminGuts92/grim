@@ -1,7 +1,7 @@
 use crate::dta::*;
 use crate::io::{BinaryStream, FileStream, SeekFrom, Stream};
 use crate::SystemInfo;
-use grim_traits::scene::{Color3, Matrix, MiloObject, Sphere};
+use grim_traits::scene::{Color3, Matrix, MiloObject, Rect, Sphere, Vector2};
 use std::error::Error;
 use std::path::Path;
 
@@ -142,6 +142,24 @@ pub (crate) fn save_matrix(mat: &Matrix, writer: &mut Box<BinaryStream>) -> Resu
     Ok(())
 }
 
+pub (crate) fn load_rect(rect: &mut Rect, reader: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    rect.x = reader.read_float32()?;
+    rect.y = reader.read_float32()?;
+    rect.w = reader.read_float32()?;
+    rect.h = reader.read_float32()?;
+
+    Ok(())
+}
+
+pub (crate) fn save_rect(rect: &Rect, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    writer.write_float32(rect.x)?;
+    writer.write_float32(rect.y)?;
+    writer.write_float32(rect.w)?;
+    writer.write_float32(rect.h)?;
+
+    Ok(())
+}
+
 pub (crate) fn load_sphere(sphere: &mut Sphere, reader: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
     sphere.x = reader.read_float32()?;
     sphere.y = reader.read_float32()?;
@@ -156,6 +174,20 @@ pub (crate) fn save_sphere(sphere: &Sphere, writer: &mut Box<BinaryStream>) -> R
     writer.write_float32(sphere.y)?;
     writer.write_float32(sphere.z)?;
     writer.write_float32(sphere.r)?;
+
+    Ok(())
+}
+
+pub (crate) fn load_vector2(vector: &mut Vector2, reader: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    vector.x = reader.read_float32()?;
+    vector.y = reader.read_float32()?;
+
+    Ok(())
+}
+
+pub (crate) fn save_vector2(vector: &Vector2, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    writer.write_float32(vector.x)?;
+    writer.write_float32(vector.y)?;
 
     Ok(())
 }
