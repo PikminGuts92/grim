@@ -16,7 +16,7 @@ pub enum MatLoadError {
 fn is_version_supported(version: u32) -> bool {
     match version {
         21 => true,      // GH1
-        27 | 28 => true, // GH2/GH2 360
+        25 | 27 | 28 => true, // GH2 4-song/GH2/GH2 360
         41 | 47 => true, // RB1/RB2
         55 | 56 => true, // TBRB/GDRB
         68 => true,      // RB3

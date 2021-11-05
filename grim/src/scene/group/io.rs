@@ -8,6 +8,7 @@ use std::error::Error;
 fn is_version_supported(version: u32) -> bool {
     match version {
          7 => true, // GH1
+        11 => true, // GH2 4-song
         12 => true, // GH2/GH2 360
         13 => true, // RB1
         14 => true, // TBRB/GDRB
@@ -59,6 +60,11 @@ impl ObjectReadWrite for GroupObject {
 
         self.environ = reader.read_prefixed_string()?;
 
+        if version == 11 {
+            // Demo doesn't have lod data for some reason
+            return Ok(());
+        }
+
         if version <= 12 {
             let lod_width = reader.read_float32()?;
             let lod_height = reader.read_float32()?;
@@ -105,6 +111,10 @@ impl ObjectReadWrite for GroupObject {
 
         // Write environ
         stream.write_prefixed_string(&self.environ)?;
+
+        if version == 11 {
+            return Ok(());
+        }
 
         if version <= 12 {
             // Write ratio
