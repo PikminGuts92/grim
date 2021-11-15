@@ -2,6 +2,7 @@ mod anim;
 mod cam;
 mod char_bones_samples;
 mod cube_tex;
+mod dir;
 mod draw;
 mod group;
 mod io;
