@@ -1,3 +1,4 @@
+use grim_macros::*;
 use std::collections::HashMap;
 use std::error::Error;
 use std::path::{Path, PathBuf};
@@ -14,18 +15,27 @@ pub struct DirFile {
     pub root: MiloDirId,
 }
 
+#[milo]
+pub struct ObjectDir {
+    pub entries: Vec<ObjectId>,
+    pub subdirs: Vec<ObjectId>,
+    pub proxy_file: Option<ObjectId>,
+    pub inline_subdir: bool,
+    pub path_name: String, // TODO: Use index to path?
+}
+
+impl ObjectDir {
+    pub fn is_proxy(&self) -> bool {
+        self.proxy_file.is_some()
+    }
+}
+
 pub struct MiloDir {
     pub object: Option<ObjectId>,
     pub objects: Vec<ObjectId>,
     pub subdirs: Vec<MiloDirId>,
     pub inline_subdirs: Vec<MiloDirId>, // Should be DirFile id?
     pub proxy_file: Option<MiloDirId>,  // ^^^
-}
-
-impl MiloDir {
-    pub fn is_proxy(&self) -> bool {
-        self.proxy_file.is_some()
-    }
 }
 
 #[derive(Default)]
