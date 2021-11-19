@@ -1,3 +1,5 @@
+pub type ObjectId = u32;
+
 #[derive(Default)]
 pub struct Sphere {
     pub x: f32,

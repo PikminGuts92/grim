@@ -5,6 +5,7 @@ mod group;
 mod mat;
 mod mesh;
 mod milo_object;
+mod milo_object_dir;
 mod poll;
 mod trans;
 
@@ -15,5 +16,6 @@ pub use group::*;
 pub use mat::*;
 pub use mesh::*;
 pub use milo_object::*;
+pub use milo_object_dir::*;
 pub use poll::*;
 pub use trans::*;
