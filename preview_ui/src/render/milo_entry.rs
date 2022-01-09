@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy::render::texture::{AddressMode, Extent3d, TextureDimension, TextureFormat};
+use bevy::render::render_resource::{AddressMode, Extent3d, TextureDimension, TextureFormat};
 
 use itertools::*;
 
@@ -21,7 +21,7 @@ pub fn render_milo_entry(
     commands: &mut Commands,
     bevy_meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
-    bevy_textures: &mut ResMut<Assets<Texture>>,
+    bevy_textures: &mut ResMut<Assets<Image>>,
     milo: &ObjectDir,
     milo_entry: Option<String>,
     system_info: &SystemInfo,
@@ -75,7 +75,7 @@ pub fn render_milo_entry(
         // Get transform
         let mat = get_computed_mat(mesh as &dyn Trans, &mut loader);
 
-        let mut bevy_mesh = Mesh::new(bevy::render::pipeline::PrimitiveTopology::TriangleList);
+        let mut bevy_mesh = Mesh::new(bevy::render::render_resource::PrimitiveTopology::TriangleList);
 
         let mut positions = Vec::new();
         let mut normals = Vec::new();
@@ -136,9 +136,9 @@ pub fn render_milo_entry(
                 double_sided: true,
                 unlit: true,
                 base_color_texture: diffuse,
-                normal_map: normal,
+                normal_map_texture: normal,
                 emissive_texture: emissive,
-                roughness: 0.8,
+                //roughness: 0.8, // TODO: Bevy 0.6 migration
                 /*base_color_texture: get_texture(&mut loader, &mat.diffuse_tex, system_info)
                     .and_then(map_texture)
                     .and_then(|t| Some(bevy_textures.add(t))),
@@ -348,17 +348,17 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
         })
 }
 
-fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>)) -> Texture {
+fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>)) -> Image {
     let (bitmap, rgba) = tex;
 
     // TODO: Figure out how bevy can support mip maps
     let tex_size = (bitmap.width as usize) * (bitmap.height as usize) * 4;
 
-    let mut texture = Texture::new_fill(
+    let mut texture = Image::new_fill(
         Extent3d {
             width: bitmap.width.into(),
             height: bitmap.height.into(),
-            depth: 1,
+            depth_or_array_layers: 1,
         },
         TextureDimension::D2,
         &rgba[..tex_size],
@@ -366,8 +366,8 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>)) -> Texture {
     );
 
     // Update texture wrap mode
-    texture.sampler.address_mode_u = AddressMode::Repeat;
-    texture.sampler.address_mode_v = AddressMode::Repeat;
+    texture.sampler_descriptor.address_mode_u = AddressMode::Repeat;
+    texture.sampler_descriptor.address_mode_v = AddressMode::Repeat;
 
     texture
 }
