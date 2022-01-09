@@ -20,7 +20,7 @@ thiserror = "1.0.26"
 
 [dev-dependencies]
 criterion = "0.3"
-rstest = "0.7" # Need old version to avoid conflict w/ bevy 0.5
+rstest = "0.12"
 
 [[bench]]
 name = "texture_benchmark"

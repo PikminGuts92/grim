@@ -16,14 +16,14 @@ pub fn render_gui(ctx: &mut &CtxRef, settings: &mut AppSettings, state: &mut App
 
     // Side panel
     egui::SidePanel::left("side_panel").min_width(400.0).resizable(true).show(ctx, |ui| {
-        egui::ScrollArea::auto_sized().show_viewport(ui, |ui, _viewport| {
+        egui::ScrollArea::vertical().show_viewport(ui, |ui, _viewport| {
             //ui.horizontal(|ui| {
                     //ui.set_min_width(300.0);
 
                 ui.vertical(|ui| {
                     ui.horizontal(|ui| {
                         for (i, text) in [ "Ark", "Milo" ].iter().enumerate() {
-                            if ui.selectable_label(i == state.side_bar_tab_index, text).clicked() {
+                            if ui.selectable_label(i == state.side_bar_tab_index, *text).clicked() {
                                 state.side_bar_tab_index = i;
                             }
                         }

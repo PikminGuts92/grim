@@ -5,9 +5,9 @@ authors = ["PikminGuts92"]
 edition = "2021"
 
 [dependencies]
-bevy = "0.5"
-bevy_egui = "0.8.0"
-bevy_fly_camera = "0.7.0"
+bevy = "0.6"
+bevy_egui = "0.10.0"
+bevy_fly_camera = "0.8.0"
 grim = { path = "../grim" }
 itertools = "0.10.1"
 native-dialog = "0.6.1"
