@@ -7,6 +7,7 @@ members = [
     "preview_ui",
     "scene_tool"
 ]
+resolver = "2" # Super duper important for bevy!
 
 [profile.release]
 codegen-units = 1
