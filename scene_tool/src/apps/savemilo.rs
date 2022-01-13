@@ -1,5 +1,5 @@
 use crate::apps::{GameOptions, SubApp};
-use clap::{Clap};
+use clap::Parser;
 use std::cmp::Ordering;
 use std::error::Error;
 use std::{arch, fs};
@@ -12,17 +12,17 @@ use grim::scene::{Object, ObjectDir, ObjectReadWrite, PackedObject, Tex};
 use grim::texture::{Bitmap, Image, swap_image_bytes, write_rgba_to_file};
 
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct SaveMiloApp {
-    #[clap(about = "Path to input milo scene", required = true)]
+    #[clap(help = "Path to input milo scene", required = true)]
     pub in_milo_path: String,
-    #[clap(about = "Path to output milo scene", required = true)]
+    #[clap(help = "Path to output milo scene", required = true)]
     pub out_milo_path: String,
-    #[clap(short = 'm', long, about = "Milo archive version (10, 24, 25)")]
+    #[clap(short = 'm', long, help = "Milo archive version (10, 24, 25)")]
     pub milo_version: Option<u32>,
-    #[clap(short = 'b' , long, about = "Use big endian serialization")]
+    #[clap(short = 'b' , long, help = "Use big endian serialization")]
     pub big_endian: Option<bool>,
-    #[clap(short = 'u' , long, about = "Leave output milo archive uncompressed")]
+    #[clap(short = 'u' , long, help = "Leave output milo archive uncompressed")]
     pub uncompressed: bool,
 }
 
