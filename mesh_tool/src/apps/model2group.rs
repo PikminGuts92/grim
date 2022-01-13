@@ -1,5 +1,5 @@
 use crate::apps::{SubApp};
-use clap::{Clap};
+use clap::Parser;
 
 use std::error::Error;
 
@@ -7,11 +7,11 @@ use grim::{Platform, SystemInfo};
 use grim::model::*;
 use grim::io::*;
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct Model2GroupApp {
-    #[clap(about = "Path to input model file (.gltf)", required = true)]
+    #[clap(help = "Path to input model file (.gltf)", required = true)]
     pub model_path: String,
-    #[clap(about = "Path to output directory", required = true)]
+    #[clap(help = "Path to output directory", required = true)]
     pub output_path: String,
 }
 
