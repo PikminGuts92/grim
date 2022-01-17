@@ -3,6 +3,7 @@
 
 mod events;
 mod gui;
+mod plugins;
 mod render;
 mod settings;
 mod state;
@@ -17,6 +18,7 @@ use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
+use plugins::*;
 use state::*;
 use std::{env::args, path::{Path, PathBuf}};
 
@@ -50,7 +52,7 @@ fn main() {
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(app_state)
         .insert_resource(app_settings)
-        .add_plugins(DefaultPlugins)
+        .add_plugin(GrimPlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(FlyCameraPlugin)
         .add_system(render_gui_system)
@@ -62,6 +64,8 @@ fn main() {
         .add_startup_system(setup)
         .run();
 }
+
+
 
 fn render_gui_system(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<AppEvent>) {
     render_gui(&mut egui_ctx.ctx(), &mut *settings, &mut *state);
