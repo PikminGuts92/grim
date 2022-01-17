@@ -32,8 +32,12 @@ pub struct WorldMesh {
 }
 
 fn main() {
-    let app_state = load_state();
-    let app_settings = load_settings(&app_state.settings_path);
+    #[cfg(target_family = "wasm")] std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+    #[cfg(target_family = "wasm")] let app_state = AppState::default();
+    #[cfg(target_family = "wasm")] let app_settings = AppSettings::default();
+
+    #[cfg(not(target_family = "wasm"))] let app_state = load_state();
+    #[cfg(not(target_family = "wasm"))] let app_settings = load_settings(&app_state.settings_path);
 
     App::new()
         .insert_resource(WindowDescriptor {
@@ -390,7 +394,7 @@ fn window_resized(
 
         settings.window_width = e.width;
         settings.window_height = e.height;
-        app_state.save_settings(&settings);
+        #[cfg(not(target_family = "wasm"))] app_state.save_settings(&settings);
     }
 }
 
