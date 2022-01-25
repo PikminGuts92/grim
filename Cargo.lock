@@ -1845,16 +1845,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gif"
-version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a668f699973d0f573d15749b7002a9ac9e1f9c6b220e7b165601334c173d8de"
-dependencies = [
- "color_quant",
- "weezl",
-]
-
-[[package]]
 name = "gilrs"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2261,14 +2251,12 @@ dependencies = [
  "bytemuck",
  "byteorder",
  "color_quant",
- "gif",
  "jpeg-decoder",
  "num-iter",
  "num-rational 0.3.2",
  "num-traits",
  "png",
  "scoped_threadpool",
- "tiff",
 ]
 
 [[package]]
@@ -2391,9 +2379,6 @@ name = "jpeg-decoder"
 version = "0.1.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "229d53d58899083193af11e15917b5640cd40b29ff475a1fe4ef725deb02d0f2"
-dependencies = [
- "rayon",
-]
 
 [[package]]
 name = "js-sys"
@@ -4068,17 +4053,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tiff"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a53f4706d65497df0c4349241deddf35f84cee19c87ed86ea8ca590f4464437"
-dependencies = [
- "jpeg-decoder",
- "miniz_oxide 0.4.4",
- "weezl",
-]
-
-[[package]]
 name = "time"
 version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4550,12 +4524,6 @@ dependencies = [
  "widestring",
  "winapi",
 ]
-
-[[package]]
-name = "weezl"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8b77fdfd5a253be4ab714e4ffa3c49caf146b4de743e97510c0656cf90f1e8e"
 
 [[package]]
 name = "wgpu"

@@ -10,7 +10,7 @@ gltf = { version = "0.16.0", features = ["extras", "import", "names", "utils" ] 
 grim_macros = { path = "../grim_macros" }
 grim_traits = { path = "../grim_traits" }
 half = "1.8.2"
-image = "0.23.14"
+image = { version = "0.23.14", default-features = false, features = [ "dxt", "jpeg", "png" ] }
 itertools = "0.10.3"
 lazy_static = "1.4.0"
 nalgebra = "0.30.1"
