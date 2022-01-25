@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 flate2 = "1.0.22"
-gltf = { version = "0.16.0", features = ["extras", "import", "names", "utils" ] }
+gltf = { version = "0.16.0", features = [ "import", "names" ] }
 grim_macros = { path = "../grim_macros" }
 grim_traits = { path = "../grim_traits" }
 half = "1.8.2"
