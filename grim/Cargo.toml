@@ -5,18 +5,18 @@ authors = ["PikminGuts92"]
 edition = "2021"
 
 [dependencies]
-flate2 = "1.0.20"
+flate2 = "1.0.22"
 gltf = { version = "0.16.0", features = ["extras", "import", "names", "utils" ] }
 grim_macros = { path = "../grim_macros" }
 grim_traits = { path = "../grim_traits" }
-half = "1.7.1"
+half = "1.8.2"
 image = "0.23.14"
-itertools = "0.10.1"
+itertools = "0.10.3"
 lazy_static = "1.4.0"
-nalgebra = "0.30.0"
+nalgebra = "0.30.1"
 rayon = "1.5"
 regex = { version = "1.5.4", default-features = false, features = [ "std" ] }
-thiserror = "1.0.26"
+thiserror = "1.0.30"
 
 [dev-dependencies]
 criterion = "0.3"
