@@ -2,7 +2,7 @@ mod loader;
 mod milo_entry;
 
 use bevy::prelude::*;
-use bevy::render::texture::{Extent3d, TextureDimension, TextureFormat};
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 pub use loader::*;
 pub use milo_entry::*;
@@ -34,7 +34,7 @@ pub fn render_milo(
     commands: &mut Commands,
     bevy_meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
-    bevy_textures: &mut ResMut<Assets<Texture>>,
+    bevy_textures: &mut ResMut<Assets<Image>>,
     milo: &ObjectDir,
     system_info: &SystemInfo,
 ) {
@@ -103,11 +103,11 @@ pub fn render_milo(
                     // TODO: Figure out how bevy can support mip maps
                     let tex_size = (bitmap.width as usize) * (bitmap.height as usize) * 4;
 
-                    let bevy_tex = Texture::new_fill(
+                    let bevy_tex = Image::new_fill(
                         Extent3d {
                             width: bitmap.width.into(),
                             height: bitmap.height.into(),
-                            depth: 1,
+                            depth_or_array_layers: 1
                         },
                         TextureDimension::D2,
                         &rgba[..tex_size],
@@ -131,7 +131,7 @@ pub fn render_milo(
             continue;
         }
 
-        let mut bevy_mesh = Mesh::new(bevy::render::pipeline::PrimitiveTopology::TriangleList);
+        let mut bevy_mesh = Mesh::new(bevy::render::render_resource::PrimitiveTopology::TriangleList);
 
         let mut positions = Vec::new();
         let mut normals = Vec::new();
@@ -203,7 +203,7 @@ pub fn render_milo(
                     None => None,
                 },
                 // TODO: Add extra texture maps
-                normal_map: match tex_map.get(mat.normal_map.as_str()) {
+                normal_map_texture: match tex_map.get(mat.normal_map.as_str()) {
                     Some(texture)
                         => Some(bevy_textures.add(texture.to_owned())),
                     None => None,

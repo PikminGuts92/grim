@@ -3,6 +3,7 @@
 
 mod events;
 mod gui;
+mod plugins;
 mod render;
 mod settings;
 mod state;
@@ -17,6 +18,7 @@ use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
+use plugins::*;
 use state::*;
 use std::{env::args, path::{Path, PathBuf}};
 
@@ -26,15 +28,20 @@ const SETTINGS_FILE_NAME: &str = "settings.json";
 const PROJECT_NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(Component)]
 pub struct WorldMesh {
     name: String,
 }
 
 fn main() {
-    let app_state = load_state();
-    let app_settings = load_settings(&app_state.settings_path);
+    #[cfg(target_family = "wasm")] std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+    #[cfg(target_family = "wasm")] let app_state = AppState::default();
+    #[cfg(target_family = "wasm")] let app_settings = AppSettings::default();
 
-    App::build()
+    #[cfg(not(target_family = "wasm"))] let app_state = load_state();
+    #[cfg(not(target_family = "wasm"))] let app_settings = load_settings(&app_state.settings_path);
+
+    App::new()
         .insert_resource(WindowDescriptor {
             title: format!("Preview v{}", VERSION),
             width: app_settings.window_width,
@@ -46,19 +53,19 @@ fn main() {
         })
         .add_event::<AppEvent>()
         //.insert_resource(ClearColor(Color::BLACK))
-        .insert_resource(Msaa { samples: 8 })
+        .insert_resource(Msaa { samples: 4 })
         .insert_resource(app_state)
         .insert_resource(app_settings)
-        .add_plugins(DefaultPlugins)
+        .add_plugin(GrimPlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(FlyCameraPlugin)
-        .add_system(render_gui_system.system())
-        .add_system(control_camera.system())
-        .add_system(drop_files.system())
-        .add_system(window_resized.system())
-        .add_system(update_state.system())
-        .add_startup_system(setup_args.system())
-        .add_startup_system(setup.system())
+        .add_system(render_gui_system)
+        .add_system(control_camera)
+        .add_system(drop_files)
+        .add_system(window_resized)
+        .add_system(update_state)
+        .add_startup_system(setup_args)
+        .add_startup_system(setup)
         .run();
 }
 
@@ -241,7 +248,7 @@ fn update_state(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut textures: ResMut<Assets<Texture>>,
+    mut textures: ResMut<Assets<Image>>,
     mut update_events: EventReader<AppEvent>,
     mut event_writer: EventWriter<bevy::app::AppExit>,
     mut world_meshes: Query<(Entity, &WorldMesh)>,

@@ -1,4 +1,4 @@
-use clap::{Clap};
+use clap::{Parser, Subcommand};
 use std::error::Error;
 
 use grim::SystemInfo;
@@ -14,14 +14,14 @@ pub(crate) trait SubApp {
     fn process(&mut self) -> Result<(), Box<dyn Error>>;
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 #[clap(name = PKG_NAME, version = VERSION, about = "Model importer for milo games")]
 struct Options {
     #[clap(subcommand)]
     commands: SubCommand,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Subcommand, Debug)]
 enum SubCommand {
     #[clap(name = "model2group", about = "Convert model to milo group")]
     Model2Group(Model2GroupApp)

@@ -1,5 +1,5 @@
 use crate::apps::{SubApp};
-use clap::{Clap};
+use clap::Parser;
 
 use std::error::Error;
 
@@ -11,11 +11,11 @@ use grim::io::*;
 use grim::scene::{Object, ObjectDir, PackedObject, Tex};
 
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct Dir2MiloApp {
-    #[clap(about = "Path to input directory", required = true)]
+    #[clap(help = "Path to input directory", required = true)]
     pub dir_path: String,
-    #[clap(about = "Path to output milo scene", required = true)]
+    #[clap(help = "Path to output milo scene", required = true)]
     pub milo_path: String,
 }
 

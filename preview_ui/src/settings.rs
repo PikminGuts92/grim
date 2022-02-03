@@ -81,12 +81,14 @@ impl AppSettings {
     }
 
     pub fn save_to_file<T>(&self, json_path: T) where T: AsRef<Path> {
-        let json_path = json_path.as_ref();
+        #[cfg(not(target_family = "wasm"))] {
+            let json_path = json_path.as_ref();
 
-        // TODO: Check if directory exists and check for error
-        let json_text = serde_json::to_string_pretty(&self).unwrap();
+            // TODO: Check if directory exists and check for error
+            let json_text = serde_json::to_string_pretty(&self).unwrap();
 
-        fs::write(json_path, json_text)
-            .expect("Error writing settings to file");
+            fs::write(json_path, json_text)
+                .expect("Error writing settings to file");
+        }
     }
 }
