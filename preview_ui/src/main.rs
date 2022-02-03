@@ -396,7 +396,7 @@ fn window_resized(
 
         settings.window_width = e.width;
         settings.window_height = e.height;
-        #[cfg(not(target_family = "wasm"))] app_state.save_settings(&settings);
+        app_state.save_settings(&settings);
     }
 }
 
