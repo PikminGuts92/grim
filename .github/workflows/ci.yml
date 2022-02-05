@@ -132,8 +132,8 @@ jobs:
           done
       - name: Zip files
         shell: bash
-        run: 7z a ./build/$ZIP_NAME $(find $OUTPUT_PATH -type f)
+        run: 7z a ${{ env.OUTPUT_PATH }}/$ZIP_NAME $(find $OUTPUT_PATH -type f)
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ env.ZIP_NAME }}
-          path: ./build/${{ env.ZIP_NAME }}
+          path: ${{ env.OUTPUT_PATH }}/${{ env.ZIP_NAME }}
