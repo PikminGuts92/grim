@@ -94,6 +94,7 @@ jobs:
       OUTPUT_PATH: ./build
     steps:
       - name: Install linux dependencies
+        if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
           sudo apt-get update
