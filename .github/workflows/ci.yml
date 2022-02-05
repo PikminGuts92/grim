@@ -14,10 +14,11 @@ jobs:
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
-      - name: Remove cargo configuration
+      - name: Remove cargo and toolchain configurations
         shell: bash
         run: |
           rm .cargo -rf
+          rm rust-toolchain.toml
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -38,10 +39,11 @@ jobs:
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
-      - name: Remove cargo configuration
+      - name: Remove cargo and toolchain configurations
         shell: bash
         run: |
           rm .cargo -rf
+          rm rust-toolchain.toml
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -63,10 +65,11 @@ jobs:
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
-      - name: Remove cargo configuration
+      - name: Remove cargo and toolchain configurations
         shell: bash
         run: |
           rm .cargo -rf
+          rm rust-toolchain.toml
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -101,6 +104,11 @@ jobs:
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
+      - name: Remove cargo and toolchain configurations
+        shell: bash
+        run: |
+          rm .cargo -rf
+          rm rust-toolchain.toml
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
