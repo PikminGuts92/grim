@@ -14,10 +14,11 @@ jobs:
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
-      - name: Remove cargo configuration
+      - name: Remove cargo and toolchain configurations
         shell: bash
         run: |
           rm .cargo -rf
+          rm rust-toolchain.toml
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -29,7 +30,6 @@ jobs:
 
   test:
     name: Test
-    if: ${{ false }} # Skip until tests are added
     runs-on: ubuntu-latest
     steps:
       - name: Install linux dependencies
@@ -39,10 +39,11 @@ jobs:
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
-      - name: Remove cargo configuration
+      - name: Remove cargo and toolchain configurations
         shell: bash
         run: |
           rm .cargo -rf
+          rm rust-toolchain.toml
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -64,10 +65,11 @@ jobs:
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
-      - name: Remove cargo configuration
+      - name: Remove cargo and toolchain configurations
         shell: bash
         run: |
           rm .cargo -rf
+          rm rust-toolchain.toml
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -82,3 +84,56 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      ZIP_NAME: ${{ github.event.repository.name }}-ci-${{ github.sha }}-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }}.zip # Hacky way to lowercase os name
+      BIN_PATH: ./target/release
+      OUTPUT_PATH: ./build
+    steps:
+      - name: Install linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+          sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
+      - uses: actions/checkout@v2
+      - name: Remove cargo and toolchain configurations
+        shell: bash
+        run: |
+          rm .cargo -rf
+          rm rust-toolchain.toml
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --bins
+      - name: Create output directory and copy licenses
+        shell: bash
+        run: |
+          mkdir -p $OUTPUT_PATH
+          cp ./LICENSE $OUTPUT_PATH/LICENSE -f
+          cp ./README.md $OUTPUT_PATH/README.md -f
+      - name: Copy executables to output directory
+        shell: bash
+        run: |
+          for exe in $(find $BIN_PATH -maxdepth 1 -type f -executable -print); do
+            cp $exe $OUTPUT_PATH/$(basename $exe) -f
+          done
+      - name: Zip files
+        shell: bash
+        run: 7z a ${{ env.OUTPUT_PATH }}/$ZIP_NAME $(find $OUTPUT_PATH -type f)
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ZIP_NAME }}
+          path: ${{ env.OUTPUT_PATH }}/${{ env.ZIP_NAME }}
