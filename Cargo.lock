@@ -407,9 +407,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_egui"
-version = "0.10.2"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b0abdef8f6d6685a6625832c2e38a964039a38c12b44ef7df859feda2a4053f"
+checksum = "c8631a5b7a74fd53f5017d0251066e60eb8eb3cc4ee944c66e6d4022a3b7c6bc"
 dependencies = [
  "bevy",
  "bytemuck",
@@ -1029,9 +1029,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.0.12"
+version = "3.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2afefa54b5c7dd40918dc1e09f213a171ab5937aadccab45e804780b238f9f43"
+checksum = "b63edc3f163b3c71ec8aa23f9bd6070f77edbf3d1d198b164afa90ff00e4ec62"
 dependencies = [
  "atty",
  "bitflags",
@@ -1603,6 +1603,7 @@ dependencies = [
  "atomic_refcell",
  "emath",
  "nohash-hasher",
+ "parking_lot",
 ]
 
 [[package]]
@@ -2633,7 +2634,7 @@ dependencies = [
 name = "mesh_tool"
 version = "0.1.0"
 dependencies = [
- "clap 3.0.12",
+ "clap 3.0.14",
  "grim",
  "thiserror",
 ]
@@ -3736,7 +3737,7 @@ dependencies = [
 name = "scene_tool"
 version = "0.1.0"
 dependencies = [
- "clap 3.0.12",
+ "clap 3.0.14",
  "grim",
  "thiserror",
 ]
