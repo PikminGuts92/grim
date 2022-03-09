@@ -15,7 +15,7 @@ itertools = "0.10.3"
 lazy_static = "1.4.0"
 nalgebra = { version = "0.30.1", optional = true }
 rayon = "1.5"
-regex = { version = "1.5.4", default-features = false, features = [ "std" ] }
+regex = { version = "1.5.5", default-features = false, features = [ "std" ] }
 thiserror = "1.0.30"
 
 [dev-dependencies]
