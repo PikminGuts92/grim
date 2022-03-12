@@ -13,7 +13,7 @@ use gui::*;
 use render::{render_milo, render_milo_entry};
 use settings::*;
 use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{WindowMode, WindowResized}};
-use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, CtxRef, Pos2, Ui}};
+use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Context, Pos2, Ui}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};

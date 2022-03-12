@@ -1,8 +1,8 @@
-use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, CtxRef, Pos2, Ui}};
+use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Context, Pos2, Ui}};
 use grim::ark::{Ark, ArkOffsetEntry};
 use super::{AppSettings, AppState, ArkDirNode, AppEvent};
 
-pub fn draw_ark_tree(state: &mut AppState, ctx: &mut &CtxRef, ui: &mut Ui) {
+pub fn draw_ark_tree(state: &mut AppState, ctx: &mut &Context, ui: &mut Ui) {
     if let Some(root) = &state.root {
         let entries = &state.ark.as_ref().unwrap().entries;
 
@@ -10,7 +10,7 @@ pub fn draw_ark_tree(state: &mut AppState, ctx: &mut &CtxRef, ui: &mut Ui) {
     }
 }
 
-fn draw_node(node: &ArkDirNode, entries: &Vec<ArkOffsetEntry>, ctx: &mut &CtxRef, ui: &mut Ui) {
+fn draw_node(node: &ArkDirNode, entries: &Vec<ArkOffsetEntry>, ctx: &mut &Context, ui: &mut Ui) {
     egui::CollapsingHeader::new(&node.name)
         .id_source(format!("dir_{}", &node.path))
         .default_open(false)

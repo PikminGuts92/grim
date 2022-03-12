@@ -3,12 +3,12 @@ mod milo;
 mod toolbar;
 
 use ark::*;
-use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, CtxRef, Pos2, Ui}};
+use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Context, Pos2, Ui}};
 use milo::*;
 use super::{AppSettings, AppState, ArkDirNode, AppEvent};
 use toolbar::*;
 
-pub fn render_gui(ctx: &mut &CtxRef, settings: &mut AppSettings, state: &mut AppState) {
+pub fn render_gui(ctx: &mut &Context, settings: &mut AppSettings, state: &mut AppState) {
     // Top Toolbar
     render_toolbar(ctx, settings, state);
 
