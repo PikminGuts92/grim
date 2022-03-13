@@ -1,7 +1,7 @@
-use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, CtxRef, Pos2, Ui}};
+use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Context, Pos2, Ui}};
 use super::{AppSettings, AppState, ArkDirNode, AppEvent};
 
-pub fn render_toolbar(ctx: &mut &CtxRef, settings: &mut AppSettings, state: &mut AppState) {
+pub fn render_toolbar(ctx: &mut &Context, settings: &mut AppSettings, state: &mut AppState) {
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         // ui.heading("Main");
 
