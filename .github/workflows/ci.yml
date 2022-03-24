@@ -92,7 +92,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     env:
-      ZIP_NAME: ${{ github.event.repository.name }}-ci-${{ github.sha }}-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }}.zip # Hacky way to lowercase os name
+      ZIP_NAME: ${{ github.event.repository.name }}-ci-${{ github.sha }}-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }} # Hacky way to lowercase os name
       BIN_PATH: ./target/release
       OUTPUT_PATH: ./build
     steps:
@@ -130,10 +130,7 @@ jobs:
           for exe in $(find $BIN_PATH -maxdepth 1 -type f -executable -print); do
             cp $exe $OUTPUT_PATH/$(basename $exe) -f
           done
-      - name: Zip files
-        shell: bash
-        run: 7z a ${{ env.OUTPUT_PATH }}/$ZIP_NAME $(find $OUTPUT_PATH -type f)
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ZIP_NAME }}
-          path: ${{ env.OUTPUT_PATH }}/${{ env.ZIP_NAME }}
+          path: ${{ env.OUTPUT_PATH }}/*
