@@ -1,4 +1,4 @@
-use image::codecs::dxt::{DxtEncoder, DXTVariant};
+use image::codecs::dxt::{DxtEncoder, DxtVariant};
 use rayon::prelude::*;
 use super::*;
 
@@ -43,21 +43,23 @@ pub fn decode_dx_image(dx_img: &[u8], rgba: &mut [u8], width: u32, encoding: DXG
 }
 
 pub fn encode_dx_image(rgba: &[u8], dx_img: &mut [u8], width: u32, encoding: DXGI_Encoding, is_360: bool) {
-    let enc = match encoding {
-        DXGI_Encoding::DXGI_FORMAT_BC1_UNORM => DXTVariant::DXT1,
-        DXGI_Encoding::DXGI_FORMAT_BC3_UNORM => DXTVariant::DXT5,
-        _ => todo!("Implement other encodings")
-    };
-
     let height = calculate_texture_height(rgba.len(), width, 32);
-    encode_dxt_with_lib(rgba, dx_img, width, height, enc);
+    encode_dxt_with_lib(rgba, dx_img, width, height, encoding);
 
     if is_360 {
         swap_image_bytes(dx_img);
     }
 }
 
-fn encode_dxt_with_lib(rgba: &[u8], dx_img: &mut [u8], width: u32, height: u32, enc: DXTVariant) {
+fn encode_dxt_with_lib(rgba: &[u8], dx_img: &mut [u8], width: u32, height: u32, encoding: DXGI_Encoding) {
+    // TODO: Switch to squish-rs
+    // https://github.com/image-rs/image/issues/1623
+    let enc = match encoding {
+        DXGI_Encoding::DXGI_FORMAT_BC1_UNORM => DxtVariant::DXT1,
+        DXGI_Encoding::DXGI_FORMAT_BC3_UNORM => DxtVariant::DXT5,
+        _ => todo!("Implement other encodings")
+    };
+
     // Encode dxt image
     let mut encoder = DxtEncoder::new(dx_img);
     encoder.encode(rgba, width, height, enc).unwrap();
