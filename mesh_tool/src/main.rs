@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 mod apps;
 use apps::MeshTool;
 
