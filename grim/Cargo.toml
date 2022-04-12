@@ -5,7 +5,7 @@ authors = ["PikminGuts92"]
 edition = "2021"
 
 [dependencies]
-flate2 = "1.0.22"
+flate2 = "1.0.23"
 gltf = { version = "1.0.0", optional = true, features = [ "import", "names" ] }
 grim_macros = { path = "../grim_macros" }
 grim_traits = { path = "../grim_traits" }
