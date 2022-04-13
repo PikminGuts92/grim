@@ -96,6 +96,10 @@ pub fn render_milo(
 
     for tex in textures.iter() {
         if let Some(bitmap) = &tex.bitmap {
+            // TODO: Use bevy supported texture formats instead of converting to rgba
+            //  DXT1 = Bc1RgbaUnorm
+            //  DXT5 = Bc3RgbaUnorm
+            //  ATI2 = Bc5RgUnorm
             match bitmap.unpack_rgba(system_info) {
                 Ok(rgba) => {
                     println!("Processing {}", tex.get_name());
