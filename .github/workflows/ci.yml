@@ -87,6 +87,7 @@ jobs:
 
   build:
     name: Build (${{ matrix.os }})
+    if: ${{ false }} # Skip for now
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
