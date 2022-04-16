@@ -619,8 +619,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_egui"
-version = "0.12.1"
-source = "git+https://github.com/forbjok/bevy_egui?branch=bevy-0.7#e6cb085bfdf98e9a86a66a141b204c9f9681d629"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9e78332493e8d2ee07046c3fe07f026dfc4509f86756a739a59cfa5af29c65b"
 dependencies = [
  "arboard",
  "bevy 0.7.0",
@@ -5284,10 +5285,13 @@ dependencies = [
 
 [[package]]
 name = "webbrowser"
-version = "0.5.5"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecad156490d6b620308ed411cfee90d280b3cbd13e189ea0d3fada8acc89158a"
+checksum = "f9c28b6b6a78440b02647358625e3febc90724126480b9da6a967b5f674b3554"
 dependencies = [
+ "jni",
+ "ndk-glue 0.6.1",
+ "url",
  "web-sys",
  "widestring",
  "winapi",
@@ -5402,9 +5406,9 @@ dependencies = [
 
 [[package]]
 name = "widestring"
-version = "0.4.3"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c168940144dd21fd8046987c16a46a33d5fc84eec29ef9dcddc2ac9e31526b7c"
+checksum = "17882f045410753661207383517a6f62ec3dbeb6a4ed2acce01f0728238d1983"
 
 [[package]]
 name = "winapi"
