@@ -98,10 +98,10 @@ pub fn render_milo_entry(
         );
 
         bevy_mesh.set_indices(Some(indices));
-        bevy_mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-        bevy_mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-        bevy_mesh.set_attribute(Mesh::ATTRIBUTE_TANGENT, tangents);
-        bevy_mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, tangents);
+        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
 
         // Load textures
         let tex_names = loader.get_mat(&mesh.mat)
