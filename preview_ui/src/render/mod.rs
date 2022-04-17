@@ -96,6 +96,10 @@ pub fn render_milo(
 
     for tex in textures.iter() {
         if let Some(bitmap) = &tex.bitmap {
+            // TODO: Use bevy supported texture formats instead of converting to rgba
+            //  DXT1 = Bc1RgbaUnorm
+            //  DXT5 = Bc3RgbaUnorm
+            //  ATI2 = Bc5RgUnorm
             match bitmap.unpack_rgba(system_info) {
                 Ok(rgba) => {
                     println!("Processing {}", tex.get_name());
@@ -154,10 +158,10 @@ pub fn render_milo(
         );
 
         bevy_mesh.set_indices(Some(indices));
-        bevy_mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-        bevy_mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-        bevy_mesh.set_attribute(Mesh::ATTRIBUTE_TANGENT, tangents);
-        bevy_mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, tangents);
+        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
 
         // Get base matrix
         let base_matrix = transforms

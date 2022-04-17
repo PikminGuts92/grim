@@ -14,7 +14,7 @@ use events::*;
 use gui::*;
 use render::{render_milo, render_milo_entry};
 use settings::*;
-use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{WindowMode, WindowResized}};
+use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{PresentMode, WindowMode, WindowResized}};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Context, Pos2, Ui}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use grim::*;
@@ -49,7 +49,7 @@ fn main() {
             width: app_settings.window_width,
             height: app_settings.window_height,
             mode: WindowMode::Windowed,
-            vsync: true,
+            present_mode: PresentMode::Fifo, // vsync
             resizable: true,
             ..Default::default()
         })
