@@ -2666,6 +2666,7 @@ dependencies = [
  "image 0.24.1",
  "itertools",
  "lazy_static",
+ "midly",
  "nalgebra",
  "rayon",
  "regex",
@@ -3303,6 +3304,15 @@ dependencies = [
  "foreign-types",
  "log",
  "objc",
+]
+
+[[package]]
+name = "midly"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5f3c664ced7caa98ccb7ed4c67cd0bd6a6bd8ecedf8b49f38544a4a8e50f0ae"
+dependencies = [
+ "rayon",
 ]
 
 [[package]]
