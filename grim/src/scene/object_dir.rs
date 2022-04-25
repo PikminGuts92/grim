@@ -4,47 +4,38 @@ use crate::scene::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::error::Error;
-use std::fs::read_dir;
+
 use std::path::{Path, PathBuf};
 
 lazy_static! {
     static ref MILO_ENTRY_REGEX: Regex = Regex::new(r"(?i)([/\\][a-z]+[/\\])[^/\\]+$").unwrap();
 }
 
-#[derive(Debug)]
-pub struct ObjectDir {
-    pub entries: Vec<Object>
+pub enum ObjectDir {
+    ObjectDir(ObjectDirBase)
 }
 
-impl ObjectDir {
-    pub fn new() -> ObjectDir {
-        ObjectDir {
-            entries: Vec::new()
+pub struct ObjectDirBase {
+    pub entries: Vec<Object>,
+    pub name: String,
+    pub dir_type: String,
+    pub sub_dirs: Vec<ObjectDir>,
+}
+
+impl ObjectDirBase {
+    pub fn new() -> ObjectDirBase {
+        ObjectDirBase {
+            entries: Vec::new(),
+            name: String::new(),
+            dir_type: String::new(),
+            sub_dirs: Vec::new(),
         }
     }
 }
 
-impl ObjectDir {
-    pub fn unpack_entries(&mut self, info: &SystemInfo) {
-        let mut new_entries = Vec::<Object>::new();
-
-        while self.entries.len() > 0 {
-            let object = self.entries.remove(0);
-
-            let new_object = match object.unpack(info) {
-                Some(obj) => obj,
-                None => object
-            };
-
-            new_entries.push(new_object);
-        }
-
-        // Assign new entries
-        self.entries = new_entries;
-    }
-
-    pub fn from_path(path: &Path, info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
-        let mut obj_dir = ObjectDir::new();
+impl<'a> ObjectDir {
+    pub fn from_path(path: &Path, _info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
+        let mut obj_dir = ObjectDirBase::new();
 
         let files = path.find_files_with_depth(FileSearchDepth::Limited(1))?
             .into_iter()
@@ -84,6 +75,63 @@ impl ObjectDir {
             }));
         }
 
-        Ok(obj_dir)
+        Ok(ObjectDir::ObjectDir(obj_dir))
+    }
+
+    pub fn get_entries(&'a self) -> &'a Vec<Object> {
+        match self {
+            ObjectDir::ObjectDir(dir) => &dir.entries
+        }
+    }
+
+    pub fn get_entries_mut(&'a mut self) -> &'a mut Vec<Object> {
+        match self {
+            ObjectDir::ObjectDir(dir) => &mut dir.entries
+        }
+    }
+
+    pub fn unpack_entries(&'a mut self, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+        if let ObjectDir::ObjectDir(obj_dir) = self {
+            for entry in obj_dir.entries.iter_mut() {
+                if let Some(new_entry) = entry.unpack(info) {
+                    *entry = new_entry;
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl ObjectDir {
+    pub(crate) fn fix_class_name(version: u32, class_name: &mut String) {
+        if version >= 25 {
+            // Nothing to fix
+            return;
+        }
+
+        let new_name = match (version, class_name.as_str()) {
+            (0..=24, "RenderedTex") => Some("TexRenderer"),
+            (0..=24, "CompositeTexture") => Some("LayerDir"),
+            (0..=23, "BandFx") => Some("WorldFx"),
+            (0..=21, "Slider") => Some("BandSlider"),
+            (0..=20, "TextEntry") => Some("BandTextEntry"),
+            (0..=19, "Placer") => Some("BandPlacer"),
+            (0..=18, "ButtonEx") => Some("BandButton"),
+            (0..=18, "LabelEx") => Some("BandLabel"),
+            (0..=18, "PictureEx") => Some("BandPicture"),
+            (0..=17, "UIPanel") => Some("PanelDir"),
+            (0..=15, "WorldInstance") => Some("WorldObject"),
+            (0..=14, "View") => Some("Group"),
+            (0..=6, "String") => Some("Line"),
+            (0..=5, "MeshGenerator") => Some("Generator"),
+            (0..=4, "TexMovie") => Some("Movie"),
+            _ => None,
+        };
+
+        // Update name if needed
+        if let Some(name) = new_name {
+            *class_name = name.to_owned();
+        }
     }
 }

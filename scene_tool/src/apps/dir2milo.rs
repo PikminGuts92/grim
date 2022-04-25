@@ -1,21 +1,21 @@
 use crate::apps::{SubApp};
-use clap::{App, Arg, Clap};
-use std::cmp::Ordering;
+use clap::Parser;
+
 use std::error::Error;
-use std::fs;
-use std::path::{Path, PathBuf};
-use thiserror::Error;
+
+use std::path::{Path};
+
 
 use grim::{Platform, SystemInfo};
 use grim::io::*;
 use grim::scene::{Object, ObjectDir, PackedObject, Tex};
-use grim::texture::{Bitmap, write_rgba_to_file};
 
-#[derive(Clap, Debug)]
+
+#[derive(Parser, Debug)]
 pub struct Dir2MiloApp {
-    #[clap(about = "Path to input directory", required = true)]
+    #[clap(help = "Path to input directory", required = true)]
     pub dir_path: String,
-    #[clap(about = "Path to output milo scene", required = true)]
+    #[clap(help = "Path to output milo scene", required = true)]
     pub milo_path: String,
 }
 
@@ -31,8 +31,8 @@ impl SubApp for Dir2MiloApp {
         let dir_path = Path::new(&self.dir_path);
         let milo_path = Path::new(&self.milo_path);
 
-        let dir_obj = ObjectDir::from_path(&dir_path, &SYSTEM_INFO)?;
-        let archive = MiloArchive::from_object_dir(&dir_obj, &SYSTEM_INFO)?;
+        let dir_obj = ObjectDir::from_path(dir_path, &SYSTEM_INFO)?;
+        let archive = MiloArchive::from_object_dir(&dir_obj, &SYSTEM_INFO, None)?;
 
         // Write to file
         let mut stream = FileStream::from_path_as_read_write_create(milo_path)?;

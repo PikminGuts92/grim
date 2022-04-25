@@ -1,13 +1,22 @@
-use crate::{Platform, SystemInfo};
+use crate::{SystemInfo};
 use crate::io::{BinaryStream, SeekFrom, Stream};
-use crate::scene::Tex;
+use crate::scene::{ObjectReadWrite, Tex, load_object, save_object};
 use crate::texture::Bitmap;
+use thiserror::Error as ThisError;
 use std::error::Error;
+
+#[derive(Debug, ThisError)]
+pub enum TexReadError {
+    #[error("Tex version of {version} not supported")]
+    TexVersionNotSupported {
+        version: u32
+    },
+}
 
 impl Tex {
     // TODO: Add from_hmx_image() function
 
-    fn is_magic_valid(magic: i32, info: &SystemInfo) -> bool {
+    fn is_magic_valid(magic: u32, info: &SystemInfo) -> bool {
         match info.version {
             // GH1
             10 => match magic {
@@ -19,9 +28,15 @@ impl Tex {
                 10 => true,
                 _ => false
             },
-            // GH2 360
+            // GH2 360/TBRB/GDRB
             25 => match magic {
                 10 => true,
+                11 => true, // GDRB
+                _ => false
+            },
+            28 => match magic {
+                10 => true,
+                11 => true, // RB3
                 _ => false
             },
             _ => false
@@ -30,38 +45,95 @@ impl Tex {
 
     pub fn from_stream(stream: &mut dyn Stream, info: &SystemInfo) -> Result<Tex, Box<dyn Error>> {
         let mut tex = Tex::new();
-        let mut reader = BinaryStream::from_stream_with_endian(stream, info.endian);
+        tex.load(stream, info).and(Ok(tex))
+    }
+}
 
-        let magic = reader.read_int32()?;
-        let is_magic_valid = Tex::is_magic_valid(magic, info);
-        // TODO: If not valid, return unsupported error
+impl ObjectReadWrite for Tex {
+    fn load(&mut self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+        let mut reader = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
 
-        // Skip meta for now
-        if magic >= 10 && info.version == 24 {
-            reader.seek(SeekFrom::Current(9))?;
-        } else if magic >= 10 {
-            reader.seek(SeekFrom::Current(13))?;
+        let magic = reader.read_uint32()?;
+
+        // If not valid, return unsupported error
+        if !Tex::is_magic_valid(magic, info) {
+            return Err(Box::new(TexReadError::TexVersionNotSupported {
+                version: magic
+            }));
         }
 
-        tex.width = reader.read_uint32()?;
-        tex.height = reader.read_uint32()?;
-        tex.bpp = reader.read_uint32()?;
+        load_object(self, &mut reader, info)?;
 
-        tex.ext_path = reader.read_prefixed_string()?;
-        tex.index_f = reader.read_float32()?;
-        tex.index = reader.read_int32()?;
+        // GDRB encoding
+        if magic >= 11 && info.version <= 25 {
+            // TODO: Save boolean value
+            reader.read_boolean()?;
+        }
 
-        tex.use_ext_path = reader.read_boolean()?;
+        self.width = reader.read_uint32()?;
+        self.height = reader.read_uint32()?;
+        self.bpp = reader.read_uint32()?;
+
+        self.ext_path = reader.read_prefixed_string()?;
+        self.index_f = reader.read_float32()?;
+        self.index = reader.read_int32()?;
+
+        // RB3 encoding
+        if magic >= 11 && info.version > 25 {
+            // TODO: Save boolean value
+            reader.read_boolean()?;
+        }
+
+        self.use_ext_path = reader.read_boolean()?;
 
         if reader.pos() == reader.len()? as u64 {
-            return Ok(tex);
+            return Ok(());
         }
 
-        tex.bitmap = match Bitmap::from_stream(&mut reader, info) {
+        self.bitmap = match Bitmap::from_stream(reader.as_mut(), info) {
             Ok(bitmap) => Some(bitmap),
             Err(_) => None,
         };
 
-        Ok(tex)
+        Ok(())
+    }
+
+    fn save(&self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+        let mut stream = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
+
+        // TODO: Get version from system info
+        let version = 10;
+
+        stream.write_uint32(version)?;
+
+        save_object(self, &mut stream, info)?;
+
+        // GDRB encoding
+        if version >= 11 && info.version <= 25 {
+            // TODO: Write actual boolean value
+            stream.write_boolean(false)?;
+        }
+
+        stream.write_uint32(self.width)?;
+        stream.write_uint32(self.height)?;
+        stream.write_uint32(self.bpp)?;
+
+        stream.write_prefixed_string(&self.ext_path)?;
+        stream.write_float32(self.index_f)?;
+        stream.write_int32(self.index)?;
+
+        // RB3 encoding
+        if version >= 11 && info.version > 25 {
+            // TODO: Write actual boolean value
+            stream.write_boolean(false)?;
+        }
+
+        stream.write_boolean(self.use_ext_path && self.bitmap.is_some())?;
+
+        if let Some(bitmap) = &self.bitmap {
+            bitmap.save(stream.as_mut(), info)?;
+        }
+
+        Ok(())
     }
 }

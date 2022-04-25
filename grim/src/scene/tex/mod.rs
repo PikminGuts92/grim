@@ -1,10 +1,11 @@
 mod io;
 pub use io::*;
+use grim_macros::*;
 use crate::texture::Bitmap;
 
+#[milo]
 #[derive(Debug)]
 pub struct Tex {
-    pub name: String,
     pub width: u32,
     pub height: u32,
     pub bpp: u32,
@@ -21,7 +22,10 @@ pub struct Tex {
 impl Tex {
     pub fn new() -> Tex {
         Tex {
-            name: String::from(""),
+            name: String::new(),
+            type2: String::new(),
+            note: String::new(),
+
             width: 0,
             height: 0,
             bpp: 0,

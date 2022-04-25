@@ -1,11 +1,11 @@
 use crate::{SystemInfo};
 use crate::io::compression::*;
-use crate::io::stream::{BinaryStream, MemoryStream, SeekFrom, Stream};
-use crate::scene::{Object, ObjectDir, PackedObject};
+use crate::io::stream::{BinaryStream, IOEndian, MemoryStream, SeekFrom, Stream};
+use crate::scene::{Object, ObjectDir, ObjectDirBase, PackedObject};
 use std::cmp::Ordering;
 use std::error::Error;
-use std::fmt::{Display, Formatter};
-use std::path::Path;
+
+
 use thiserror::Error as ThisError;
 
 const MAX_BLOCK_SIZE: usize = 0x20000;
@@ -82,11 +82,11 @@ impl MiloArchive {
             let block_count = reader.read_int32()?;
             let max_inflate_size = reader.read_int32()?;
 
-            let mut block_sizes: Vec<i32> = vec![0; block_count as usize];
+            let mut block_sizes: Vec<u32> = vec![0; block_count as usize];
 
             for size in block_sizes
                 .iter_mut() {
-                *size = reader.read_int32()?;
+                *size = reader.read_uint32()?;
             }
 
             // Advances to first block
@@ -96,9 +96,15 @@ impl MiloArchive {
             let mut buffer = vec![0u8; max_inflate_size as usize];
 
             for block_size in block_sizes.iter() {
-                let bytes = reader.read_bytes(*block_size as usize)?;
+                let bytes = reader.read_bytes((*block_size & 0xFFFFFF) as usize)?;
 
-                let mut data = inflate_zlib_block(&bytes, &mut buffer[..])?;
+                let mut data = match (block_type, ((*block_size & 0xFF000000) == 0)) {
+                    (BlockType::TypeA, _)
+                        | (BlockType::TypeD, false) => bytes, // No compression
+                    (BlockType::TypeB, _) => inflate_zlib_block(&bytes, &mut buffer[..])?,
+                    (BlockType::TypeC, _) => todo!("Gzip compression not supported!"), // TODO: Support gzip
+                    (BlockType::TypeD, true) => inflate_zlib_block(&bytes[4..], &mut buffer[..])?, // Skip 4-byte inflated size prefix
+                };
 
                 uncompressed.append(&mut data);
                 block_info.block_sizes.push(data.len());
@@ -142,14 +148,33 @@ impl MiloArchive {
             return Err(Box::new(MiloUnpackError::UnsupportedDirectoryVersion { version }));
         }
 
-        let entry_count = reader.read_int32()?;
+        let mut dir_type;
+        let dir_name;
 
+        if version >= 24 {
+            // Read object dir name + type
+            dir_type = reader.read_prefixed_string()?;
+            dir_name = reader.read_prefixed_string()?;
+
+            reader.seek(SeekFrom::Current(8))?; // Skip extra nums
+
+            // Update class name
+            ObjectDir::fix_class_name(version, &mut dir_type);
+        } else {
+            dir_type = String::new();
+            dir_name = String::new();
+        }
+
+        let entry_count = reader.read_int32()?;
         let mut packed_entries: Vec<PackedObject> = Vec::new();
 
         // Parse entry types + names
         for _ in 0..entry_count {
-            let entry_type = reader.read_prefixed_string()?;
+            let mut entry_type = reader.read_prefixed_string()?;
             let entry_name = reader.read_prefixed_string()?;
+
+            // Update class name
+            ObjectDir::fix_class_name(version, &mut entry_type);
 
             packed_entries.push(PackedObject {
                 name: entry_name,
@@ -166,6 +191,18 @@ impl MiloArchive {
             for _ in 0..ext_count {
                 reader.read_prefixed_string()?;
             }
+        } else {
+            // TODO: Parse directory info (entry)
+            /*let entry_size = self.guess_entry_size(&mut reader)?.unwrap();
+            reader.seek(SeekFrom::Current((entry_size + 4) as i64))?;*/
+
+            // Hacky way to read directory entry
+            // Only works if no sub dirs
+            packed_entries.insert(0, PackedObject {
+                name: dir_name.to_owned(),
+                object_type: dir_type.to_owned(),
+                data: Vec::new()
+            });
         }
 
         // Get data for entries
@@ -180,12 +217,15 @@ impl MiloArchive {
             }
         }
 
-        Ok(ObjectDir {
+        Ok(ObjectDir::ObjectDir(ObjectDirBase {
             entries: packed_entries
                 .into_iter()
-                .map(|p| Object::Packed(p))
-                .collect()
-        })
+                .map(Object::Packed)
+                .collect(),
+            name: dir_name,
+            dir_type,
+            sub_dirs: Vec::new()
+        }))
     }
 
     fn guess_entry_size<'a>(&'a self, reader: &mut BinaryStream) -> Result<Option<usize>, Box<dyn Error>> {
@@ -195,7 +235,7 @@ impl MiloArchive {
         let mut magic: i32;
 
         loop {
-            if let None = reader.seek_until(&ADDE_PADDING)? {
+            if reader.seek_until(&ADDE_PADDING)?.is_none() {
                 // End of file reached
                 reader.seek(SeekFrom::Start(start_pos))?;
                 return Ok(None);
@@ -214,7 +254,7 @@ impl MiloArchive {
             magic = reader.read_int32()?;
             reader.seek(SeekFrom::Current(-4))?;
 
-            if magic >= 0 && magic <= 0xFF {
+            if (0..=0xFF).contains(&magic) {
                 break;
             }
         }
@@ -262,19 +302,47 @@ impl MiloArchive {
         }
     }
 
-    pub fn from_object_dir(obj_dir: &ObjectDir, info: &SystemInfo) -> Result<MiloArchive, Box<dyn Error>> {
+    pub fn from_object_dir(obj_dir: &ObjectDir, info: &SystemInfo, block_type: Option<BlockType>) -> Result<MiloArchive, Box<dyn Error>> {
         // Create stream
         let mut data = Vec::<u8>::new();
         let mut stream = MemoryStream::from_vector_as_read_write(&mut data);
-        let mut writer = BinaryStream::from_stream(&mut stream);
+        let mut writer = BinaryStream::from_stream_with_endian(&mut stream, info.endian);
 
-        let mut entries: Vec<&Object> = obj_dir.entries.iter().collect();
-        entries.sort_by(MiloArchive::compare_entries_by_type_and_name);
+        let mut entries: Vec<&Object> = obj_dir.get_entries().iter().collect();
 
+        // Write version
         writer.write_uint32(info.version)?;
+
+        let mut dir_entry_op = None;
+        if info.version >= 24 {
+            // TODO: Refactor and get from field instead of hacky entries
+            let dir_entry = entries.swap_remove(0); // Faster than remove(), will sort anyways
+
+            // Write directory name + type
+            let dir_type = dir_entry.get_type();
+            let dir_name = dir_entry.get_name();
+
+            writer.write_prefixed_string(dir_type)?;
+            writer.write_prefixed_string(dir_name)?;
+
+            // Compute values for string table
+            let hash_count = (entries.len() + 1) * 2;
+            let blob_size = entries
+                .iter()
+                .map(|o| o.get_name().len() + 1)
+                .sum::<usize>() + (dir_name.len() + 1);
+
+            // Write string table values
+            writer.write_uint32(hash_count as u32)?;
+            writer.write_uint32(blob_size as u32)?;
+
+            dir_entry_op = Some(dir_entry);
+        }
+
         writer.write_uint32(entries.len() as u32)?;
 
         // Write types + names
+        entries.sort_by(MiloArchive::compare_entries_by_type_and_name);
         for entry in entries.iter() {
             let obj_type = entry.get_type();
             let obj_name = entry.get_name();
@@ -286,6 +354,15 @@ impl MiloArchive {
         if info.version == 10 {
             // TODO: Determine external dependencies or get from directory property
             writer.write_uint32(0)?;
+        } else {
+            // Hacky way to write directory entry
+            let dir_entry = dir_entry_op.unwrap();
+
+            if let Object::Packed(packed) = dir_entry {
+                writer.write_bytes(&packed.data.as_slice())?;
+            }
+
+            writer.write_bytes(&ADDE_PADDING)?;
         }
 
         let mut block_sizes = Vec::new();
@@ -294,20 +371,38 @@ impl MiloArchive {
         // Write data for entries
         for entry in entries.iter() {
             // Get packed entry
-            let data = match entry {
-                Object::Packed(packed) => &packed.data,
+            match entry {
+                Object::Packed(packed) => {
+                    let data = &packed.data;
+
+                    // Write to stream
+                    writer.write_bytes(&data[..])?;
+                    writer.write_bytes(&ADDE_PADDING)?;
+
+                    // Update block size
+                    current_size += data.len() + 4;
+                },
                 _ => {
-                    // TODO: Handle this better
-                    continue;
+                    // Pack entry
+                    let data = entry
+                        .pack(info)
+                        .and_then(|o| match o {
+                            Object::Packed(p) => Some(p.data),
+                            _ => None
+                        });
+
+                    if let Some(data) = &data {
+                        // Write to stream
+                        writer.write_bytes(&data[..])?;
+                        writer.write_bytes(&ADDE_PADDING)?;
+
+                        // Update block size
+                        current_size += data.len() + 4;
+                    } else {
+                        continue;
+                    }
                 }
             };
-
-            // Write to stream
-            writer.write_bytes(&data[..])?;
-            writer.write_bytes(&ADDE_PADDING)?;
-
-            // Update block size
-            current_size += data.len() + 4;
 
             if current_size >= MAX_BLOCK_SIZE {
                 block_sizes.push(current_size);
@@ -321,7 +416,7 @@ impl MiloArchive {
 
         Ok(MiloArchive {
             structure: MiloArchiveStructure::Blocked(BlockInfo {
-                block_type: BlockType::TypeB,
+                block_type: block_type.unwrap_or(BlockType::TypeB),
                 start_offset: 2064,
                 block_sizes
             }),
@@ -368,13 +463,33 @@ impl MiloArchive {
                 let mut block_offset = 0;
                 let mut deflate_sizes = Vec::new();
                 for block_size in info.block_sizes.iter() {
-                    let compressed_data = deflate_zlib_block(&self.data[block_offset..(block_offset + *block_size)], &mut buffer)?;
+                    let block_data = &self.data[block_offset..(block_offset + *block_size)];
 
-                    // Write compressed block to stream
-                    writer.write_bytes(&compressed_data[..])?;
+                    if let BlockType::TypeA = &info.block_type {
+                        // Write uncompressed block to stream
+                        writer.write_bytes(block_data)?;
 
-                    // Add compressed size
-                    deflate_sizes.push(compressed_data.len());
+                        // Add uncompressed size
+                        deflate_sizes.push(block_data.len());
+                    }
+                    else if let BlockType::TypeD = &info.block_type {
+                        let compressed_data = &deflate_zlib_block(block_data, &mut buffer)?[..];
+
+                        // Write compressed block to stream
+                        writer.write_uint32(block_data.len() as u32)?; // Write inflated size
+                        writer.write_bytes(compressed_data)?;
+
+                        // Add compressed size
+                        deflate_sizes.push(compressed_data.len() + 4);
+                    } else {
+                        let compressed_data = &deflate_zlib_block(block_data, &mut buffer)?[..];
+
+                        // Write compressed block to stream
+                        writer.write_bytes(compressed_data)?;
+
+                        // Add compressed size
+                        deflate_sizes.push(compressed_data.len());
+                    }
 
                     // Update current offset
                     block_offset += *block_size;
@@ -383,6 +498,7 @@ impl MiloArchive {
                 // Go back to block sizes offset
                 writer.seek(SeekFrom::Start(block_sizes_offset))?;
 
+                // Write deflated sizes
                 for size in deflate_sizes.iter() {
                     writer.write_uint32(*size as u32)?;
                 }
@@ -394,5 +510,39 @@ impl MiloArchive {
         }
 
         Ok(())
+    }
+
+    pub fn guess_endian_version(&self) -> Option<(IOEndian, u32)> {
+        if self.data.len() < 4 {
+            return None;
+        }
+
+        let mut buffer = [0u8; 4];
+        buffer.copy_from_slice(&self.data[..4]);
+
+        let mut endian = IOEndian::Big;
+        let mut version = u32::from_be_bytes(buffer);
+        if version > 32 {
+            endian = IOEndian::Little;
+            version = u32::from_le_bytes(buffer);
+        }
+
+        Some((endian, version))
+    }
+
+    pub fn get_version(&self, endian: IOEndian) -> Option<u32> {
+        if self.data.len() < 4 {
+            return None;
+        }
+
+        let mut buffer = [0u8; 4];
+        buffer.copy_from_slice(&self.data[..4]);
+
+        let version = match endian {
+            IOEndian::Big => u32::from_be_bytes(buffer),
+            _ => u32::from_le_bytes(buffer),
+        };
+
+        Some(version)
     }
 }

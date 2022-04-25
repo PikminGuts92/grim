@@ -1,0 +1,137 @@
+on: [push, pull_request]
+
+name: CI
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install linux dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+          sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
+      - uses: actions/checkout@v2
+      - name: Remove cargo and toolchain configurations
+        shell: bash
+        run: |
+          rm .cargo -rf
+          rm rust-toolchain.toml
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install linux dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+          sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
+      - uses: actions/checkout@v2
+      - name: Remove cargo and toolchain configurations
+        shell: bash
+        run: |
+          rm .cargo -rf
+          rm rust-toolchain.toml
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+
+  clippy:
+    name: Clippy
+    if: ${{ false }} # Always skip job (for now)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install linux dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+          sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
+      - uses: actions/checkout@v2
+      - name: Remove cargo and toolchain configurations
+        shell: bash
+        run: |
+          rm .cargo -rf
+          rm rust-toolchain.toml
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
+
+  build:
+    name: Build (${{ matrix.os }})
+    if: ${{ false }} # Skip for now
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      ZIP_NAME: ${{ github.event.repository.name }}-ci-${{ github.sha }}-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }} # Hacky way to lowercase os name
+      BIN_PATH: ./target/release
+      OUTPUT_PATH: ./build
+    steps:
+      - name: Install linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+          sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
+      - uses: actions/checkout@v2
+      - name: Remove cargo and toolchain configurations
+        shell: bash
+        run: |
+          rm .cargo -rf
+          rm rust-toolchain.toml
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --bins
+      - name: Create output directory and copy licenses
+        shell: bash
+        run: |
+          mkdir -p $OUTPUT_PATH
+          cp ./LICENSE $OUTPUT_PATH/LICENSE -f
+          cp ./README.md $OUTPUT_PATH/README.md -f
+      - name: Copy executables to output directory
+        shell: bash
+        run: |
+          for exe in $(find $BIN_PATH -maxdepth 1 -type f -executable -print); do
+            cp $exe $OUTPUT_PATH/$(basename $exe) -f
+          done
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.ZIP_NAME }}
+          path: ${{ env.OUTPUT_PATH }}/*

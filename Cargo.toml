@@ -1,11 +1,17 @@
 [workspace]
 members = [
     "grim",
+    "grim_macros",
+    "grim_traits",
+    "mesh_tool",
     "p9_scene_tool",
+    "preview_ui",
     "scene_tool"
 ]
+resolver = "2" # Super duper important for bevy!
 
 [profile.release]
 codegen-units = 1
 lto = true
 opt-level = 'z'  # Optimize for size
+strip = true

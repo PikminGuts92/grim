@@ -1,10 +1,11 @@
 use std::error::Error;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 pub use std::io::SeekFrom;
 use std::path::Path;
+pub use half::f16;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IOEndian {
     Little,
     Big,
@@ -186,7 +187,7 @@ pub struct FileOptions {
 
 impl FileStream {
     fn from_options(path: &Path, ops: FileOptions) -> Result<FileStream, Box<dyn Error>> {
-        let file = File::with_options()
+        let file = OpenOptions::new()
             .read(ops.read)
             .write(ops.write)
             .create(ops.create)
@@ -257,7 +258,7 @@ impl Stream for FileStream {
             panic!("File stream is read-only"); // TODO: Throw error instead
         }
 
-        self.file.write(data)?;
+        self.file.write_all(data)?;
         self.position += data.len() as u64;
         Ok(())
     }
@@ -371,6 +372,11 @@ impl<'a> BinaryStream<'a> {
 
         Ok(None)
     }
+
+    // Setters
+    pub fn set_endian(&mut self, endian: IOEndian) {
+        self.endian = endian;
+    }
 }
 
 // Reader implementation
@@ -464,6 +470,16 @@ impl<'a> BinaryStream<'a> {
     }
 
     // Read floats
+    pub fn read_float16(&mut self) -> Result<f16, Box<dyn Error>> {
+        let mut buffer = [0u8; 2];
+        self.read_bytes_into_slice(&mut buffer)?;
+
+        match self.endian {
+            IOEndian::Little => Ok(f16::from_le_bytes(buffer)),
+            IOEndian::Big => Ok(f16::from_be_bytes(buffer)),
+        }
+    }
+
     pub fn read_float32(&mut self) -> Result<f32, Box<dyn Error>> {
         let mut buffer = [0u8; 4];
         self.read_bytes_into_slice(&mut buffer)?;
@@ -492,10 +508,36 @@ impl<'a> BinaryStream<'a> {
         // TODO: Replace with better one (FromUtf8Error message is awful)
         Ok(String::from_utf8(raw_bytes)?)
     }
+
+    pub fn read_null_terminated_string(&mut self) -> Result<String, Box<dyn Error>> {
+        let mut raw_bytes = Vec::new();
+
+        loop {
+            let b = self.read_uint8()?;
+            if b == 0 {
+                break
+            }
+
+            raw_bytes.push(b);
+        }
+
+        // TODO: Replace with better one (FromUtf8Error message is awful)
+        Ok(String::from_utf8(raw_bytes)?)
+    }
 }
 
 // Writer implementation
 impl<'a> BinaryStream<'a> {
+    // Write boolean
+    pub fn write_boolean(&mut self, value: bool) -> Result<(), Box<dyn Error>> {
+        let data = match value {
+            true => 1u8,
+            _ => 0u8,
+        };
+
+        self.write_uint8(data)
+    }
+
     // Write signed integers
     pub fn write_int8(&mut self, value: i8) -> Result<(), Box<dyn Error>> {
         let data = match self.endian {
@@ -503,7 +545,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_int16(&mut self, value: i16) -> Result<(), Box<dyn Error>> {
@@ -512,7 +554,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_int32(&mut self, value: i32) -> Result<(), Box<dyn Error>> {
@@ -521,7 +563,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_int64(&mut self, value: i64) -> Result<(), Box<dyn Error>> {
@@ -530,7 +572,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     // Write unsigned integers
@@ -540,7 +582,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_uint16(&mut self, value: u16) -> Result<(), Box<dyn Error>> {
@@ -549,7 +591,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_uint32(&mut self, value: u32) -> Result<(), Box<dyn Error>> {
@@ -558,7 +600,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_uint64(&mut self, value: u64) -> Result<(), Box<dyn Error>> {
@@ -567,17 +609,26 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     // Write floats
+    pub fn write_float16(&mut self, value: f16) -> Result<(), Box<dyn Error>> {
+        let data = match self.endian {
+            IOEndian::Little => value.to_le_bytes(),
+            IOEndian::Big => value.to_be_bytes(),
+        };
+
+        self.write_bytes(&data)
+    }
+
     pub fn write_float32(&mut self, value: f32) -> Result<(), Box<dyn Error>> {
         let data = match self.endian {
             IOEndian::Little => value.to_le_bytes(),
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     pub fn write_float64(&mut self, value: f64) -> Result<(), Box<dyn Error>> {
@@ -586,7 +637,7 @@ impl<'a> BinaryStream<'a> {
             IOEndian::Big => value.to_be_bytes(),
         };
 
-        Ok(self.write_bytes(&data)?)
+        self.write_bytes(&data)
     }
 
     // Write strings
