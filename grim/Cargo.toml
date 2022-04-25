@@ -13,6 +13,7 @@ half = "1.8.2"
 image = { version = "0.24.1", default-features = false, features = [ "dxt", "jpeg", "png" ] }
 itertools = "0.10.3"
 lazy_static = "1.4.0"
+midly = { version = "0.5.2", optional = true }
 nalgebra = { version = "0.30.1", optional = true }
 rayon = "1.5"
 regex = { version = "1.5.5", default-features = false, features = [ "std" ] }
@@ -23,6 +24,7 @@ criterion = "0.3"
 rstest = "0.12"
 
 [features]
+midi = [ "midly" ]
 model = [ "gltf", "nalgebra" ]
 
 [[bench]]

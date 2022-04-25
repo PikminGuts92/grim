@@ -3,6 +3,7 @@
 pub mod ark;
 pub mod dta;
 pub mod io;
+#[cfg(feature = "midi")] pub mod midi;
 #[cfg(feature = "model")] pub mod model;
 pub mod scene;
 mod system;
