@@ -1646,9 +1646,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.1.12"
+version = "3.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c167e37342afc5f33fd87bbc870cedd020d2a6dffa05d45ccd9241fbdd146db"
+checksum = "535434c063ced786eb04aaf529308092c5ab60889e8fe24275d15de07b01fa97"
 dependencies = [
  "atty",
  "bitflags",
@@ -1676,9 +1676,9 @@ dependencies = [
 
 [[package]]
 name = "clap_lex"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "189ddd3b5d32a70b35e7686054371742a937b0d99128e76dde6340210e966669"
+checksum = "a37c35f1112dad5e6e0b1adaff798507497a18fceeb30cceb3bae7d1427b9213"
 dependencies = [
  "os_str_bytes",
 ]
@@ -3287,7 +3287,7 @@ dependencies = [
 name = "mesh_tool"
 version = "0.1.0"
 dependencies = [
- "clap 3.1.12",
+ "clap 3.1.14",
  "grim",
  "thiserror",
 ]
@@ -3456,9 +3456,9 @@ dependencies = [
 
 [[package]]
 name = "nalgebra"
-version = "0.30.1"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fb2d0de08694bed883320212c18ee3008576bfe8c306f4c3c4a58b4876998be"
+checksum = "18a89248335f688e4bd994e6d030fd7e185eb41769b8c435395075425e100ac6"
 dependencies = [
  "approx",
  "matrixmultiply",
@@ -4427,7 +4427,7 @@ dependencies = [
 name = "scene_tool"
 version = "0.1.0"
 dependencies = [
- "clap 3.1.12",
+ "clap 3.1.14",
  "grim",
  "thiserror",
 ]
@@ -4771,18 +4771,18 @@ checksum = "b1141d4d61095b28419e22cb0bbf02755f5e54e0526f97f1e3d1d160e60885fb"
 
 [[package]]
 name = "thiserror"
-version = "1.0.30"
+version = "1.0.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "854babe52e4df1653706b98fcfc05843010039b406875930a70e4d9644e5c417"
+checksum = "bd829fe32373d27f76265620b5309d0340cb8550f523c1dda251d6298069069a"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.30"
+version = "1.0.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa32fd3f627f367fe16f893e2597ae3c05020f8bba2666a4e6ea73d377e5714b"
+checksum = "0396bc89e626244658bef819e22d0cc459e795a5ebe878e6ec336d1674a8d79a"
 dependencies = [
  "proc-macro2",
  "quote",
