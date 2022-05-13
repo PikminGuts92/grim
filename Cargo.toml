@@ -9,6 +9,12 @@ members = [
 ]
 resolver = "2" # Super duper important for bevy!
 
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
 [profile.release]
 codegen-units = 1
 lto = true

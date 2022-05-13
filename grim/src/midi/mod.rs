@@ -1,6 +1,8 @@
 mod io;
+mod reader;
 
 pub use self::io::*;
+pub use self::reader::*;
 
 #[derive(Default)]
 pub struct MidiFile {
@@ -47,6 +49,11 @@ impl MidiText {
             MidiTextType::Event(text) => text,
         }
     }
+}
+
+pub struct MidiInfo {
+    pub format: u16,
+    pub ticks_per_quarter: u16, // Usually 480
 }
 
 pub struct MidiNote {
