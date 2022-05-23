@@ -14,7 +14,7 @@ use events::*;
 use gui::*;
 use render::{render_milo, render_milo_entry};
 use settings::*;
-use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{PresentMode, WindowMode, WindowResized}};
+use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{PresentMode, WindowMode, WindowResized}, winit::WinitWindows};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Context, Pos2, Ui}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use grim::*;
@@ -92,7 +92,7 @@ fn setup(
 ) {
     // Set primary window to maximized if preferred
     if settings.maximized {
-        let window = windows.get_primary_mut().unwrap();
+        let window = windows.primary_mut();
         window.set_maximized(true);
     }
 
@@ -390,9 +390,32 @@ fn is_camera_button_down(key_input: &Res<Input<KeyCode>>) -> bool {
 
 fn window_resized(
     mut resize_events: EventReader<WindowResized>,
+    mut windows: ResMut<Windows>,
     mut settings: ResMut<AppSettings>,
     app_state: Res<AppState>,
+    winit_windows: NonSend<WinitWindows>,
 ) {
+    let primary_window = windows.primary_mut();
+    let window = winit_windows.get_window(primary_window.id()).unwrap();
+    let maximized = window.is_maximized();
+
+    if settings.maximized != maximized {
+        if maximized {
+            println!("Window maximized");
+        } else {
+            println!("Window unmaximized");
+        }
+
+        settings.maximized = maximized;
+        app_state.save_settings(&settings);
+        return;
+    }
+
+    if maximized {
+        // Ignore resize if maximized
+        return;
+    }
+
     for e in resize_events.iter() {
         println!("Window resized: {}x{}", e.width, e.height);
 
