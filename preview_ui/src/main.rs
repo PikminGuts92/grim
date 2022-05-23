@@ -428,8 +428,6 @@ fn window_resized(
 fn drop_files(
     mut drag_drop_events: EventReader<FileDragAndDrop>,
 ) {
-    // Currently doesn't work on Windows
-    // https://github.com/bevyengine/bevy/issues/2096
     for d in drag_drop_events.iter() {
         if let FileDragAndDrop::DroppedFile { id: _, path_buf } = d {
             println!("Dropped \"{}\"", path_buf.to_str().unwrap())
