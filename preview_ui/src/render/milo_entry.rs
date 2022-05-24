@@ -342,7 +342,7 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
         .and_then(|t| t.bitmap.as_ref())
         .and_then(|b| match (system_info.platform, b.encoding) {
             // TODO: Uncomment when BCn textures are supported
-            /*(Platform::X360 | Platform::PS3, 8 | 24 | 32) => {
+            (Platform::X360 | Platform::PS3, 8 | 24 | 32) => {
                 let enc = match b.encoding {
                      8 => TextureEncoding::DXT1,
                     24 => TextureEncoding::DXT5,
@@ -354,7 +354,7 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
                 if system_info.platform.eq(&Platform::X360) {
                     // Swap bytes
                     for ab in data.chunks_mut(2) {
-                        let tmp = ab[1];
+                        let tmp = ab[0];
 
                         ab[0] = ab[1];
                         ab[1] = tmp;
@@ -362,7 +362,7 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
                 }
 
                 Some((data, enc))
-            },*/
+            },
             _ => b.unpack_rgba(system_info).ok()
                 .and_then(|rgba| Some((rgba, TextureEncoding::RGBA)))
         })
@@ -385,7 +385,12 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
     // TODO: Figure out how bevy can support mip maps
     let tex_size = ((bitmap.width as usize) * (bitmap.height as usize) * bpp) / 8;
 
-    let mut texture = Image::new_fill(
+    let image_new_fn = match enc {
+        TextureEncoding::RGBA => image_new_fill, // Use fill method for older textures
+        _ => image_new,
+    };
+
+    let mut texture = /*Image::new_fill*/ image_new_fn(
         Extent3d {
             width: bitmap.width.into(),
             height: bitmap.height.into(),
@@ -406,4 +411,54 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
     texture.sampler_descriptor.address_mode_v = AddressMode::Repeat;
 
     texture
+}
+
+fn image_new(
+    size: Extent3d,
+    dimension: TextureDimension,
+    pixel: &[u8],
+    format: TextureFormat,
+) -> Image {
+    // Problematic!!!
+    /*debug_assert_eq!(
+        size.volume() * format.pixel_size(),
+        data.len(),
+        "Pixel data, size and format have to match",
+    );*/
+    let mut image = Image {
+        data: pixel.to_owned(),
+        ..Default::default()
+    };
+    image.texture_descriptor.dimension = dimension;
+    image.texture_descriptor.size = size;
+    image.texture_descriptor.format = format;
+    image
+}
+
+fn image_new_fill(
+    size: Extent3d,
+    dimension: TextureDimension,
+    pixel: &[u8],
+    format: TextureFormat,
+) -> Image {
+    let mut value = Image::default();
+    value.texture_descriptor.format = format;
+    value.texture_descriptor.dimension = dimension;
+    value.resize(size);
+
+    // Problematic!!!
+    /*debug_assert_eq!(
+        pixel.len() % format.pixel_size(),
+        0,
+        "Must not have incomplete pixel data."
+    );
+    debug_assert!(
+        pixel.len() <= value.data.len(),
+        "Fill data must fit within pixel buffer."
+    );*/
+
+    for current_pixel in value.data.chunks_exact_mut(pixel.len()) {
+        current_pixel.copy_from_slice(pixel);
+    }
+    value
 }
