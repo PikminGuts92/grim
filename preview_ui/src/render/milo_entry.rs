@@ -399,8 +399,8 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
         TextureDimension::D2,
         &rgba[..tex_size],
         match enc {
-            TextureEncoding::DXT1 => TextureFormat::Bc1RgbaUnorm,
-            TextureEncoding::DXT5 => TextureFormat::Bc3RgbaUnorm,
+            TextureEncoding::DXT1 => TextureFormat::Bc1RgbaUnormSrgb,
+            TextureEncoding::DXT5 => TextureFormat::Bc3RgbaUnormSrgb,
             TextureEncoding::ATI2 => TextureFormat::Bc5RgUnorm,
             _ => TextureFormat::Rgba8UnormSrgb,
         }
