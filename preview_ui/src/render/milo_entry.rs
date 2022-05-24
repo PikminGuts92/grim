@@ -15,7 +15,7 @@ use grim::scene::{GroupObject, Matrix, MeshObject, Milo, MiloObject, Object, Obj
 use grim::texture::Bitmap;
 
 use crate::WorldMesh;
-use super::{map_matrix, MiloLoader};
+use super::{map_matrix, MiloLoader, TextureEncoding};
 
 pub fn render_milo_entry(
     commands: &mut Commands,
@@ -328,9 +328,9 @@ fn get_product_local_mat<'a>(
     map_matrix(milo_object.get_local_xfm())
 }
 
-fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_info: &SystemInfo) -> Option<&'b (&'a Tex, Vec<u8>)> {
+fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_info: &SystemInfo) -> Option<&'b (&'a Tex, Vec<u8>, TextureEncoding)> {
     // Check for cached texture
-    if let Some(cached) = loader.get_cached_texture(tex_name) {
+    if let Some(cached) = loader.get_cached_texture(tex_name).take() {
         // TODO: Figure out why commented out line doesn't work (stupid lifetimes)
         //return Some(cached);
         return loader.get_cached_texture(tex_name);
@@ -340,21 +340,57 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
     // TODO: Check for external textures
     loader.get_texture(tex_name)
         .and_then(|t| t.bitmap.as_ref())
-        .and_then(|b| b.unpack_rgba(system_info).ok())
-        .and_then(move |rgba| {
+        .and_then(|b| match (system_info.platform, b.encoding) {
+            // TODO: Uncomment when BCn textures are supported
+            (Platform::X360 | Platform::PS3, 8 | 24 | 32) => {
+                let enc = match b.encoding {
+                     8 => TextureEncoding::DXT1,
+                    24 => TextureEncoding::DXT5,
+                    32 | _ => TextureEncoding::ATI2,
+                };
+
+                let mut data = b.raw_data.to_owned();
+
+                if system_info.platform.eq(&Platform::X360) {
+                    // Swap bytes
+                    for ab in data.chunks_mut(2) {
+                        let tmp = ab[0];
+
+                        ab[0] = ab[1];
+                        ab[1] = tmp;
+                    }
+                }
+
+                Some((data, enc))
+            },
+            _ => b.unpack_rgba(system_info).ok()
+                .and_then(|rgba| Some((rgba, TextureEncoding::RGBA)))
+        })
+        .and_then(move |(rgba, enc)| {
             // Cache decoded texture
-            loader.set_cached_texture(tex_name, rgba);
+            loader.set_cached_texture(tex_name, rgba, enc);
             loader.get_cached_texture(tex_name)
         })
 }
 
-fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>)) -> Image {
-    let (bitmap, rgba) = tex;
+fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
+    let (bitmap, rgba, enc) = tex;
+
+    let bpp: usize = match enc {
+        TextureEncoding::DXT1 => 4,
+        TextureEncoding::DXT5 | TextureEncoding::ATI2 => 8,
+        TextureEncoding::RGBA => 32,
+    };
 
     // TODO: Figure out how bevy can support mip maps
-    let tex_size = (bitmap.width as usize) * (bitmap.height as usize) * 4;
+    let tex_size = ((bitmap.width as usize) * (bitmap.height as usize) * bpp) / 8;
 
-    let mut texture = Image::new_fill(
+    let image_new_fn = match enc {
+        TextureEncoding::RGBA => image_new_fill, // Use fill method for older textures
+        _ => image_new,
+    };
+
+    let mut texture = /*Image::new_fill*/ image_new_fn(
         Extent3d {
             width: bitmap.width.into(),
             height: bitmap.height.into(),
@@ -362,7 +398,12 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>)) -> Image {
         },
         TextureDimension::D2,
         &rgba[..tex_size],
-        TextureFormat::Rgba8UnormSrgb,
+        match enc {
+            TextureEncoding::DXT1 => TextureFormat::Bc1RgbaUnormSrgb,
+            TextureEncoding::DXT5 => TextureFormat::Bc3RgbaUnormSrgb,
+            TextureEncoding::ATI2 => TextureFormat::Bc5RgUnorm,
+            _ => TextureFormat::Rgba8UnormSrgb,
+        }
     );
 
     // Update texture wrap mode
@@ -370,4 +411,54 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>)) -> Image {
     texture.sampler_descriptor.address_mode_v = AddressMode::Repeat;
 
     texture
+}
+
+fn image_new(
+    size: Extent3d,
+    dimension: TextureDimension,
+    pixel: &[u8],
+    format: TextureFormat,
+) -> Image {
+    // Problematic!!!
+    /*debug_assert_eq!(
+        size.volume() * format.pixel_size(),
+        data.len(),
+        "Pixel data, size and format have to match",
+    );*/
+    let mut image = Image {
+        data: pixel.to_owned(),
+        ..Default::default()
+    };
+    image.texture_descriptor.dimension = dimension;
+    image.texture_descriptor.size = size;
+    image.texture_descriptor.format = format;
+    image
+}
+
+fn image_new_fill(
+    size: Extent3d,
+    dimension: TextureDimension,
+    pixel: &[u8],
+    format: TextureFormat,
+) -> Image {
+    let mut value = Image::default();
+    value.texture_descriptor.format = format;
+    value.texture_descriptor.dimension = dimension;
+    value.resize(size);
+
+    // Problematic!!!
+    /*debug_assert_eq!(
+        pixel.len() % format.pixel_size(),
+        0,
+        "Must not have incomplete pixel data."
+    );
+    debug_assert!(
+        pixel.len() <= value.data.len(),
+        "Fill data must fit within pixel buffer."
+    );*/
+
+    for current_pixel in value.data.chunks_exact_mut(pixel.len()) {
+        current_pixel.copy_from_slice(pixel);
+    }
+    value
 }
