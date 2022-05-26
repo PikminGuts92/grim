@@ -54,6 +54,7 @@ fn main() {
             ..Default::default()
         })
         .add_event::<AppEvent>()
+        .add_event::<AppFileEvent>()
         //.insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(app_state)
@@ -65,7 +66,8 @@ fn main() {
         .add_system(control_camera)
         .add_system(drop_files)
         .add_system(window_resized)
-        .add_system(update_state)
+        .add_system(consume_file_events)
+        .add_system(consume_app_events)
         .add_startup_system(setup_args)
         .add_startup_system(setup)
         .run();
@@ -176,91 +178,46 @@ fn load_settings(settings_path: &Path) -> AppSettings {
 
 fn setup_args(
     mut state: ResMut<AppState>,
-    mut ev_update_state: EventWriter<AppEvent>,
+    mut ev_update_state: EventWriter<AppFileEvent>,
 ) {
-    let args = args().skip(1).collect::<Vec<String>>();
+    let mut args = args().skip(1).collect::<Vec<String>>();
     if args.is_empty() {
         return;
     }
 
-    let arg0 = args[0].as_str();
-    let file_path = Path::new(arg0);
-    let ext = file_path.extension().unwrap().to_str().unwrap();
+    ev_update_state.send(AppFileEvent::Open(args.remove(0).into()));
+}
 
-    if ext.contains("hdr") {
-        // Open ark
-        println!("Opening hdr from \"{}\"", arg0);
-
-        let ark_res = Ark::from_path(file_path);
-        if let Ok(ark) = ark_res {
-            println!("Successfully opened ark with {} entries", ark.entries.len());
-
-            state.root = Some(create_ark_tree(&ark));
-            state.ark = Some(ark);
-        }
-    } else if ext.contains("milo")
-        || ext.contains("gh")
-        || ext.contains("rnd") { // TODO: Break out into static regex
-        // Open milo
-        println!("Opening milo from \"{}\"", arg0);
-
-        match open_and_unpack_milo(file_path) {
-            Ok((milo, info)) => {
-                println!("Successfully opened milo with {} entries", milo.get_entries().len());
-
-                state.milo = Some(milo);
-                state.system_info = Some(info);
-
-                //ev_update_state.send(AppEvent::RefreshMilo);
-
-                const name_prefs: [&str; 5] = ["venue", "top", "lod0", "lod1", "lod2"];
-
-                let groups = state.milo
-                    .as_ref()
-                    .unwrap()
-                    .get_entries()
-                    .iter()
-                    .filter(|o| o.get_type() == "Group")
-                    .collect::<Vec<_>>();
-
-                let mut selected_entry = None;
-                /*for name in name_prefs {
-                    let group = groups
-                        .iter()
-                        .find(|g| g.get_name().starts_with(name));
-
-                    if let Some(grp) = group {
-                        selected_entry = Some(grp.get_name().to_owned());
-                        break;
-                    }
-                }*/
-
-                ev_update_state.send(AppEvent::SelectMiloEntry(selected_entry));
-            },
-            Err(_err) => {
-                // TODO: Log error
+fn consume_file_events(
+    mut file_events: EventReader<AppFileEvent>,
+    mut app_event_writer: EventWriter<AppEvent>,
+    mut state: ResMut<AppState>,
+) {
+    for e in file_events.iter() {
+        match e {
+            AppFileEvent::Open(file_path) => {
+                //milo_event_writer.send(bevy::app::AppExit);
+                open_file(file_path, &mut state, &mut app_event_writer);
             }
         }
-    } else {
-        println!("Unknown file type \"{}\"", arg0);
     }
 }
 
-fn update_state(
+fn consume_app_events(
+    mut app_events: EventReader<AppEvent>,
+    mut bevy_event_writer: EventWriter<bevy::app::AppExit>,
+    mut state: ResMut<AppState>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut textures: ResMut<Assets<Image>>,
-    mut update_events: EventReader<AppEvent>,
-    mut event_writer: EventWriter<bevy::app::AppExit>,
     mut world_meshes: Query<(Entity, &WorldMesh)>,
-    mut state: ResMut<AppState>,
 ) {
-    for e in update_events.iter() {
+    for e in app_events.iter() {
         match e {
             AppEvent::Exit => {
-                event_writer.send(bevy::app::AppExit);
-            }
+                bevy_event_writer.send(bevy::app::AppExit);
+            },
             AppEvent::SelectMiloEntry(entry_name) => {
                 /*let render_entry = match &state.milo_view.selected_entry {
                     Some(name) => name.ne(entry_name),
@@ -310,7 +267,7 @@ fn update_state(
 
                 println!("Updated milo");
             },
-            AppEvent::RefreshMilo => {
+            /*AppEvent::RefreshMilo => {
                 return;
 
                 if let Some(milo) = &state.milo {
@@ -326,8 +283,74 @@ fn update_state(
                 }
 
                 println!("Updated milo");
+            },*/
+        }
+    }
+}
+
+fn open_file(
+    file_path: &PathBuf,
+    state: &mut ResMut<AppState>,
+    app_event_writer: &mut EventWriter<AppEvent>,
+) {
+    let ext = file_path.extension().unwrap().to_str().unwrap();
+
+    if ext.contains("hdr") {
+        // Open ark
+        println!("Opening hdr from \"{}\"", file_path.display());
+
+        let ark_res = Ark::from_path(file_path);
+        if let Ok(ark) = ark_res {
+            println!("Successfully opened ark with {} entries", ark.entries.len());
+
+            state.root = Some(create_ark_tree(&ark));
+            state.ark = Some(ark);
+        }
+    } else if ext.contains("milo")
+        || ext.contains("gh")
+        || ext.contains("rnd") { // TODO: Break out into static regex
+        // Open milo
+        println!("Opening milo from \"{}\"", file_path.display());
+
+        match open_and_unpack_milo(file_path) {
+            Ok((milo, info)) => {
+                println!("Successfully opened milo with {} entries", milo.get_entries().len());
+
+                state.milo = Some(milo);
+                state.system_info = Some(info);
+
+                //ev_update_state.send(AppEvent::RefreshMilo);
+
+                const name_prefs: [&str; 5] = ["venue", "top", "lod0", "lod1", "lod2"];
+
+                let groups = state.milo
+                    .as_ref()
+                    .unwrap()
+                    .get_entries()
+                    .iter()
+                    .filter(|o| o.get_type() == "Group")
+                    .collect::<Vec<_>>();
+
+                let mut selected_entry = None;
+                /*for name in name_prefs {
+                    let group = groups
+                        .iter()
+                        .find(|g| g.get_name().starts_with(name));
+
+                    if let Some(grp) = group {
+                        selected_entry = Some(grp.get_name().to_owned());
+                        break;
+                    }
+                }*/
+
+                app_event_writer.send(AppEvent::SelectMiloEntry(selected_entry));
+            },
+            Err(_err) => {
+                // TODO: Log error
             }
         }
+    } else {
+        println!("Unknown file type \"{}\"", file_path.display());
     }
 }
 
@@ -427,10 +450,13 @@ fn window_resized(
 
 fn drop_files(
     mut drag_drop_events: EventReader<FileDragAndDrop>,
+    mut file_event_writer: EventWriter<AppFileEvent>,
 ) {
     for d in drag_drop_events.iter() {
         if let FileDragAndDrop::DroppedFile { id: _, path_buf } = d {
-            println!("Dropped \"{}\"", path_buf.to_str().unwrap())
+            println!("Dropped \"{}\"", path_buf.to_str().unwrap());
+
+            file_event_writer.send(AppFileEvent::Open(path_buf.to_owned()));
         }
     }
 }

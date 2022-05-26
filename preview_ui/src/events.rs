@@ -1,5 +1,10 @@
+use std::path::PathBuf;
+
 pub enum AppEvent {
     Exit,
-    RefreshMilo,
     SelectMiloEntry(Option<String>),
+}
+
+pub enum AppFileEvent {
+    Open(PathBuf),
 }
