@@ -15,7 +15,7 @@ pub fn render_gui(ctx: &mut &Context, settings: &mut AppSettings, state: &mut Ap
     //ctx.set_visuals(egui::Visuals::light());
 
     // Side panel
-    egui::SidePanel::left("side_panel").min_width(400.0).resizable(true).show(ctx, |ui| {
+    egui::SidePanel::left("side_panel").min_width(200.0).default_width(300.0).resizable(true).show(ctx, |ui| {
         egui::ScrollArea::vertical().show_viewport(ui, |ui, _viewport| {
             //ui.horizontal(|ui| {
                     //ui.set_min_width(300.0);
