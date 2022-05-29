@@ -1,6 +1,10 @@
+mod errors;
 mod io;
+mod parser;
 
+pub use errors::*;
 pub use io::*;
+use parser::*;
 
 pub struct DataString {
     data: Vec<u8>,
