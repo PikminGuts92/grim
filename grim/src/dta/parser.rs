@@ -5,9 +5,9 @@ use nom::combinator::{map};
 use nom::error::{context, Error};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated};
 use nom::multi::{many0};
-use super::ParseDTAError;
+use super::{DataArray, ParseDTAError, RootData};
 
-const WS_CHARACTERS: &[u8] = b" \t\r\n";
+const WS_CHARACTERS: &[u8] = b" \t\r\n\x0c";
 const SPACE_CHARACTERS: &[u8] = b" \t";
 const NEWLINE_CHARACTERS: &[u8] = b"\r\n";
 
@@ -23,9 +23,68 @@ pub struct ParsedSong<'a> {
     pub data: &'a [u8],
 }
 
-/*pub struct NodeInfo<'a> {
+pub struct DTAParser<'a> {
     pub depth: usize,
-    pub data_array: Vec<DataArray>
+    pub line_number: usize,
+    pub char_index: usize,
+    pub data_array: Vec<(DataArray, usize)>, // Includes char start index
+    pub remaining: &'a [u8]
+}
+
+impl<'a> DTAParser<'a> {
+    pub fn new(data: &'a [u8]) -> Self {
+        Self {
+            depth: 0,
+            line_number: 0,
+            char_index: 0,
+            data_array: Vec::new(),
+            remaining: data
+        }
+    }
+
+    pub fn parse(mut self) {
+        self.parse_array();
+    }
+
+    fn parse_array(&mut self) -> Vec<(DataArray, usize)> {
+        let mut data = Vec::new();
+
+        self.consume_whitespace();
+        // TODO: Consume comments
+
+        data
+    }
+
+    fn consume_whitespace(&mut self) {
+        let mut chars_moved = 0;
+        let mut lines_moved = 0;
+
+        for c in self.remaining.iter() {
+            match c {
+                b'\n' => {
+                    chars_moved += 1;
+                    lines_moved += 1;
+                },
+                c if c.is_ascii_whitespace() => {
+                    chars_moved += 1;
+                }
+                _ => {
+                    break;
+                }
+            }
+        }
+
+        // Update self
+        self.char_index += chars_moved;
+        self.line_number += lines_moved;
+        self.remaining = &self.remaining[chars_moved..];
+    }
+}
+
+/*pub(crate) fn parse_dta_str<'a>(text: &'a [u8]) -> Vec<DataArray> {
+    //let mut parse_info = 
+
+    Vec::new()
 }*/
 
 fn take_ws<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
