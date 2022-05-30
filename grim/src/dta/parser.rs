@@ -2,7 +2,7 @@ use nom::*;
 use nom::branch::{alt};
 use nom::bytes::complete::{is_not, tag, take_till, take_while};
 use nom::combinator::{map};
-use nom::error::Error;
+use nom::error::{context, Error};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated};
 use nom::multi::{many0};
 use super::ParseDTAError;
@@ -22,6 +22,11 @@ pub struct ParsedSong<'a> {
     pub size: usize,
     pub data: &'a [u8],
 }
+
+/*pub struct NodeInfo<'a> {
+    pub depth: usize,
+    pub data_array: Vec<DataArray>
+}*/
 
 fn take_ws<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
     take_while(move |c| WS_CHARACTERS.contains(&c))(text)
@@ -55,7 +60,13 @@ fn take_until_newline<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
 }
 
 fn take_comment<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
-    preceded(tag(COMMENT_CHARACTER), preceded(take_until_newline, take_newline))(text)
+    context(
+        "comment",
+        preceded(
+            tag(COMMENT_CHARACTER),
+            preceded(take_until_newline, take_newline)
+        )
+    )(text)
 }
 
 fn take_section<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
@@ -68,13 +79,85 @@ fn take_section<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
 
 fn take_quoted_string<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
     // TODO: Better support escaped characters?
-    preceded(
-        tag(QUOTE_CHARACTER),
-        take_till(move |c| QUOTE_CHARACTER.contains(&c))
+    context(
+        "string",
+        delimited(
+            tag(QUOTE_CHARACTER),
+            take_till(move |c| QUOTE_CHARACTER.contains(&c)),
+            tag(QUOTE_CHARACTER),
+        )
     )(text)
 }
 
 fn take_node<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
+    let (mut r1, _) = take_ws_or_comment(text)?; // Whitespace
+
+    // Read open bracket
+    let open_bracket_res: IResult<&'a [u8], &'a [u8]> = tag(OPEN_BRACKET)(r1);
+    if open_bracket_res.is_ok() {
+        // Nested data...
+        r1 = &r1[1..];
+
+        let (nested_r1, _) = take_node(r1)?;
+        r1 = nested_r1;
+    }
+
+    // Read until close bracket
+    let mut close_bracket_res: IResult<&'a [u8], &'a [u8]>;
+
+    loop {
+        close_bracket_res = tag(CLOSE_BRACKET)(r1);
+
+        if r1.is_empty() {
+            break;
+        } else if close_bracket_res.is_ok() {
+            r1 = &r1[1..];
+            break;
+        }
+
+
+    }
+
+    /*while let Ok((nested_r1, _)) = close_bracket_res {
+        /*let comment_result = take_comment(text);
+
+        if comment_result.is_err() {
+            break;
+        }
+
+        let (t1, _) = comment_result.unwrap();
+        ws_result = take_ws(t1);*/
+    }*/
+
+    /*let tt: IResult<&'a [u8], &'a [u8]> = alt((
+        map(take_quoted_string, |_| (r1, r2))
+    ))(r1);*/
+
+    //return Ok((r1, r2));
+
+    //return tt;
+
+    preceded(
+        take_ws_or_comment,
+            // string
+            // int
+            // float
+            // node
+            delimited(
+                tag(OPEN_BRACKET),
+                preceded(
+                    take_ws_or_comment,
+                    take_while(|c| !CLOSE_BRACKET.contains(&c))
+                ),
+                preceded(
+                    take_ws_or_comment,
+                    tag(CLOSE_BRACKET)
+                )
+            )
+    )(text)
+}
+
+fn take_root_node<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
     preceded(
         take_ws_or_comment,
             // string
@@ -96,7 +179,7 @@ fn take_node<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
 }
 
 pub fn parse_dta<'a>(dta: &'a[u8]) -> Result<Vec<ParsedSong>, ParseDTAError> {
-    let (r1, r2) = preceded(take_ws_or_comment, tag(OPEN_BRACKET))(dta)
+    let (r1, r2) = take_root_node(dta)
         .map_err(|_| ParseDTAError::UnknownDTAParseError)?;
 
     let r1_str = std::str::from_utf8(r1).unwrap();
