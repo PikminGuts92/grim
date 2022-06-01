@@ -13,7 +13,7 @@ pub enum DtaLoadError {
 }
 
 impl DataArray {
-    pub fn load(&mut self, stream: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    pub fn load(&mut self, _stream: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 }
@@ -69,7 +69,7 @@ fn load_array(stream: &mut Box<BinaryStream>) -> Result<Vec<DataArray>, Box<dyn 
     Ok(nodes)
 }
 
-fn save_node(data: &DataArray, stream: &mut Box<BinaryStream>, id: &mut u32) -> Result<(), Box<dyn Error>> {
+fn save_node(data: &DataArray, stream: &mut Box<BinaryStream>, _id: &mut u32) -> Result<(), Box<dyn Error>> {
     match data {
         DataArray::Integer(int) => {
             stream.write_uint32(0x00)?;

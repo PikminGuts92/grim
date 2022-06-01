@@ -120,7 +120,7 @@ pub fn render_milo(
 
                     tex_map.insert(tex.get_name().as_str(), bevy_tex);
                 },
-                Err(err) => {
+                Err(_err) => {
                     println!("Failed to convert {}", tex.get_name());
                 }
             }

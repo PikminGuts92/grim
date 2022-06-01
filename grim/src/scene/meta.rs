@@ -25,12 +25,3 @@ pub struct MetadataObject {
     // pub props: DataArray,
     pub note: String,
 }
-
-impl MetadataObject {
-    pub fn test(&mut self) {
-        //let v = self.get_version().unwrap();
-        //self.version = None;
-        let t = self.version;
-        let t = self.get_version();
-    }
-}

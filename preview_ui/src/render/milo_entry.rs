@@ -330,7 +330,7 @@ fn get_product_local_mat<'a>(
 
 fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_info: &SystemInfo) -> Option<&'b (&'a Tex, Vec<u8>, TextureEncoding)> {
     // Check for cached texture
-    if let Some(cached) = loader.get_cached_texture(tex_name).take() {
+    if let Some(_cached) = loader.get_cached_texture(tex_name).take() {
         // TODO: Figure out why commented out line doesn't work (stupid lifetimes)
         //return Some(cached);
         return loader.get_cached_texture(tex_name);

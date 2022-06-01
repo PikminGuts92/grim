@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #![allow(unused_imports)]
 
 // Hide console if release build
@@ -73,7 +74,7 @@ fn main() {
         .run();
 }
 
-fn render_gui_system(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<AppEvent>) {
+fn render_gui_system(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<AppEvent>) {
     render_gui(&mut egui_ctx.ctx(), &mut *settings, &mut *state);
 
     let mut test = Vec::new();
@@ -86,11 +87,11 @@ fn render_gui_system(mut settings: ResMut<AppSettings>, mut state: ResMut<AppSta
 
 fn setup(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    _meshes: ResMut<Assets<Mesh>>,
+    _materials: ResMut<Assets<StandardMaterial>>,
     mut windows: ResMut<Windows>,
     settings: Res<AppSettings>,
-    state: Res<AppState>,
+    _state: Res<AppState>,
 ) {
     // Set primary window to maximized if preferred
     if settings.maximized {
@@ -177,7 +178,7 @@ fn load_settings(settings_path: &Path) -> AppSettings {
 }
 
 fn setup_args(
-    mut state: ResMut<AppState>,
+    _state: ResMut<AppState>,
     mut ev_update_state: EventWriter<AppFileEvent>,
 ) {
     let mut args = args().skip(1).collect::<Vec<String>>();
@@ -211,7 +212,7 @@ fn consume_app_events(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut textures: ResMut<Assets<Image>>,
-    mut world_meshes: Query<(Entity, &WorldMesh)>,
+    world_meshes: Query<(Entity, &WorldMesh)>,
 ) {
     for e in app_events.iter() {
         match e {
@@ -321,9 +322,9 @@ fn open_file(
 
                 //ev_update_state.send(AppEvent::RefreshMilo);
 
-                const name_prefs: [&str; 5] = ["venue", "top", "lod0", "lod1", "lod2"];
+                const NAME_PREFS: [&str; 5] = ["venue", "top", "lod0", "lod1", "lod2"];
 
-                let groups = state.milo
+                let _groups = state.milo
                     .as_ref()
                     .unwrap()
                     .get_entries()
@@ -331,8 +332,8 @@ fn open_file(
                     .filter(|o| o.get_type() == "Group")
                     .collect::<Vec<_>>();
 
-                let mut selected_entry = None;
-                /*for name in name_prefs {
+                let selected_entry = None;
+                /*for name in NAME_PREFS {
                     let group = groups
                         .iter()
                         .find(|g| g.get_name().starts_with(name));

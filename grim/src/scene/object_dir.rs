@@ -91,6 +91,7 @@ impl<'a> ObjectDir {
     }
 
     pub fn unpack_entries(&'a mut self, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+        #[allow(irrefutable_let_patterns)]
         if let ObjectDir::ObjectDir(obj_dir) = self {
             for entry in obj_dir.entries.iter_mut() {
                 if let Some(new_entry) = entry.unpack(info) {

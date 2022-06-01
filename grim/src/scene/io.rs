@@ -36,7 +36,7 @@ pub(crate) fn save_object<T: MiloObject>(obj: &T, writer: &mut Box<BinaryStream>
 }
 
 
-pub(crate) fn load_object_type<T: MiloObject>(obj: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+pub(crate) fn load_object_type<T: MiloObject>(obj: &mut T, reader: &mut Box<BinaryStream>, _info: &SystemInfo) -> Result<(), Box<dyn Error>> {
     // Skip revision for now
     reader.read_uint32()?;
 
