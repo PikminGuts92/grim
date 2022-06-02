@@ -1,4 +1,6 @@
-use image::codecs::dxt::{DxtEncoder, DxtVariant};
+#![allow(deprecated)]
+
+use image::codecs::dxt::{DxtEncoder, DxtVariant}; // TODO: Remove deprecated types
 use rayon::prelude::*;
 use super::*;
 
@@ -61,7 +63,7 @@ fn encode_dxt_with_lib(rgba: &[u8], dx_img: &mut [u8], width: u32, height: u32, 
     };
 
     // Encode dxt image
-    let mut encoder = DxtEncoder::new(dx_img);
+    let encoder = DxtEncoder::new(dx_img);
     encoder.encode(rgba, width, height, enc).unwrap();
 }
 

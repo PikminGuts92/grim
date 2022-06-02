@@ -1,3 +1,5 @@
+#![allow(unused_must_use)]
+
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Context, Pos2, Ui}};
 use super::{AppSettings, AppState, ArkDirNode, AppEvent};
 

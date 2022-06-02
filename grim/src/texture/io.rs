@@ -39,7 +39,7 @@ pub enum Image<'a> {
 
 impl Bitmap {
     pub fn from_image(image: Image, info: &SystemInfo) -> Bitmap {
-        if let Image::FromRGBA { rgba, width, height, mips} = image {
+        if let Image::FromRGBA { rgba, width, height, mips: _} = image {
             match info.platform {
                 Platform::X360 | Platform::PS3 => {
                     let is_360 = info.platform.eq(&Platform::X360);
