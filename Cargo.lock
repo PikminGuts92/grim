@@ -816,6 +816,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_infinite_grid"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5046800a94c1b56e17fea180ba2fc08250c51089ffa45d27f3b32a22e482ca05"
+dependencies = [
+ "bevy 0.7.0",
+]
+
+[[package]]
 name = "bevy_input"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4198,6 +4207,7 @@ dependencies = [
  "bevy-remote-devtools-plugin",
  "bevy_egui",
  "bevy_fly_camera",
+ "bevy_infinite_grid",
  "console_error_panic_hook",
  "grim",
  "itertools",
