@@ -204,3 +204,24 @@ pub fn render_gui(ctx: &mut &Context, settings: &mut AppSettings, state: &mut Ap
             });
     }
 }
+
+pub fn render_gui_info(ctx: &mut &Context, state: &mut AppState) {
+    //egui::Label::new("vert_face_count")
+
+    let vert_count = state.vert_count;
+    let face_count = state.face_count;
+
+    egui::Area::new("vert_face_count")
+        .anchor(egui::Align2::RIGHT_TOP, [-10., 10.])
+        .movable(false)
+        .show(ctx, |ui| {
+            //ui.add_space(32.);
+
+            //ui.label(format!("Vertices: {vert_count} Faces: {face_count}"));
+
+            ui.with_layout(egui::Layout::top_down(egui::Align::RIGHT), |ui| {
+                ui.label(format!("Vertices: {vert_count}"));
+                ui.label(format!("Faces: {face_count}"));
+            });
+        });
+}

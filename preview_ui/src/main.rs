@@ -35,6 +35,8 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(Component)]
 pub struct WorldMesh {
     name: String,
+    vert_count: usize,
+    face_count: usize,
 }
 
 fn main() {
@@ -66,6 +68,7 @@ fn main() {
         .add_plugin(FlyCameraPlugin)
         .add_plugin(InfiniteGridPlugin)
         .add_system(render_gui_system)
+        .add_system(detect_meshes)
         .add_system(control_camera)
         .add_system(drop_files)
         .add_system(window_resized)
@@ -78,13 +81,35 @@ fn main() {
 
 fn render_gui_system(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<AppEvent>) {
     render_gui(&mut egui_ctx.ctx(), &mut *settings, &mut *state);
-
-    let mut test = Vec::new();
-    test.push("Test");
+    render_gui_info(&mut egui_ctx.ctx(), &mut *state);
 
     state.consume_events(|ev| {
         event_writer.send(ev);
     });
+}
+
+fn detect_meshes(
+    mut state: ResMut<AppState>,
+    meshes: Res<Assets<Mesh>>,
+    mesh_entities: Query<(&Handle<Mesh>, &WorldMesh, Option<&Visibility>)>,
+    //added_meshes: Query<(&WorldMesh, &Handle<Mesh>), Added<WorldMesh>>,
+    //removed_meshes: RemovedComponents<Mesh>,
+) {
+    let mut vertex_count = 0;
+    let mut face_count = 0;
+
+    for (mesh_id, world_mesh, _visibility) in mesh_entities.iter() {
+        if let Some(_mesh) = meshes.get(mesh_id) {
+            // TODO: Check visibility
+            //vertex_count += mesh.count_vertices();
+            vertex_count += world_mesh.vert_count;
+            face_count += world_mesh.face_count;
+        }
+    }
+
+    // Update counts
+    state.vert_count = vertex_count;
+    state.face_count = face_count;
 }
 
 fn setup(

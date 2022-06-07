@@ -168,6 +168,8 @@ pub fn render_milo_entry(
                     ..Default::default()
                 }).insert(WorldMesh {
                     name: mesh.name.to_owned(),
+                    vert_count: mesh.vertices.len(),
+                    face_count: mesh.faces.len()
                 });
             });
     }
