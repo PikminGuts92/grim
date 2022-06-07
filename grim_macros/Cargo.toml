@@ -12,4 +12,4 @@ grim_traits = { path = "../grim_traits" }
 lazy_static = "1.4.0"
 proc-macro2 = "1.0.39"
 quote = "1.0.18"
-syn = { version = "1.0.95", default-features = false, features = ["derive"] }
+syn = { version = "1.0.96", default-features = false, features = ["derive"] }
