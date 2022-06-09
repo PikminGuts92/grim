@@ -11,11 +11,11 @@ pub type MiloDirId = u32;
 pub type ObjectId = u32;
 
 pub struct DirFile {
-    pub path: PathBuf,
+    pub path: PathBuf, // Absolute path?
     pub root: MiloDirId,
 }
 
-#[milo]
+/*#[milo]
 pub struct ObjectDir {
     pub entries: Vec<ObjectId>,
     pub subdirs: Vec<ObjectId>,
@@ -28,7 +28,7 @@ impl ObjectDir {
     pub fn is_proxy(&self) -> bool {
         self.proxy_file.is_some()
     }
-}
+}*/
 
 pub struct MiloDir {
     pub object: Option<ObjectId>,
@@ -53,6 +53,8 @@ pub enum LoadMiloFileError {
         path: PathBuf
     },
 }
+
+// MiloDirId -> MiloDir -> ObjectId -> Object
 
 impl MiloEnvironment {
     pub fn new() -> MiloEnvironment {
@@ -86,7 +88,36 @@ impl MiloEnvironment {
         self.object_dirs.get_mut(&id).unwrap()
     }
 
-    pub fn load_dir<T: AsRef<Path>>(&mut self, path: T, info: Option<&SystemInfo>) -> Result<(), LoadMiloFileError> {
-        Ok(())
+    pub fn load_dir<T: AsRef<Path>>(&mut self, path: T, info: Option<&SystemInfo>) -> Result<MiloDirId, LoadMiloFileError> {
+        // TODO: Check if path exists
+        let milo_path = path.as_ref();
+
+        // TODO: Check if path is already loaded
+        //let abs_path = std::fs::canonicalize(milo_path).unwrap();
+
+        /*match abs_path {
+            Ok(_) => { print!("Successfully creating abs path"); },
+            _ => { println!("Error creating abs path :("); }
+        }*/
+
+        if let Some(file_path) = milo_path.to_str() {
+            println!("Path is {}", file_path);
+        }
+
+        let mut stream: Box<dyn crate::io::Stream> = Box::new(crate::io::FileStream::from_path_as_read_open(milo_path).unwrap()); // TODO: Use ?
+        let milo = crate::io::MiloArchive::from_stream(&mut stream).unwrap(); // TODO: Use ?
+
+        let system_info = SystemInfo::guess_system_info(&milo, &milo_path);
+
+        // Create directory
+        let mut dir = DirFile {
+            path: milo_path.to_owned(),
+            root: 0,
+        };
+        self.dir_files.push(dir);
+
+
+        println!("Opened milo directory!");
+        Ok(0)
     }
 }

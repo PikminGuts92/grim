@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use grim::{Platform, SystemInfo};
 use grim::io::*;
-use grim::scene::{Object, ObjectDir, PackedObject, Tex};
+use grim::scene::{Object, ObjectDir, MiloEnvironment, PackedObject, Tex};
 use grim::texture::{write_rgba_to_file};
 
 // TODO: Use this error somewhere or refactor
@@ -74,6 +74,10 @@ impl SubApp for Milo2DirApp {
 
             println!("Opening {}", file_name);
         }
+
+        let mut milo_env = MiloEnvironment::new();
+        let dir_id = milo_env.load_dir(milo_path, None)?;
+        return Ok(());
 
         let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(milo_path)?);
         let milo = MiloArchive::from_stream(&mut stream)?;
