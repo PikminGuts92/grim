@@ -8,7 +8,7 @@ edition = "2021"
 bevy = { version = "0.7.0", default-features = false, features = [ "bevy_core_pipeline", "bevy_pbr", "bevy_render", "bevy_winit", "x11" ] }
 bevy_egui = { version = "0.14.0", features = [ "immutable_ctx" ] }
 bevy_fly_camera = { git = "https://github.com/PikminGuts92/bevy_fly_camera", branch = "bevy-0.7" }
-bevy_infinite_grid = { git = "https://github.com/ForesightMiningSoftwareCorporation/bevy_infinite_grid", rev = "673fddf" }
+bevy_infinite_grid = "0.2.0"
 bevy-remote-devtools-plugin = { version = "0.2.0", optional = true }
 console_error_panic_hook = "0.1.7"
 grim = { path = "../grim" }
