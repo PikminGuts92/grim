@@ -30,9 +30,14 @@ impl ObjectDir {
     }
 }*/
 
+pub struct NamedObject {
+    pub name: String,
+    pub id: ObjectId,
+}
+
 pub struct MiloDir {
-    pub object: Option<ObjectId>,
-    pub objects: Vec<ObjectId>,
+    pub object: Option<NamedObject>,
+    pub objects: Vec<NamedObject>,
     pub subdirs: Vec<MiloDirId>,
     pub inline_subdirs: Vec<MiloDirId>, // Should be DirFile id?
     pub proxy_file: Option<MiloDirId>,  // ^^^
