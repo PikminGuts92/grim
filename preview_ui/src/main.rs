@@ -18,7 +18,7 @@ use settings::*;
 use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{PresentMode, WindowMode, WindowResized}, winit::WinitWindows};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Context, Pos2, Ui}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
-use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridMaterial, InfiniteGridPlugin};
+use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin};
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
@@ -116,7 +116,6 @@ fn setup(
     mut commands: Commands,
     _meshes: ResMut<Assets<Mesh>>,
     _materials: ResMut<Assets<StandardMaterial>>,
-    mut grid_materials: ResMut<Assets<InfiniteGridMaterial>>,
     mut windows: ResMut<Windows>,
     settings: Res<AppSettings>,
     _state: Res<AppState>,
@@ -186,9 +185,9 @@ fn setup(
     });
 
     // Infinite grid
-    commands.spawn_bundle(InfiniteGridBundle::new(
-        grid_materials.add(InfiniteGridMaterial::default()),
-    ));
+    commands.spawn_bundle(InfiniteGridBundle {
+        ..InfiniteGridBundle::default()
+    });
 }
 
 fn load_state() -> AppState {
