@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #![allow(unused_imports)]
 
 // Hide console if release build
@@ -14,9 +15,10 @@ use events::*;
 use gui::*;
 use render::{render_milo, render_milo_entry};
 use settings::*;
-use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{PresentMode, WindowMode, WindowResized}};
+use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{PresentMode, WindowMode, WindowResized}, winit::WinitWindows};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Context, Pos2, Ui}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
+use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin};
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
@@ -33,6 +35,8 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(Component)]
 pub struct WorldMesh {
     name: String,
+    vert_count: usize,
+    face_count: usize,
 }
 
 fn main() {
@@ -54,6 +58,7 @@ fn main() {
             ..Default::default()
         })
         .add_event::<AppEvent>()
+        .add_event::<AppFileEvent>()
         //.insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(app_state)
@@ -61,38 +66,63 @@ fn main() {
         .add_plugin(GrimPlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(FlyCameraPlugin)
+        .add_plugin(InfiniteGridPlugin)
         .add_system(render_gui_system)
+        .add_system(detect_meshes)
         .add_system(control_camera)
         .add_system(drop_files)
         .add_system(window_resized)
-        .add_system(update_state)
+        .add_system(consume_file_events)
+        .add_system(consume_app_events)
         .add_startup_system(setup_args)
         .add_startup_system(setup)
         .run();
 }
 
-fn render_gui_system(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mut egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<AppEvent>) {
+fn render_gui_system(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<AppEvent>) {
     render_gui(&mut egui_ctx.ctx(), &mut *settings, &mut *state);
-
-    let mut test = Vec::new();
-    test.push("Test");
+    render_gui_info(&mut egui_ctx.ctx(), &mut *state);
 
     state.consume_events(|ev| {
         event_writer.send(ev);
     });
 }
 
+fn detect_meshes(
+    mut state: ResMut<AppState>,
+    meshes: Res<Assets<Mesh>>,
+    mesh_entities: Query<(&Handle<Mesh>, &WorldMesh, Option<&Visibility>)>,
+    //added_meshes: Query<(&WorldMesh, &Handle<Mesh>), Added<WorldMesh>>,
+    //removed_meshes: RemovedComponents<Mesh>,
+) {
+    let mut vertex_count = 0;
+    let mut face_count = 0;
+
+    for (mesh_id, world_mesh, _visibility) in mesh_entities.iter() {
+        if let Some(_mesh) = meshes.get(mesh_id) {
+            // TODO: Check visibility
+            //vertex_count += mesh.count_vertices();
+            vertex_count += world_mesh.vert_count;
+            face_count += world_mesh.face_count;
+        }
+    }
+
+    // Update counts
+    state.vert_count = vertex_count;
+    state.face_count = face_count;
+}
+
 fn setup(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    _meshes: ResMut<Assets<Mesh>>,
+    _materials: ResMut<Assets<StandardMaterial>>,
     mut windows: ResMut<Windows>,
     settings: Res<AppSettings>,
-    state: Res<AppState>,
+    _state: Res<AppState>,
 ) {
     // Set primary window to maximized if preferred
     if settings.maximized {
-        let window = windows.get_primary_mut().unwrap();
+        let window = windows.primary_mut();
         window.set_maximized(true);
     }
 
@@ -153,6 +183,11 @@ fn setup(
         sensitivity: 0.0,
         ..Default::default()
     });
+
+    // Infinite grid
+    commands.spawn_bundle(InfiniteGridBundle {
+        ..InfiniteGridBundle::default()
+    });
 }
 
 fn load_state() -> AppState {
@@ -175,92 +210,47 @@ fn load_settings(settings_path: &Path) -> AppSettings {
 }
 
 fn setup_args(
-    mut state: ResMut<AppState>,
-    mut ev_update_state: EventWriter<AppEvent>,
+    _state: ResMut<AppState>,
+    mut ev_update_state: EventWriter<AppFileEvent>,
 ) {
-    let args = args().skip(1).collect::<Vec<String>>();
+    let mut args = args().skip(1).collect::<Vec<String>>();
     if args.is_empty() {
         return;
     }
 
-    let arg0 = args[0].as_str();
-    let file_path = Path::new(arg0);
-    let ext = file_path.extension().unwrap().to_str().unwrap();
+    ev_update_state.send(AppFileEvent::Open(args.remove(0).into()));
+}
 
-    if ext.contains("hdr") {
-        // Open ark
-        println!("Opening hdr from \"{}\"", arg0);
-
-        let ark_res = Ark::from_path(file_path);
-        if let Ok(ark) = ark_res {
-            println!("Successfully opened ark with {} entries", ark.entries.len());
-
-            state.root = Some(create_ark_tree(&ark));
-            state.ark = Some(ark);
-        }
-    } else if ext.contains("milo")
-        || ext.contains("gh")
-        || ext.contains("rnd") { // TODO: Break out into static regex
-        // Open milo
-        println!("Opening milo from \"{}\"", arg0);
-
-        match open_and_unpack_milo(file_path) {
-            Ok((milo, info)) => {
-                println!("Successfully opened milo with {} entries", milo.get_entries().len());
-
-                state.milo = Some(milo);
-                state.system_info = Some(info);
-
-                //ev_update_state.send(AppEvent::RefreshMilo);
-
-                const name_prefs: [&str; 5] = ["venue", "top", "lod0", "lod1", "lod2"];
-
-                let groups = state.milo
-                    .as_ref()
-                    .unwrap()
-                    .get_entries()
-                    .iter()
-                    .filter(|o| o.get_type() == "Group")
-                    .collect::<Vec<_>>();
-
-                let mut selected_entry = None;
-                /*for name in name_prefs {
-                    let group = groups
-                        .iter()
-                        .find(|g| g.get_name().starts_with(name));
-
-                    if let Some(grp) = group {
-                        selected_entry = Some(grp.get_name().to_owned());
-                        break;
-                    }
-                }*/
-
-                ev_update_state.send(AppEvent::SelectMiloEntry(selected_entry));
-            },
-            Err(_err) => {
-                // TODO: Log error
+fn consume_file_events(
+    mut file_events: EventReader<AppFileEvent>,
+    mut app_event_writer: EventWriter<AppEvent>,
+    mut state: ResMut<AppState>,
+) {
+    for e in file_events.iter() {
+        match e {
+            AppFileEvent::Open(file_path) => {
+                //milo_event_writer.send(bevy::app::AppExit);
+                open_file(file_path, &mut state, &mut app_event_writer);
             }
         }
-    } else {
-        println!("Unknown file type \"{}\"", arg0);
     }
 }
 
-fn update_state(
+fn consume_app_events(
+    mut app_events: EventReader<AppEvent>,
+    mut bevy_event_writer: EventWriter<bevy::app::AppExit>,
+    mut state: ResMut<AppState>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut textures: ResMut<Assets<Image>>,
-    mut update_events: EventReader<AppEvent>,
-    mut event_writer: EventWriter<bevy::app::AppExit>,
-    mut world_meshes: Query<(Entity, &WorldMesh)>,
-    mut state: ResMut<AppState>,
+    world_meshes: Query<(Entity, &WorldMesh)>,
 ) {
-    for e in update_events.iter() {
+    for e in app_events.iter() {
         match e {
             AppEvent::Exit => {
-                event_writer.send(bevy::app::AppExit);
-            }
+                bevy_event_writer.send(bevy::app::AppExit);
+            },
             AppEvent::SelectMiloEntry(entry_name) => {
                 /*let render_entry = match &state.milo_view.selected_entry {
                     Some(name) => name.ne(entry_name),
@@ -310,7 +300,7 @@ fn update_state(
 
                 println!("Updated milo");
             },
-            AppEvent::RefreshMilo => {
+            /*AppEvent::RefreshMilo => {
                 return;
 
                 if let Some(milo) = &state.milo {
@@ -326,8 +316,74 @@ fn update_state(
                 }
 
                 println!("Updated milo");
+            },*/
+        }
+    }
+}
+
+fn open_file(
+    file_path: &PathBuf,
+    state: &mut ResMut<AppState>,
+    app_event_writer: &mut EventWriter<AppEvent>,
+) {
+    let ext = file_path.extension().unwrap().to_str().unwrap();
+
+    if ext.contains("hdr") {
+        // Open ark
+        println!("Opening hdr from \"{}\"", file_path.display());
+
+        let ark_res = Ark::from_path(file_path);
+        if let Ok(ark) = ark_res {
+            println!("Successfully opened ark with {} entries", ark.entries.len());
+
+            state.root = Some(create_ark_tree(&ark));
+            state.ark = Some(ark);
+        }
+    } else if ext.contains("milo")
+        || ext.contains("gh")
+        || ext.contains("rnd") { // TODO: Break out into static regex
+        // Open milo
+        println!("Opening milo from \"{}\"", file_path.display());
+
+        match open_and_unpack_milo(file_path) {
+            Ok((milo, info)) => {
+                println!("Successfully opened milo with {} entries", milo.get_entries().len());
+
+                state.milo = Some(milo);
+                state.system_info = Some(info);
+
+                //ev_update_state.send(AppEvent::RefreshMilo);
+
+                const NAME_PREFS: [&str; 5] = ["venue", "top", "lod0", "lod1", "lod2"];
+
+                let _groups = state.milo
+                    .as_ref()
+                    .unwrap()
+                    .get_entries()
+                    .iter()
+                    .filter(|o| o.get_type() == "Group")
+                    .collect::<Vec<_>>();
+
+                let selected_entry = None;
+                /*for name in NAME_PREFS {
+                    let group = groups
+                        .iter()
+                        .find(|g| g.get_name().starts_with(name));
+
+                    if let Some(grp) = group {
+                        selected_entry = Some(grp.get_name().to_owned());
+                        break;
+                    }
+                }*/
+
+                app_event_writer.send(AppEvent::SelectMiloEntry(selected_entry));
+            },
+            Err(_err) => {
+                // TODO: Log error
             }
         }
+    } else {
+        println!("Unknown file type \"{}\"", file_path.display());
     }
 }
 
@@ -390,9 +446,32 @@ fn is_camera_button_down(key_input: &Res<Input<KeyCode>>) -> bool {
 
 fn window_resized(
     mut resize_events: EventReader<WindowResized>,
+    mut windows: ResMut<Windows>,
     mut settings: ResMut<AppSettings>,
     app_state: Res<AppState>,
+    winit_windows: NonSend<WinitWindows>,
 ) {
+    let primary_window = windows.primary_mut();
+    let window = winit_windows.get_window(primary_window.id()).unwrap();
+    let maximized = window.is_maximized();
+
+    if settings.maximized != maximized {
+        if maximized {
+            println!("Window maximized");
+        } else {
+            println!("Window unmaximized");
+        }
+
+        settings.maximized = maximized;
+        app_state.save_settings(&settings);
+        return;
+    }
+
+    if maximized {
+        // Ignore resize if maximized
+        return;
+    }
+
     for e in resize_events.iter() {
         println!("Window resized: {}x{}", e.width, e.height);
 
@@ -404,12 +483,13 @@ fn window_resized(
 
 fn drop_files(
     mut drag_drop_events: EventReader<FileDragAndDrop>,
+    mut file_event_writer: EventWriter<AppFileEvent>,
 ) {
-    // Currently doesn't work on Windows
-    // https://github.com/bevyengine/bevy/issues/2096
     for d in drag_drop_events.iter() {
         if let FileDragAndDrop::DroppedFile { id: _, path_buf } = d {
-            println!("Dropped \"{}\"", path_buf.to_str().unwrap())
+            println!("Dropped \"{}\"", path_buf.to_str().unwrap());
+
+            file_event_writer.send(AppFileEvent::Open(path_buf.to_owned()));
         }
     }
 }

@@ -24,7 +24,9 @@ fn draw_node(node: &ArkDirNode, entries: &Vec<ArkOffsetEntry>, ctx: &mut &Contex
                     let ark_entry = &entries[*file_idx];
                     let file_name = get_file_name(&ark_entry.path);
 
-                    ui.selectable_label(false, file_name);
+                    #[allow(unused_must_use)] {
+                        ui.selectable_label(false, file_name);
+                    }
                     ui.end_row();
 
                     //ui.small_button(file_name);

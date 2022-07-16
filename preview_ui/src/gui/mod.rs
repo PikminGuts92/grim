@@ -15,7 +15,7 @@ pub fn render_gui(ctx: &mut &Context, settings: &mut AppSettings, state: &mut Ap
     //ctx.set_visuals(egui::Visuals::light());
 
     // Side panel
-    egui::SidePanel::left("side_panel").min_width(400.0).resizable(true).show(ctx, |ui| {
+    egui::SidePanel::left("side_panel").min_width(200.0).default_width(300.0).resizable(true).show(ctx, |ui| {
         egui::ScrollArea::vertical().show_viewport(ui, |ui, _viewport| {
             //ui.horizontal(|ui| {
                     //ui.set_min_width(300.0);
@@ -203,4 +203,25 @@ pub fn render_gui(ctx: &mut &Context, settings: &mut AppSettings, state: &mut Ap
                 });*/
             });
     }
+}
+
+pub fn render_gui_info(ctx: &mut &Context, state: &mut AppState) {
+    //egui::Label::new("vert_face_count")
+
+    let vert_count = state.vert_count;
+    let face_count = state.face_count;
+
+    egui::Area::new("vert_face_count")
+        .anchor(egui::Align2::RIGHT_TOP, [-10., 10.])
+        .movable(false)
+        .show(ctx, |ui| {
+            //ui.add_space(32.);
+
+            //ui.label(format!("Vertices: {vert_count} Faces: {face_count}"));
+
+            ui.with_layout(egui::Layout::top_down(egui::Align::RIGHT), |ui| {
+                ui.label(format!("Vertices: {vert_count}"));
+                ui.label(format!("Faces: {face_count}"));
+            });
+        });
 }

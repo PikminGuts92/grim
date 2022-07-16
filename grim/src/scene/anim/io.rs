@@ -20,7 +20,7 @@ impl ObjectReadWrite for AnimObject {
         Ok(())
     }
 
-    fn save(&self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+    fn save(&self, _stream: &mut dyn Stream, _info: &SystemInfo) -> Result<(), Box<dyn Error>> {
         todo!()
     }
 }

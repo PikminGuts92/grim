@@ -3,7 +3,7 @@ use grim::ark::{Ark, ArkOffsetEntry};
 use itertools::*;
 use super::{AppSettings, AppState, ArkDirNode, AppEvent};
 
-pub fn draw_milo_tree(state: &mut AppState, ctx: &mut &Context, ui: &mut Ui) {
+pub fn draw_milo_tree(state: &mut AppState, _ctx: &mut &Context, ui: &mut Ui) {
     if let Some(milo) = state.milo.take() {
         let mut entries = milo.get_entries().iter().map(|e| e).collect::<Vec<_>>();
 

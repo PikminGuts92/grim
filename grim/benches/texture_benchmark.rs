@@ -1,5 +1,5 @@
 use grim::texture::{Bitmap, decode_dx_image, decode_from_bitmap, DXGI_Encoding};
-use criterion::{BenchmarkId, black_box, Criterion, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 
 fn benchmark_texture(c: &mut Criterion) {
     let widths = [32, 64, 128, 256, 512, 1024, 2048];

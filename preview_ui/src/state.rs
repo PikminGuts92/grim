@@ -25,6 +25,8 @@ pub struct AppState {
     pub pending_events: Vec<AppEvent>,
     pub side_bar_tab_index: usize,
     pub milo_view: MiloView,
+    pub vert_count: usize,
+    pub face_count: usize,
 }
 
 impl AppState {
