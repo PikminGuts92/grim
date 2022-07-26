@@ -10,6 +10,6 @@ proc-macro = true
 [dependencies]
 grim_traits = { path = "../grim_traits" }
 lazy_static = "1.4.0"
-proc-macro2 = "1.0.40"
+proc-macro2 = "1.0.42"
 quote = "1.0.20"
 syn = { version = "1.0.98", default-features = false, features = ["derive"] }
