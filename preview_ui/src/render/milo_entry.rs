@@ -1,5 +1,6 @@
 use bevy::prelude::*;
-use bevy::render::render_resource::{AddressMode, Extent3d, TextureDimension, TextureFormat};
+use bevy::render::render_resource::{AddressMode, Extent3d, SamplerDescriptor, TextureDimension, TextureFormat};
+use bevy::render::texture::ImageSampler;
 
 use itertools::*;
 
@@ -60,10 +61,14 @@ pub fn render_milo_entry(
     // Scale down
     let scale_mat = Mat4::from_scale(Vec3::new(0.1, 0.1, 0.1));
 
+    let trans = Transform::from_matrix(trans_mat * scale_mat);
+    let global_trans = GlobalTransform::from(trans);
+
     // Root transform
     let root_entity = commands.spawn()
-        .insert(Transform::from_matrix(trans_mat * scale_mat))
-        .insert(GlobalTransform::from_matrix(trans_mat * scale_mat))
+        .insert(trans)
+        .insert(global_trans)
+        .insert_bundle(VisibilityBundle::default())
         .id();
 
     for mesh in meshes {
@@ -409,8 +414,11 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
     );
 
     // Update texture wrap mode
-    texture.sampler_descriptor.address_mode_u = AddressMode::Repeat;
-    texture.sampler_descriptor.address_mode_v = AddressMode::Repeat;
+    texture.sampler_descriptor = ImageSampler::Descriptor(SamplerDescriptor {
+        address_mode_u: AddressMode::Repeat,
+        address_mode_v: AddressMode::Repeat,
+        ..SamplerDescriptor::default()
+    });
 
     texture
 }
