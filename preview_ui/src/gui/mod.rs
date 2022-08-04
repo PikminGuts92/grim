@@ -213,6 +213,7 @@ pub fn render_gui_info(ctx: &mut &Context, state: &mut AppState) {
 
     egui::Area::new("vert_face_count")
         .anchor(egui::Align2::RIGHT_TOP, [-10., 10.])
+        .interactable(false)
         .movable(false)
         .show(ctx, |ui| {
             //ui.add_space(32.);
