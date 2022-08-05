@@ -11,15 +11,17 @@ impl PluginGroup for MinimalPlugins {
         group
             .add(bevy::log::LogPlugin::default())
             .add(bevy::core::CorePlugin::default())
+            .add(bevy::time::TimePlugin::default())
             .add(bevy::transform::TransformPlugin::default())
+            .add(bevy::hierarchy::HierarchyPlugin::default())
             .add(bevy::diagnostic::DiagnosticsPlugin::default())
             .add(bevy::input::InputPlugin::default())
-            .add(bevy::window::WindowPlugin::default())
-            .add(bevy::asset::AssetPlugin::default())
-            .add(bevy::scene::ScenePlugin::default());
+            .add(bevy::window::WindowPlugin::default());
 
         // Optional features being used
         group
+            .add(bevy::asset::AssetPlugin::default())
+            .add(bevy::scene::ScenePlugin::default())
             .add(bevy::winit::WinitPlugin::default())
             .add(bevy::render::RenderPlugin::default())
             .add(bevy::core_pipeline::CorePipelinePlugin::default())

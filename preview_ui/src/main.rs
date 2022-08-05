@@ -18,7 +18,7 @@ use settings::*;
 use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{PresentMode, WindowMode, WindowResized}, winit::WinitWindows};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Context, Pos2, Ui}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
-use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin};
+//use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin};
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
@@ -66,7 +66,7 @@ fn main() {
         .add_plugin(GrimPlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(FlyCameraPlugin)
-        .add_plugin(InfiniteGridPlugin)
+        //.add_plugin(InfiniteGridPlugin)
         .add_system(render_gui_system)
         .add_system(detect_meshes)
         .add_system(control_camera)
@@ -98,9 +98,16 @@ fn detect_meshes(
     let mut vertex_count = 0;
     let mut face_count = 0;
 
-    for (mesh_id, world_mesh, _visibility) in mesh_entities.iter() {
+    for (mesh_id, world_mesh, visibility) in mesh_entities.iter() {
         if let Some(_mesh) = meshes.get(mesh_id) {
-            // TODO: Check visibility
+            let is_visible = visibility
+                .map_or(false, |v| v.is_visible);
+
+            // Ignore invisible meshes
+            if !is_visible {
+                continue;
+            }
+
             //vertex_count += mesh.count_vertices();
             vertex_count += world_mesh.vert_count;
             face_count += world_mesh.face_count;
@@ -174,7 +181,7 @@ fn setup(
         ..Default::default()
     });*/
     // camera
-    let mut camera = PerspectiveCameraBundle::new_3d();
+    let mut camera = Camera3dBundle::default();
     camera.transform = Transform::from_xyz(-2.0, 2.5, 5.0)
         .looking_at(Vec3::ZERO, Vec3::Y);
 
@@ -185,9 +192,9 @@ fn setup(
     });
 
     // Infinite grid
-    commands.spawn_bundle(InfiniteGridBundle {
+    /*commands.spawn_bundle(InfiniteGridBundle {
         ..InfiniteGridBundle::default()
-    });
+    });*/
 }
 
 fn load_state() -> AppState {
