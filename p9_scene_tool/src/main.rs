@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 
 mod apps;
+mod models;
 use apps::P9SceneTool;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

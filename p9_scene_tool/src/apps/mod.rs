@@ -2,7 +2,9 @@ use clap::{Parser, Subcommand};
 use std::error::Error;
 
 mod milo2midi;
-pub use self::milo2midi::*;
+mod newproject;
+use self::milo2midi::*;
+use self::newproject::*;
 
 // From Cargo.toml
 const PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
@@ -22,7 +24,9 @@ struct Options {
 #[derive(Subcommand, Debug)]
 enum SubCommand {
     #[clap(name = "milo2midi", about = "Creates MIDI from milo scene")]
-    Milo2Midi(Milo2MidiApp)
+    Milo2Midi(Milo2MidiApp),
+    #[clap(name = "newproj", about = "Create new song project from scratch")]
+    NewProject(NewProjectApp)
 }
 
 #[derive(Debug)]
@@ -40,6 +44,7 @@ impl P9SceneTool {
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         match &mut self.options.commands {
             SubCommand::Milo2Midi(app) => app.process(),
+            SubCommand::NewProject(app) => app.process(),
         }
     }
 }
