@@ -22,7 +22,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-check-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-check-stable-${{ hashFiles('**/Cargo.toml') }}
       - name: Remove cargo and toolchain configurations
         shell: bash
         run: |
@@ -61,7 +61,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-test-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-test-stable-${{ hashFiles('**/Cargo.toml') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -96,7 +96,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-clippy-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-clippy-stable-${{ hashFiles('**/Cargo.toml') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -145,7 +145,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-build-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-build-stable-${{ hashFiles('**/Cargo.toml') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
