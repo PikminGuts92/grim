@@ -63,6 +63,7 @@ impl SubApp for NewProjectApp {
 fn create_p9_song(name: &str) -> P9Song {
     P9Song {
         name: name.to_owned(),
+        game: P9Game::TBRB,
         preferences: SongPreferences {
             venue: String::from("dreamscape"),
             mini_venues: vec![
@@ -93,18 +94,7 @@ fn create_p9_song(name: &str) -> P9Song {
             dreamscape_camera: String::from("kP9DreamSlow"),
             lyric_part: String::from("PART HARM1")
         },
-        lyric_configurations: vec![
-            LyricConfig {
-                name: String::from("config_1"),
-                lyrics: vec![
-                    LyricEvent {
-                        position: [0., 0., 0.],
-                        rotation: [0., 0., 0., 0.],
-                        scale: [1., 1., 1.]
-                    }
-                ]
-            }
-        ]
+        ..P9Song::default()
     }
 }
 
