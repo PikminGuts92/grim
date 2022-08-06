@@ -4,12 +4,22 @@ mod reader;
 pub use self::io::*;
 pub use self::reader::*;
 
-#[derive(Default)]
 pub struct MidiFile {
     pub format: u16,
     pub ticks_per_quarter: u16,
     pub tracks: Vec<MidiTrack>,
     pub tempo: Vec<MidiTempo>,
+}
+
+impl Default for MidiFile {
+    fn default() -> Self {
+        Self {
+            format: 1,
+            ticks_per_quarter: 480,
+            tracks: Vec::new(),
+            tempo: Vec::new()
+        }
+    }
 }
 
 pub struct MidiTempo {
