@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize, Serializer, ser::SerializeSeq};
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(default)]

@@ -26,8 +26,12 @@ impl SubApp for NewProjectApp {
         //let song_meta_path = ouput_dir.join("song.json");
 
         let song = create_p9_song(&self.name);
-        let song_json = serde_json::to_string_pretty(&song)?;
+        //let song_json = serde_json::to_string_pretty(&song)?;
+        let song_json = crate::formatter::to_string(&song)?;
+
         let song_json_path = ouput_dir.join("song.json");
+
+        //serde_json::ser::PrettyFormatter::new()
 
         write(song_json_path, song_json).unwrap();
         println!("Wrote \"song.json\"");
@@ -72,6 +76,17 @@ fn create_p9_song(name: &str) -> P9Song {
             dreamscape_camera: String::from("kP9DreamSlow"),
             lyric_part: String::from("PART HARM1")
         },
-        lyric_configurations: Vec::new()
+        lyric_configurations: vec![
+            LyricConfig {
+                name: String::from("config_1"),
+                lyrics: vec![
+                    LyricEvent {
+                        position: [0., 0., 0.],
+                        rotation: [0., 0., 0., 0.],
+                        scale: [1., 1., 1.]
+                    }
+                ]
+            }
+        ]
     }
 }

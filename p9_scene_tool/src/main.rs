@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 
 mod apps;
+mod formatter;
 mod models;
 use apps::P9SceneTool;
 
