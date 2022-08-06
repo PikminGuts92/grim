@@ -1,6 +1,7 @@
 use crate::apps::{SubApp};
 use crate::models::*;
 use clap::Parser;
+use grim::midi::{MidiFile, MidiTrack};
 use serde::Serialize;
 use std::error::Error;
 use std::fs::{copy, create_dir_all, read, remove_dir_all, write};
@@ -23,20 +24,36 @@ impl SubApp for NewProjectApp {
             create_dir_all(&ouput_dir).unwrap();
         }
 
-        //let song_meta_path = ouput_dir.join("song.json");
+        // Create extra folder
+        let extra_dir = ouput_dir.join("extra");
+        if !extra_dir.exists() {
+            create_dir_all(&extra_dir).unwrap();
+            //write(extra_dir.join("EXTRA_MILO_RELATED_FILES_HERE"), "").unwrap();
+            println!("Created extras directory");
+        }
 
+        // Create lipsync folder
+        let lipsync_dir = ouput_dir.join("lipsync");
+        if !lipsync_dir.exists() {
+            create_dir_all(&lipsync_dir).unwrap();
+            //write(lipsync_dir.join("LIPSYNC_HERE"), "").unwrap();
+            println!("Created lipsync directory");
+        }
+
+        // Write midi file
+        let midi_path = ouput_dir.join("venue.mid");
+        create_default_mid(&midi_path)?;
+
+        // Write json file
         let song = create_p9_song(&self.name);
         //let song_json = serde_json::to_string_pretty(&song)?;
         let song_json = crate::formatter::to_string(&song)?;
-
         let song_json_path = ouput_dir.join("song.json");
-
-        //serde_json::ser::PrettyFormatter::new()
 
         write(song_json_path, song_json).unwrap();
         println!("Wrote \"song.json\"");
 
-        let output_dir_str = ouput_dir.as_path().to_str().unwrap(); // Ugh why so hacky?
+        let output_dir_str = ouput_dir.as_path().to_str().unwrap_or("???"); // Ugh why so hacky?
 
         println!("Successfully created project in \"{output_dir_str}\"");
         Ok(())
@@ -89,4 +106,32 @@ fn create_p9_song(name: &str) -> P9Song {
             }
         ]
     }
+}
+
+fn create_default_mid(mid_path: &Path) -> Result<(), std::io::Error> {
+    const DEFAULT_TRACK_NAMES: [&str; 5] = [
+        "PAUL",
+        "JOHN",
+        "GEORGE",
+        "RINGO",
+        "VENUE"
+    ];
+
+    let mut midi = MidiFile::default();
+
+    // Create basic tempo track
+    // Nothing to do?
+
+    // Add other tracks
+    for track_name in DEFAULT_TRACK_NAMES {
+        midi.tracks.push(MidiTrack {
+            name: Some(track_name.to_owned()),
+            notes: Vec::new(),
+            texts: Vec::new()
+        });
+    }
+
+    midi.write_to_file(mid_path);
+    println!("Wrote \"venue.mid\"");
+    Ok(())
 }
