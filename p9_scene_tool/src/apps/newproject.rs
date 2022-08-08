@@ -13,7 +13,9 @@ pub struct NewProjectApp {
     #[clap(help = "Path to output project directory", required = true)]
     pub dir_path: String,
     #[clap(short, long, help = "Shortname of song (ex. \"temporarysec\")", required = true)]
-    pub name: String
+    pub name: String,
+    #[clap(short, long, help = "Use GDRB format", required = false)]
+    pub gdrb: bool
 }
 
 impl SubApp for NewProjectApp {
@@ -42,10 +44,10 @@ impl SubApp for NewProjectApp {
 
         // Write midi file
         let midi_path = ouput_dir.join("venue.mid");
-        create_default_mid(&midi_path)?;
+        create_default_mid(&midi_path, self.gdrb)?;
 
         // Write json file
-        let song = create_p9_song(&self.name);
+        let song = create_p9_song(&self.name, self.gdrb);
         //let song_json = serde_json::to_string_pretty(&song)?;
         let song_json = crate::formatter::to_string(&song)?;
         let song_json_path = ouput_dir.join("song.json");
@@ -54,17 +56,39 @@ impl SubApp for NewProjectApp {
         println!("Wrote \"song.json\"");
 
         let output_dir_str = ouput_dir.as_path().to_str().unwrap_or("???"); // Ugh why so hacky?
+        let game_format = if self.gdrb { "GDRB" } else { "TBRB" };
 
-        println!("Successfully created project in \"{output_dir_str}\"");
+        println!("Successfully created project for {game_format} in \"{output_dir_str}\"");
         Ok(())
     }
 }
 
-fn create_p9_song(name: &str) -> P9Song {
-    P9Song {
-        name: name.to_owned(),
-        game: P9Game::TBRB,
-        preferences: SongPreferences {
+fn create_p9_song(name: &str, gdrb: bool) -> P9Song {
+    let preferences = if gdrb {
+        SongPreferences::GDRB(GDRBSongPreferences {
+            venue: String::from("dookie"),
+            mike_instruments: vec![
+                String::from("bass_g3")
+            ],
+            billie_instruments: vec![
+                String::from("guitar_blue01")
+            ],
+            tre_instruments: vec![
+                String::from("drum_dw")
+            ],
+            tempo: String::from("medium"),
+            song_clips: String::from("none"),
+            normal_outfit: String::from("dookie"),
+            bonus_outfit: String::from("dookie"),
+            drum_set: String::from("drum_dw"),
+            era: String::from("early"),
+            cam_directory: String::from(""),
+            media_directory: String::from(""),
+            song_intro_cam: String::from(""),
+            win_cam: String::from(""),
+        })
+    } else {
+        SongPreferences::TBRB(TBRBSongPreferences {
             venue: String::from("dreamscape"),
             mini_venues: vec![
                 String::from("abbeyroad01default")
@@ -93,17 +117,29 @@ fn create_p9_song(name: &str) -> P9Song {
             mixer: String::from("none"),
             dreamscape_camera: String::from("kP9DreamSlow"),
             lyric_part: String::from("PART HARM1")
-        },
+        })
+    };
+
+    P9Song {
+        name: name.to_owned(),
+        preferences,
         ..P9Song::default()
     }
 }
 
-fn create_default_mid(mid_path: &Path) -> Result<(), std::io::Error> {
-    const DEFAULT_TRACK_NAMES: [&str; 5] = [
+fn create_default_mid(mid_path: &Path, gdrb: bool) -> Result<(), std::io::Error> {
+    const TBRB_TRACK_NAMES: [&str; 5] = [
         "PAUL",
         "JOHN",
         "GEORGE",
         "RINGO",
+        "VENUE"
+    ];
+
+    const GDRB_TRACK_NAMES: [&str; 4] = [
+        "BILLIE",
+        "MIKE",
+        "TRE",
         "VENUE"
     ];
 
@@ -113,9 +149,10 @@ fn create_default_mid(mid_path: &Path) -> Result<(), std::io::Error> {
     // Nothing to do?
 
     // Add other tracks
-    for track_name in DEFAULT_TRACK_NAMES {
+    let track_names = if gdrb { GDRB_TRACK_NAMES.as_slice() } else { TBRB_TRACK_NAMES.as_slice() };
+    for track_name in track_names {
         midi.tracks.push(MidiTrack {
-            name: Some(track_name.to_owned()),
+            name: Some(track_name.to_string()),
             notes: Vec::new(),
             texts: Vec::new()
         });
