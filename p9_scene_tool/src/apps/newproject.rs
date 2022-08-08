@@ -2,7 +2,6 @@ use crate::apps::{SubApp};
 use crate::models::*;
 use clap::Parser;
 use grim::midi::{MidiFile, MidiTrack};
-use serde::Serialize;
 use std::error::Error;
 use std::fs::{copy, create_dir_all, read, remove_dir_all, write};
 use std::path::{Path, PathBuf};
@@ -10,8 +9,8 @@ use thiserror::Error;
 
 #[derive(Parser, Debug)]
 pub struct NewProjectApp {
-    #[clap(help = "Path to output project directory", required = true)]
-    pub dir_path: String,
+    #[clap(name = "dir_path", help = "Path to output project directory", required = true)]
+    pub output_path: String,
     #[clap(short, long, help = "Shortname of song (ex. \"temporarysec\")", required = true)]
     pub name: String,
     #[clap(short, long, help = "Use GDRB format", required = false)]
@@ -20,7 +19,7 @@ pub struct NewProjectApp {
 
 impl SubApp for NewProjectApp {
     fn process(&mut self) -> Result<(), Box<dyn Error>> {
-        let ouput_dir = PathBuf::from(&self.dir_path);
+        let ouput_dir = PathBuf::from(&self.output_path);
         if !ouput_dir.exists() {
             // Create dir
             create_dir_all(&ouput_dir).unwrap();

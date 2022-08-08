@@ -6,13 +6,14 @@ pub use gdrb::*;
 pub use tbrb::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct P9Song {
     pub name: String,
     pub preferences: SongPreferences,
     pub lyric_configurations: Option<Vec<LyricConfig>>,
 }
 
+#[derive(Debug)]
 pub enum SongPreferences {
     TBRB(TBRBSongPreferences),
     GDRB(GDRBSongPreferences)
@@ -24,14 +25,14 @@ impl Default for SongPreferences {
     }
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LyricConfig {
     #[serde(alias = "Name")] pub name: String,
     #[serde(alias = "Lyrics")] pub lyrics: Vec<LyricEvent>,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LyricEvent {
     #[serde(alias = "Pos", rename = "pos")] pub position: [f32; 3],
