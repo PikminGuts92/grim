@@ -2980,6 +2980,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9_scene_tool"
+version = "0.1.0"
+dependencies = [
+ "clap 3.2.16",
+ "grim",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "parking"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
