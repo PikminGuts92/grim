@@ -195,6 +195,7 @@ fn setup(
     commands.spawn_bundle(InfiniteGridBundle {
         grid: InfiniteGrid {
             fadeout_distance: 300.,
+            shadow_color: None, // No shadow
             ..InfiniteGrid::default()
         },
         ..InfiniteGridBundle::default()
