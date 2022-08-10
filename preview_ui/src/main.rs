@@ -18,7 +18,7 @@ use settings::*;
 use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{PresentMode, WindowMode, WindowResized}, winit::WinitWindows};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Context, Pos2, Ui}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
-use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGrid, InfiniteGridPlugin};
+use bevy_infinite_grid::{GridShadowCamera, InfiniteGridBundle, InfiniteGrid, InfiniteGridPlugin};
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
@@ -189,7 +189,7 @@ fn setup(
         enabled: false,
         sensitivity: 0.0,
         ..Default::default()
-    });
+    }).insert(GridShadowCamera); // Fix camera
 
     // Infinite grid
     commands.spawn_bundle(InfiniteGridBundle {
