@@ -2984,7 +2984,7 @@ dependencies = [
 name = "p9_scene_tool"
 version = "0.1.0"
 dependencies = [
- "clap 3.2.16",
+ "clap 3.2.17",
  "grim",
  "serde",
  "serde_json",
