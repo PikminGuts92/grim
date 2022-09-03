@@ -1,4 +1,4 @@
-use midly::{Format as MidiFormat, Header as MidiHeader, Smf, Timing as MidiTiming, Track, TrackEvent, TrackEventKind};
+use midly::{Format as MidiFormat, Header as MidiHeader, MetaMessage, MidiMessage, Smf, Timing as MidiTiming, Track, TrackEvent, TrackEventKind};
 use std::fs;
 use std::path::Path;
 use super::*;
@@ -24,6 +24,119 @@ impl MidiFile {
             MidiTiming::Metrical(time) => time.as_int(),
             MidiTiming::Timecode(_, _) => panic!("\"Timecode\" not supported for reading in midi file"),
         };
+
+        // TODO: Parse tempo track individually. Maybe use accumulator too.
+        for track in smf.tracks.iter().skip(1) {
+            let mut abs_pos = 0;
+            let mut mid_track_events = Vec::new();
+            let mut track_name = None;
+
+            // TODO: Parse track name event
+            for ev in track.iter() {
+                abs_pos += ev.delta.as_int() as u64;
+
+                let mut pending_notes: [Option<MidiNote>; 0x80] = [(); 0x80].map(|_| None);
+
+                match &ev.kind {
+                    TrackEventKind::Meta(meta) => match meta {
+                        MetaMessage::TrackName(raw_track_name) => {
+                            // Parse track name and assign
+                            if let Ok(name) = String::from_utf8(raw_track_name.to_vec()) {
+                                track_name = Some(name);
+                            }
+                        },
+                        MetaMessage::Lyric(lyric) => {
+                            mid_track_events.push(MidiEvent::Meta(MidiText {
+                                pos: abs_pos,
+                                pos_realtime: None,
+                                text: MidiTextType::Lyric(lyric.to_vec().into_boxed_slice())
+                            }));
+                        },
+                        MetaMessage::Text(text) => {
+                            mid_track_events.push(MidiEvent::Meta(MidiText {
+                                pos: abs_pos,
+                                pos_realtime: None,
+                                text: MidiTextType::Event(text.to_vec().into_boxed_slice())
+                            }));
+                        },
+                        _ => {}
+                    },
+                    TrackEventKind::Midi { channel, message: MidiMessage::NoteOn { key, vel } } => {
+                        let index = key.as_int() as usize;
+
+                        // If note exists, ignore
+                        if let Some(mut note) = pending_notes[index].take() {
+                            if vel.as_int() == 0 {
+                                // Treat as off note
+                                let length = abs_pos - note.pos;
+                                if length == 0 {
+                                    continue;
+                                }
+
+                                // Edit length and add note
+                                note.length = length;
+                                mid_track_events.push(MidiEvent::Note(note));
+                            } else {
+                                // Restore
+                                pending_notes[index] = Some(note);
+                            }
+                            continue;
+                        }
+
+                        // Otherwise add note
+                        pending_notes[index] = Some(MidiNote {
+                            pos: abs_pos,
+                            length: 0,
+                            pitch: key.as_int(),
+                            channel: channel.as_int(),
+                            velocity: vel.as_int() as u8,
+                            ..Default::default()
+                        });
+                    },
+                    TrackEventKind::Midi { channel: _, message: MidiMessage::NoteOff { key, vel: _ } } => {
+                        let index = key.as_int() as usize;
+
+                        if let Some(mut note) = pending_notes[index].take() {
+                            let length = abs_pos - note.pos;
+                            if length == 0 {
+                                continue;
+                            }
+
+                            // Edit length and add note
+                            note.length = length;
+                            mid_track_events.push(MidiEvent::Note(note));
+                        }
+                    },
+                    TrackEventKind::SysEx(sysex) => {
+                        mid_track_events.push(MidiEvent::SysEx(MidiSysex {
+                            pos: abs_pos,
+                            pos_realtime: None,
+                            data: sysex.to_vec().into_boxed_slice()
+                        }));
+                    },
+                    _ => {}
+                }
+
+                // Add remaining notes
+                for mut note in pending_notes {
+                    if let Some(mut note) = note.take() {
+                        let length = abs_pos - note.pos;
+                        if length == 0 {
+                            continue;
+                        }
+
+                        // Edit length and add note
+                        note.length = length;
+                        mid_track_events.push(MidiEvent::Note(note));
+                    }
+                }
+            }
+
+            mid.tracks.push(MidiTrack {
+                name: track_name,
+                events: mid_track_events
+            });
+        }
 
         Some(mid)
     }
