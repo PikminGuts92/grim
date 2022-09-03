@@ -24,7 +24,7 @@ impl Default for MidiFile {
 
 pub struct MidiTempo {
     pub pos: u64,
-    pub pos_realtime: f64, // Milliseconds
+    pub pos_realtime: Option<f64>, // Milliseconds
     pub mpq: u32,
     pub bpm: f64,
 }
