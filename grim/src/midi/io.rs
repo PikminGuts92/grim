@@ -37,8 +37,7 @@ impl MidiFile {
                         mid.tempo.push(MidiTempo {
                             pos: abs_pos,
                             pos_realtime: None,
-                            mpq: tempo.as_int(),
-                            bpm: 0., // TODO: Calculate bpm
+                            mpq: tempo.as_int()
                         });
                     },
                     TrackEventKind::Meta(MetaMessage::TimeSignature(num, dem, clocks_per_click, notes_per_quarter_32)) => {
@@ -161,6 +160,9 @@ impl MidiFile {
                 events: mid_track_events
             });
         }
+
+        // Update realtime offsets
+        mid.calculate_realtime_pos();
 
         Some(mid)
     }
