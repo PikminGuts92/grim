@@ -7,7 +7,7 @@ struct PendingMidiNote {
     velocity: u8
 }
 
-pub(crate) struct MidiReader {
+/*pub(crate) struct MidiReader {
     info: Option<MidiInfo>,
     current_track_index: i32,
     current_pos: u64,
@@ -15,4 +15,4 @@ pub(crate) struct MidiReader {
     current_track: Option<MidiTrack>,
     tracks: Vec<MidiTrack>,
     tempo_track: Vec<MidiTempo>,
-}
+}*/
