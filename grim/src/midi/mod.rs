@@ -225,8 +225,8 @@ impl<'a> TempoNavigator<'a> {
         }
 
         // Stop when next tempo pos is greater than input pos or end reached
-        while current_tempo.pos != pos && let Some(next_tempo) = self.get_next_tempo() {
-            if next_tempo.pos > pos {
+        while let Some(next_tempo) = self.get_next_tempo() {
+            if current_tempo.pos == pos || next_tempo.pos > pos {
                 break;
             }
 
