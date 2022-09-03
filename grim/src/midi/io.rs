@@ -40,9 +40,9 @@ impl MidiFile {
                             mpq: tempo.as_int()
                         });
                     },
-                    TrackEventKind::Meta(MetaMessage::TimeSignature(num, dem, clocks_per_click, notes_per_quarter_32)) => {
+                    /*TrackEventKind::Meta(MetaMessage::TimeSignature(num, dem, clocks_per_click, notes_per_quarter_32)) => {
                         // TODO: Save time sig changes
-                    },
+                    },*/
                     _ => continue
                 }
             }

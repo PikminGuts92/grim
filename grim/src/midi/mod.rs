@@ -74,16 +74,16 @@ impl MidiEvent {
     pub fn get_length(&self) -> u64 {
         match self {
             MidiEvent::Note(note) => note.length,
-            MidiEvent::Meta(meta) => 0,
-            MidiEvent::SysEx(sys) => 0
+            MidiEvent::Meta(_) => 0,
+            MidiEvent::SysEx(_) => 0
         }
     }
 
     pub fn get_length_realtime(&self) -> Option<f64> {
         match self {
             MidiEvent::Note(note) => note.length_realtime,
-            MidiEvent::Meta(meta) => None,
-            MidiEvent::SysEx(sys) => None
+            MidiEvent::Meta(_) => None,
+            MidiEvent::SysEx(_) => None
         }
     }
 }
@@ -280,16 +280,6 @@ impl<'a> TempoNavigator<'a> {
         tempo_pos_realtime + delta_realtime
     }
 }
-
-/*struct DoubleLinkedNode<T> {
-    pub prev: Option<Box<DoubleLinkedNode<T>>>,
-    pub next: Option<Box<DoubleLinkedNode<T>>>,
-    pub data: Rc<T>,
-}
-
-impl DoubleLinkedNode<T> {
-    
-}*/
 
 #[cfg(test)]
 mod tests {
