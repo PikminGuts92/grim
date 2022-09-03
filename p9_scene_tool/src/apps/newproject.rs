@@ -152,8 +152,7 @@ fn create_default_mid(mid_path: &Path, gdrb: bool) -> Result<(), std::io::Error>
     for track_name in track_names {
         midi.tracks.push(MidiTrack {
             name: Some(track_name.to_string()),
-            notes: Vec::new(),
-            texts: Vec::new()
+            events: Vec::new()
         });
     }
 
