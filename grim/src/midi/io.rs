@@ -25,6 +25,30 @@ impl MidiFile {
             MidiTiming::Timecode(_, _) => panic!("\"Timecode\" not supported for reading in midi file"),
         };
 
+        // Parse tempo track
+        if let Some(tempo_track) = smf.tracks.get(0) {
+            let mut abs_pos = 0;
+
+            for ev in tempo_track.iter() {
+                abs_pos += ev.delta.as_int() as u64;
+
+                match ev.kind {
+                    TrackEventKind::Meta(MetaMessage::Tempo(tempo)) => {
+                        mid.tempo.push(MidiTempo {
+                            pos: abs_pos,
+                            pos_realtime: None,
+                            mpq: tempo.as_int(),
+                            bpm: 0., // TODO: Calculate bpm
+                        });
+                    },
+                    TrackEventKind::Meta(MetaMessage::TimeSignature(num, dem, clocks_per_click, notes_per_quarter_32)) => {
+                        // TODO: Save time sig changes
+                    },
+                    _ => continue
+                }
+            }
+        }
+
         // TODO: Parse tempo track individually. Maybe use accumulator too.
         for track in smf.tracks.iter().skip(1) {
             let mut abs_pos = 0;
