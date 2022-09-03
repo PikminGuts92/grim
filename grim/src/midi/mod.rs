@@ -323,6 +323,7 @@ mod tests {
     #[rstest]
     #[case([], [(2, 1)], [(1000., 500.)])]
     #[case([(4, 200.)], [(2, 4)], [(1000., 1600.)])] // Note overlaps tempo change
+    #[case([(4, 200.)], [(0, 8), (2, 4), (2,1)], [(0., 3200.), (1000., 1600.), (1000., 500.)])]
     fn calc_realtime_note_positions<const N: usize, const M: usize>(#[case] input_tempo: [(u64, f64); N], #[case] input_notes: [(u64, u64); M], #[case] expected: [(f64, f64); M]) {
         let mut mid = MidiFile {
             ticks_per_quarter: TICKS_PER_QUARTER,
