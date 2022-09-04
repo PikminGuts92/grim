@@ -1,7 +1,11 @@
 use midly::{Format as MidiFormat, Header as MidiHeader, MetaMessage, MidiMessage, Smf, Timing as MidiTiming, Track, TrackEvent, TrackEventKind};
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
 use std::fs;
 use std::path::Path;
 use super::*;
+
+const MAX_DELTA: u64 = 1 << 27;
 
 impl MidiFile {
     pub fn from_path<T: AsRef<Path>>(path: T) -> Option<MidiFile> {
@@ -167,6 +171,158 @@ impl MidiFile {
         Some(mid)
     }
 
+    fn generate_tempo_track<'a>(&'a self) -> Vec<TrackEvent<'a>> {
+        let mut tempo_track = vec![
+            TrackEvent {
+                delta: 0.into(),
+                kind: TrackEventKind::Meta(midly::MetaMessage::TrackName(b"tempo"))
+            }
+        ];
+
+        // Add change events
+        let mut current_pos: u64 = 0;
+        for tempo_ev in self.tempo.iter() {
+            let delta = tempo_ev.pos - current_pos;
+
+            // Super unlikely to occur. It comes out to about 279k beats at 480 resolution
+            if delta > MAX_DELTA {
+                panic!("Unsupported: Delta distance of {delta} between {} and {} is larger than max {MAX_DELTA}",
+                    current_pos,
+                    tempo_ev.pos
+                );
+            }
+
+            tempo_track.push(TrackEvent {
+                delta: (delta as u32).into(),
+                kind: TrackEventKind::Meta(midly::MetaMessage::Tempo(tempo_ev.mpq.into()))
+            });
+
+            current_pos = tempo_ev.pos;
+        }
+
+        // Add end of track event
+        tempo_track.push(TrackEvent {
+            delta: 0.into(),
+            kind: TrackEventKind::Meta(midly::MetaMessage::EndOfTrack)
+        });
+
+        tempo_track
+    }
+
+    fn generate_track<'a>(&'a self, track_index: usize) -> Vec<TrackEvent<'a>> {
+        let mut track = Vec::new();
+        let input_track = &self.tracks[track_index];
+
+        // Add track name event
+        if let Some(track_name) = input_track.name.as_ref() {
+            track.push(TrackEvent {
+                delta: 0.into(),
+                kind: TrackEventKind::Meta(midly::MetaMessage::TrackName(track_name.as_bytes()))
+            });
+        };
+
+        let mut pending_off_notes: BinaryHeap<Reverse<(u64, u8, u8, u8)>> = BinaryHeap::new();
+
+        // Add track events
+        let mut current_pos: u64 = 0;
+        for ev in input_track.events.iter() {
+            let ev_pos = ev.get_pos();
+
+            // Process note off events
+            while let Some(&Reverse((off_pos, off_pitch, off_channel, off_velocity))) = pending_off_notes.peek() {
+                if off_pos > ev_pos {
+                    break;
+                }
+
+                let off_delta = off_pos - current_pos;
+                current_pos = off_pos;
+
+                // Add note off event
+                track.push(TrackEvent {
+                    delta: (off_delta as u32).into(),
+                    kind: TrackEventKind::Midi {
+                        channel: off_channel.into(),
+                        message: MidiMessage::NoteOff {
+                            key: off_pitch.into(),
+                            vel: off_velocity.into()
+                        }
+                    }
+                });
+
+                pending_off_notes.pop();
+            }
+
+            // Super unlikely to occur. It comes out to about 279k beats at 480 resolution
+            let delta = ev_pos - current_pos;
+            if delta > MAX_DELTA {
+                panic!("Unsupported: Delta distance of {delta} between {} and {} is larger than max {MAX_DELTA}",
+                    current_pos,
+                    ev_pos
+                );
+            }
+
+            let ev_kind = match ev {
+                MidiEvent::Note(note) => {
+                    // Track note off position
+                    let note_off_pos = ev_pos + note.length;
+                    pending_off_notes.push(Reverse((note_off_pos, note.pitch, note.channel, note.velocity)));
+
+                    TrackEventKind::Midi {
+                        channel: note.channel.into(),
+                        message: MidiMessage::NoteOn {
+                            key: note.pitch.into(),
+                            vel: note.velocity.into()
+                        }
+                    }
+                },
+                MidiEvent::Meta(meta) => {
+                    let meta_message = match &meta.text {
+                        MidiTextType::Event(ev) => midly::MetaMessage::Text(ev.as_ref()),
+                        MidiTextType::Lyric(lyric) => midly::MetaMessage::Lyric(lyric.as_ref()),
+                    };
+
+                    TrackEventKind::Meta(meta_message)
+                },
+                MidiEvent::SysEx(sysex) => {
+                    TrackEventKind::SysEx(sysex.data.as_ref())
+                }
+            };
+
+            track.push(TrackEvent {
+                delta: (delta as u32).into(),
+                kind: ev_kind
+            });
+
+            current_pos = ev_pos;
+        }
+
+        // Process remaining note off events
+        while let Some(Reverse((off_pos, off_pitch, off_channel, off_velocity))) = pending_off_notes.pop() {
+            let off_delta = off_pos - current_pos;
+            current_pos = off_pos;
+
+            // Add note off event
+            track.push(TrackEvent {
+                delta: (off_delta as u32).into(),
+                kind: TrackEventKind::Midi {
+                    channel: off_channel.into(),
+                    message: MidiMessage::NoteOff {
+                        key: off_pitch.into(),
+                        vel: off_velocity.into()
+                    }
+                }
+            });
+        }
+
+        // Add end of track event
+        track.push(TrackEvent {
+            delta: 0.into(),
+            kind: TrackEventKind::Meta(midly::MetaMessage::EndOfTrack)
+        });
+
+        track
+    }
+
     pub fn write_to_file<T: AsRef<Path>>(&self, path: T) {
         let path = path.as_ref();
 
@@ -180,41 +336,13 @@ impl MidiFile {
         let mut smf = Smf::new(header);
 
         // Add tempo track
-        // TODO: Iterate and add tempo changes
-        smf.tracks.push(
-            vec![
-                TrackEvent {
-                    delta: 0.into(),
-                    kind: TrackEventKind::Meta(midly::MetaMessage::TrackName(b"tempo"))
-                },
-                TrackEvent {
-                    delta: 0.into(),
-                    kind: TrackEventKind::Meta(midly::MetaMessage::EndOfTrack)
-                }
-            ]
-        );
+        let tempo_track = self.generate_tempo_track();
+        smf.tracks.push(tempo_track);
 
-        // Write tracks
-        for track in &self.tracks {
-            let mut events = Vec::new();
-
-            // Add track name
-            if let Some(track_name) = track.name.as_ref().map(|n| n.as_bytes()) {
-                events.push(TrackEvent {
-                    delta: 0.into(),
-                    kind: TrackEventKind::Meta(midly::MetaMessage::TrackName(track_name))
-                });
-            }
-
-            // TODO: Implement writing midi notes
-
-            // Add end event
-            events.push(TrackEvent {
-                delta: 0.into(),
-                kind: TrackEventKind::Meta(midly::MetaMessage::EndOfTrack)
-            });
-
-            smf.tracks.push(events);
+        // Add tracks
+        for track_index in 0..self.tracks.len() {
+            let track_events = self.generate_track(track_index);
+            smf.tracks.push(track_events);
         }
 
         // Write midi file
