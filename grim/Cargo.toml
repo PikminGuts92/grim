@@ -17,7 +17,7 @@ midly = { version = "0.5.2", optional = true }
 nalgebra = { version = "0.31.1", optional = true }
 rayon = "1.5.3"
 regex = { version = "1.6.0", default-features = false, features = [ "std" ] }
-thiserror = "1.0.32"
+thiserror = "1.0.34"
 
 [dev-dependencies]
 criterion = "0.3.6"
