@@ -9,6 +9,7 @@ use std::fs::{copy, create_dir_all, File, read, remove_dir_all, write};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
+// TODO: Rename to something like 'compile' or 'build'
 #[derive(Parser, Debug)]
 pub struct Project2MiloApp {
     #[clap(name = "dirPath", help = "Path to input project directory", required = true)]
@@ -27,11 +28,16 @@ impl SubApp for Project2MiloApp {
             panic!("Input directory doesn't exist")
         }
 
+        // Open song file
         let song_json_path = input_dir.join("song.json");
         let song_json = read(song_json_path)?;
         let song = serde_json::from_slice::<P9Song>(song_json.as_slice())?;
 
         dbg!(song);
+
+        // Open midi
+        let mid_path = input_dir.join("venue.mid");
+        let mid = MidiFile::from_path(mid_path).unwrap();
 
         Ok(())
     }
