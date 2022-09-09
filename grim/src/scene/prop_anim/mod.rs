@@ -78,8 +78,8 @@ pub struct PropKeys {
 }
 
 #[milo]
-#[derive(Debug)]
 #[milo_super(Anim)]
+#[derive(Debug)]
 pub struct PropAnim {
     pub unknown_toggle: bool, // Used in GDRB
     pub keys: Vec<PropKeys>,
