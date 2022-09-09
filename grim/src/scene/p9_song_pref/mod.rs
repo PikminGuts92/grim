@@ -26,7 +26,7 @@ impl From<P9SongPrefCharacter> for usize {
 }
 
 #[milo]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct P9SongPref {
     pub venue: String,
     pub minivenues: Vec<String>,
