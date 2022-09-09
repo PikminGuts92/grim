@@ -161,7 +161,7 @@ impl ObjectReadWrite for P9SongPref {
             writer.write_prefixed_string(&self.era)?;
 
             writer.write_prefixed_string(&self.cam_directory)?;
-            writer.write_prefixed_string(&self.drum_set)?;
+            writer.write_prefixed_string(&self.media_directory)?;
 
             writer.write_prefixed_string(&self.song_intro_cam)?;
             writer.write_prefixed_string(&self.win_cam)?;
