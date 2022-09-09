@@ -15,12 +15,12 @@ impl DataString {
 
     pub fn from_string(str: String) -> DataString {
         DataString {
-            data: str.as_bytes().to_owned(),
+            data: str.into_bytes(),
         }
     }
 
-    pub fn as_utf8(&self) -> String {
-        String::from_utf8_lossy(&self.data).into_owned()
+    pub fn as_utf8(&self) -> Option<&str> {
+        std::str::from_utf8(&self.data).ok()
     }
 
     pub fn get_raw(&self) -> &Vec<u8> {
