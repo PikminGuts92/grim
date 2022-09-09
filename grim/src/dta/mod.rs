@@ -40,27 +40,55 @@ pub enum DataArray {
     Integer(i32),
     Float(f32),
     Variable(DataString),
+    //Func() ???
     Object(DataString),
     Symbol(DataString),
     KDataUnhandled,
     IfDef(DataString),
     Else,
     EndIf,
+    Array(Vec<DataArray>),
+    Command(Vec<DataArray>),
     String(DataString),
+    Property(Vec<DataArray>),
     Define(DataString),
     Include(DataString),
     Merge(DataString),
     IfNDef(DataString),
     Autorun,
     Undef(DataString),
-    Array(Vec<DataArray>),
-    Command(Vec<DataArray>),
-    Property(Vec<DataArray>),
 }
 
 impl Default for DataArray {
     fn default() -> DataArray {
         DataArray::Integer(0)
+    }
+}
+
+impl DataArray {
+    pub(crate) fn get_enum_value(&self) -> u32 {
+        match self {
+            DataArray::Integer(_)     => 0x00,
+            DataArray::Float(_)       => 0x01,
+            DataArray::Variable(_)    => 0x02,
+            //DataArray::Func(_)        => 0x03,
+            DataArray::Object(_)      => 0x04,
+            DataArray::Symbol(_)      => 0x05,
+            DataArray::KDataUnhandled => 0x06,
+            DataArray::IfDef(_)       => 0x07,
+            DataArray::Else           => 0x08,
+            DataArray::EndIf          => 0x09,
+            DataArray::Array(_)       => 0x10,
+            DataArray::Command(_)     => 0x11,
+            DataArray::String(_)      => 0x12,
+            DataArray::Property(_)    => 0x13,
+            DataArray::Define(_)      => 0x20,
+            DataArray::Include(_)     => 0x21,
+            DataArray::Merge(_)       => 0x22,
+            DataArray::IfNDef(_)      => 0x23,
+            DataArray::Autorun        => 0x24,
+            DataArray::Undef(_)       => 0x25,
+        }
     }
 }
 

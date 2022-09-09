@@ -49,6 +49,9 @@ pub(crate) fn save_array(data: &Vec<DataArray>, stream: &mut Box<BinaryStream>, 
     stream.write_uint16(data.len() as u16)?;
     stream.write_uint32(*id)?;
 
+    // Update id (actually line # in dta)
+    *id += 1;
+
     for node in data {
         save_node(node, stream, id)?;
     }
@@ -69,21 +72,33 @@ pub(crate) fn load_array(stream: &mut Box<BinaryStream>) -> Result<Vec<DataArray
     Ok(nodes)
 }
 
-fn save_node(data: &DataArray, stream: &mut Box<BinaryStream>, _id: &mut u32) -> Result<(), Box<dyn Error>> {
+fn save_node(data: &DataArray, writer: &mut Box<BinaryStream>, id: &mut u32) -> Result<(), Box<dyn Error>> {
+    let node_enum = data.get_enum_value();
+    writer.write_uint32(node_enum)?;
+
     match data {
-        DataArray::Integer(int) => {
-            stream.write_uint32(0x00)?;
-            stream.write_int32(*int)?;
-        },
-        DataArray::Float(f) => {
-            stream.write_uint32(0x01)?;
-            stream.write_float32(*f)?;
-        },
-        DataArray::Variable(str) => {
-            stream.write_uint32(0x02)?;
-            save_string(str, stream)?;
-        }
-        _ => todo!() // TODO: Hmm...
+        DataArray::Integer(int) => writer.write_int32(*int)?,
+        DataArray::Float(f) => writer.write_float32(*f)?,
+        DataArray::Variable(str) => save_string(str, writer)?,
+        /*DataArray::Func(str) => {
+            save_string(str, writer)?;
+        },*/
+        DataArray::Object(str) => save_string(str, writer)?,
+        DataArray::Symbol(str) => save_string(str, writer)?,
+        DataArray::KDataUnhandled => writer.write_int32(0)?,
+        DataArray::IfDef(str) => save_string(str, writer)?,
+        DataArray::Else => writer.write_int32(0)?,
+        DataArray::EndIf => writer.write_int32(0)?,
+        DataArray::Array(arr) => save_array(arr, writer, id)?,
+        DataArray::Command(arr) => save_array(arr, writer, id)?,
+        DataArray::String(str) => save_string(str, writer)?,
+        DataArray::Property(arr) => save_array(arr, writer, id)?,
+        DataArray::Define(str) => save_string(str, writer)?,
+        DataArray::Include(str) => save_string(str, writer)?,
+        DataArray::Merge(str) => save_string(str, writer)?,
+        DataArray::IfNDef(str) => save_string(str, writer)?,
+        DataArray::Autorun => writer.write_int32(0)?,
+        DataArray::Undef(str) => save_string(str, writer)?
     };
     Ok(())
 }
@@ -95,6 +110,7 @@ fn load_node(stream: &mut Box<BinaryStream>) -> Result<DataArray, Box<dyn Error>
         0x00 => DataArray::Integer(stream.read_int32()?),
         0x01 => DataArray::Float(stream.read_float32()?),
         0x02 => DataArray::Variable(load_string(stream)?),
+        0x03 => todo!(), // TODO: Add func support
         0x04 => DataArray::Object(load_string(stream)?),
         0x05 => DataArray::Symbol(load_string(stream)?),
         0x06 => {
