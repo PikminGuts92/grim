@@ -2,6 +2,7 @@ mod io;
 pub use io::*;
 use grim_macros::*;
 
+#[allow(non_camel_case_types)]
 #[derive(Copy, Clone)]
 pub enum P9SongPrefCharacter {
     TBRB_George,
