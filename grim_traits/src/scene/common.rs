@@ -1,4 +1,4 @@
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Sphere {
     pub x: f32,
     pub y: f32,
@@ -6,7 +6,7 @@ pub struct Sphere {
     pub r: f32,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Rect {
     pub x: f32,
     pub y: f32,
@@ -14,6 +14,7 @@ pub struct Rect {
     pub h: f32,
 }
 
+#[derive(Debug)]
 pub struct Color3 {
     pub r: f32,
     pub g: f32,
@@ -36,6 +37,7 @@ impl Default for Color3 {
     }
 }
 
+#[derive(Debug)]
 pub struct Color4 {
     pub r: f32,
     pub g: f32,
@@ -60,20 +62,20 @@ impl Default for Color4 {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Vector2 {
     pub x: f32,
     pub y: f32,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Vector3 {
     pub x: f32,
     pub y: f32,
     pub z: f32,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Vector4 {
     pub x: f32,
     pub y: f32,
@@ -81,6 +83,15 @@ pub struct Vector4 {
     pub w: f32,
 }
 
+#[derive(Debug, Default)]
+pub struct Quat {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub w: f32,
+}
+
+#[derive(Debug)]
 pub struct Matrix {
     pub m11: f32,
     pub m12: f32,

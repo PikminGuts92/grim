@@ -2,6 +2,7 @@ mod io;
 
 pub use io::*;
 
+#[derive(Debug, Default)]
 pub struct DataString {
     data: Vec<u8>,
 }
@@ -34,6 +35,7 @@ impl From<Vec<u8>> for DataString {
     }
 }
 
+#[derive(Debug)]
 pub enum DataArray {
     Integer(i32),
     Float(f32),
@@ -56,7 +58,13 @@ pub enum DataArray {
     Property(Vec<DataArray>),
 }
 
-#[derive(Default)]
+impl Default for DataArray {
+    fn default() -> DataArray {
+        DataArray::Integer(0)
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct RootData {
     pub data: Vec<DataArray>,
 }
