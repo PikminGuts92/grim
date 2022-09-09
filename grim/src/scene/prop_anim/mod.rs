@@ -1,6 +1,6 @@
 mod io;
 pub use io::*;
-use crate::dta::DataArray;
+use crate::dta::{DataArray, RootData};
 use grim_macros::*;
 use grim_traits::scene::*;
 
@@ -65,10 +65,49 @@ impl Default for PropKeysEvents {
     }
 }
 
+impl PropKeysEvents {
+    pub(crate) fn get_enum_value(&self) -> u32 {
+        match self {
+            PropKeysEvents::Float(_)   => 0,
+            PropKeysEvents::Color(_)   => 1,
+            PropKeysEvents::Object(_)  => 2,
+            PropKeysEvents::Bool(_)    => 3,
+            PropKeysEvents::Quat(_)    => 4,
+            PropKeysEvents::Vector3(_) => 5,
+            PropKeysEvents::Symbol(_)  => 6
+        }
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        match self {
+            PropKeysEvents::Float(evs)   => evs.len(),
+            PropKeysEvents::Color(evs)   => evs.len(),
+            PropKeysEvents::Object(evs)  => evs.len(),
+            PropKeysEvents::Bool(evs)    => evs.len(),
+            PropKeysEvents::Quat(evs)    => evs.len(),
+            PropKeysEvents::Vector3(evs) => evs.len(),
+            PropKeysEvents::Symbol(evs)  => evs.len()
+        }
+    }
+
+    pub(crate) fn from_enum_value(value: u32) -> PropKeysEvents {
+        match value {
+            0 => PropKeysEvents::Float(Vec::new()),
+            1 => PropKeysEvents::Color(Vec::new()),
+            2 => PropKeysEvents::Object(Vec::new()),
+            3 => PropKeysEvents::Bool(Vec::new()),
+            4 => PropKeysEvents::Quat(Vec::new()),
+            5 => PropKeysEvents::Vector3(Vec::new()),
+            6 => PropKeysEvents::Symbol(Vec::new()),
+            _ => panic!("Unsupported prop keys enum value of {value}") // TODO: Use dedicated error?
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct PropKeys {
     pub target: String,
-    pub property: DataArray,
+    pub property: Vec<DataArray>,
 
     pub interpolation: u32, // Some flags?
     pub interp_handler: String,

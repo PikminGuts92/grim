@@ -14,7 +14,7 @@ pub enum DtaLoadError {
 
 impl DataArray {
     pub fn load(&mut self, _stream: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
-        Ok(())
+        todo!()
     }
 }
 
@@ -45,8 +45,8 @@ impl RootData {
     }
 }
 
-fn save_array(data: &Vec<DataArray>, stream: &mut Box<BinaryStream>, id: &mut u32) -> Result<(), Box<dyn Error>> {
-    stream.write_uint32(data.len() as u32)?;
+pub(crate) fn save_array(data: &Vec<DataArray>, stream: &mut Box<BinaryStream>, id: &mut u32) -> Result<(), Box<dyn Error>> {
+    stream.write_uint16(data.len() as u16)?;
     stream.write_uint32(*id)?;
 
     for node in data {
@@ -56,7 +56,7 @@ fn save_array(data: &Vec<DataArray>, stream: &mut Box<BinaryStream>, id: &mut u3
     Ok(())
 }
 
-fn load_array(stream: &mut Box<BinaryStream>) -> Result<Vec<DataArray>, Box<dyn Error>> {
+pub(crate) fn load_array(stream: &mut Box<BinaryStream>) -> Result<Vec<DataArray>, Box<dyn Error>> {
     let count = stream.read_uint16()? as usize;
     let _id = stream.read_uint32()?;
 
@@ -83,7 +83,7 @@ fn save_node(data: &DataArray, stream: &mut Box<BinaryStream>, _id: &mut u32) ->
             stream.write_uint32(0x02)?;
             save_string(str, stream)?;
         }
-        _ => {}
+        _ => todo!() // TODO: Hmm...
     };
     Ok(())
 }

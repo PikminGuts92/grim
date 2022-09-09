@@ -1,7 +1,7 @@
 use crate::dta::*;
 use crate::io::{BinaryStream, FileStream, SeekFrom, Stream};
 use crate::SystemInfo;
-use grim_traits::scene::{Color3, Matrix, MiloObject, Rect, Sphere, Vector2};
+use grim_traits::scene::{Color3, Color4, Matrix, MiloObject, Quat, Rect, Sphere, Vector2, Vector3};
 use std::error::Error;
 use std::path::Path;
 
@@ -98,6 +98,25 @@ pub (crate) fn save_color3(color: &Color3, writer: &mut Box<BinaryStream>) -> Re
     Ok(())
 }
 
+pub (crate) fn load_color4(color: &mut Color4, reader: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    color.r = reader.read_float32()?;
+    color.g = reader.read_float32()?;
+    color.b = reader.read_float32()?;
+    color.a = reader.read_float32()?;
+
+    Ok(())
+}
+
+pub (crate) fn save_color4(color: &Color4, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    writer.write_float32(color.r)?;
+    writer.write_float32(color.g)?;
+    writer.write_float32(color.b)?;
+    writer.write_float32(color.a)?;
+
+    Ok(())
+}
+
+
 pub (crate) fn load_matrix(mat: &mut Matrix, reader: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
     mat.m11 = reader.read_float32()?;
     mat.m12 = reader.read_float32()?;
@@ -188,6 +207,40 @@ pub (crate) fn load_vector2(vector: &mut Vector2, reader: &mut Box<BinaryStream>
 pub (crate) fn save_vector2(vector: &Vector2, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
     writer.write_float32(vector.x)?;
     writer.write_float32(vector.y)?;
+
+    Ok(())
+}
+
+pub (crate) fn load_vector3(vector: &mut Vector3, reader: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    vector.x = reader.read_float32()?;
+    vector.y = reader.read_float32()?;
+    vector.z = reader.read_float32()?;
+
+    Ok(())
+}
+
+pub (crate) fn save_vector3(vector: &Vector3, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    writer.write_float32(vector.x)?;
+    writer.write_float32(vector.y)?;
+    writer.write_float32(vector.z)?;
+
+    Ok(())
+}
+
+pub (crate) fn load_quat(quat: &mut Quat, reader: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    quat.x = reader.read_float32()?;
+    quat.y = reader.read_float32()?;
+    quat.z = reader.read_float32()?;
+    quat.w = reader.read_float32()?;
+
+    Ok(())
+}
+
+pub (crate) fn save_quat(quat: &Quat, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    writer.write_float32(quat.x)?;
+    writer.write_float32(quat.y)?;
+    writer.write_float32(quat.z)?;
+    writer.write_float32(quat.w)?;
 
     Ok(())
 }
