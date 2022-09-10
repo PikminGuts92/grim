@@ -130,7 +130,7 @@ impl MidiFile {
                             length: 0,
                             pitch: key.as_int(),
                             channel: channel.as_int(),
-                            velocity: vel.as_int() as u8,
+                            velocity: vel.as_int(),
                             ..Default::default()
                         });
                     },
