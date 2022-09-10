@@ -3,6 +3,7 @@ mod reader;
 
 pub use self::io::*;
 pub use self::reader::*;
+use std::cmp::Ordering;
 
 const MPQ_120BPM: u32 = 60_000_000 / 120;
 
@@ -42,12 +43,54 @@ pub struct MidiTrack {
     pub events: Vec<MidiEvent>,
 }
 
+impl MidiTrack {
+    pub fn is_sorted(&self) -> bool {
+        let events = &self.events;
+
+        if events.len() <= 1 {
+            // Congrats, nothing to sort
+            return true;
+        }
+
+        let mut prev_pos = events
+            .first()
+            .map(|ev| ev.get_pos())
+            .unwrap(); // Shouldn't panic
+
+        for ev in events.iter().skip(1) {
+            let ev_pos = ev.get_pos();
+
+            if prev_pos > ev_pos {
+                return false;
+            }
+
+            prev_pos = ev_pos;
+        }
+
+        true
+    }
+
+    pub fn sort(&mut self) {
+        self.events.sort_by(|a, b| {
+            let a_pos = a.get_pos();
+            let b_pos = b.get_pos();
+
+            if a_pos != b_pos {
+                a_pos.cmp(&b_pos)
+            } else {
+                // Positions are equal, compare by other means
+                a.partial_cmp(&b).unwrap_or(Ordering::Equal)
+            }
+        });
+    }
+}
+
 pub struct MidiInfo {
     pub format: u16,
     pub ticks_per_quarter: u16, // Usually 480
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum MidiEvent {
     Note(MidiNote),
     Meta(MidiText),
@@ -88,7 +131,7 @@ impl MidiEvent {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, PartialOrd)]
 pub struct MidiNote {
     pub pos: u64,
     pub pos_realtime: Option<f64>, // Milliseconds
@@ -99,14 +142,14 @@ pub struct MidiNote {
     pub velocity: u8
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct MidiText {
     pub pos: u64,
     pub pos_realtime: Option<f64>, // Milliseconds
     pub text: MidiTextType,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum MidiTextType {
     Event(Box<[u8]>),
     Lyric(Box<[u8]>)
@@ -128,7 +171,7 @@ impl MidiText {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct MidiSysex {
     pub pos: u64,
     pub pos_realtime: Option<f64>, // Milliseconds

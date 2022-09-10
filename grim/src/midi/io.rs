@@ -173,10 +173,14 @@ impl MidiFile {
                 }
             }
 
-            mid.tracks.push(MidiTrack {
+            // Sort events and add track
+            let mut mid_track = MidiTrack {
                 name: track_name,
                 events: mid_track_events
-            });
+            };
+
+            mid_track.sort();
+            mid.tracks.push(mid_track);
         }
 
         // Update realtime offsets
@@ -227,6 +231,8 @@ impl MidiFile {
         let mut track = Vec::new();
         let input_track = &self.tracks[track_index];
 
+        // TODO: Verify track is sorted before generating?
+
         // Add track name event
         if let Some(track_name) = input_track.name.as_ref() {
             track.push(TrackEvent {
@@ -238,7 +244,7 @@ impl MidiFile {
         let mut pending_off_notes: BinaryHeap<Reverse<(u64, u8, u8, u8)>> = BinaryHeap::new();
 
         // Add track events
-        let mut current_pos: u64 = 0;
+        let mut prev_note_pos: u64 = 0;
         for ev in input_track.events.iter() {
             let ev_pos = ev.get_pos();
 
@@ -248,8 +254,8 @@ impl MidiFile {
                     break;
                 }
 
-                let off_delta = off_pos - current_pos;
-                current_pos = off_pos;
+                let off_delta = off_pos - prev_note_pos;
+                prev_note_pos = off_pos;
 
                 // Add note off event
                 track.push(TrackEvent {
@@ -267,10 +273,10 @@ impl MidiFile {
             }
 
             // Super unlikely to occur. It comes out to about 279k beats at 480 resolution
-            let delta = ev_pos - current_pos;
+            let delta = ev_pos - prev_note_pos;
             if delta > MAX_DELTA {
                 panic!("Unsupported: Delta distance of {delta} between {} and {} is larger than max {MAX_DELTA}",
-                    current_pos,
+                    prev_note_pos,
                     ev_pos
                 );
             }
@@ -307,13 +313,13 @@ impl MidiFile {
                 kind: ev_kind
             });
 
-            current_pos = ev_pos;
+            prev_note_pos = ev_pos;
         }
 
         // Process remaining note off events
         while let Some(Reverse((off_pos, off_pitch, off_channel, off_velocity))) = pending_off_notes.pop() {
-            let off_delta = off_pos - current_pos;
-            current_pos = off_pos;
+            let off_delta = off_pos - prev_note_pos;
+            prev_note_pos = off_pos;
 
             // Add note off event
             track.push(TrackEvent {
