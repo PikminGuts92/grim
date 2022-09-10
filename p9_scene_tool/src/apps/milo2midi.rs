@@ -7,8 +7,8 @@ use thiserror::Error;
 
 use grim::{Platform, SystemInfo};
 use grim::io::*;
-use grim::midi::MidiFile;
-use grim::scene::{Object, ObjectDir, ObjectDirBase, PackedObject, Tex};
+use grim::midi::{MidiFile, MidiTrack};
+use grim::scene::{Object, ObjectDir, ObjectDirBase, PackedObject, PropAnim, Tex};
 use grim::texture::{Bitmap, write_rgba_to_file};
 
 #[derive(Parser, Debug)]
@@ -59,8 +59,28 @@ impl SubApp for Milo2MidiApp {
             let is_packed = entry.is_packed();
 
             println!("{name} | {obj_type} (packed: {is_packed})");
+
+            if let Object::PropAnim(prop_anim) = entry {
+                let mut extra_tracks = process_prop_anim(prop_anim, &mid);
+                mid.tracks.append(&mut extra_tracks);
+            }
         }
+
+        // Save output midi file
+        let midi_dir = output_midi_path.parent().unwrap();
+        if !midi_dir.exists() {
+            // Not found, create directory
+            fs::create_dir_all(&midi_dir)?;
+        }
+
+        mid.write_to_file(output_midi_path);
 
         Ok(())
     }
+}
+
+fn process_prop_anim(prop_anim: &PropAnim, base_mid: &MidiFile) -> Vec<MidiTrack> {
+
+
+    Vec::new()
 }
