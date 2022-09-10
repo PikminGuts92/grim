@@ -37,7 +37,7 @@ impl SubApp for Project2MiloApp {
 
         // Open midi
         let mid_path = input_dir.join("venue.mid");
-        let mid = MidiFile::from_path(mid_path).unwrap();
+        let _mid = MidiFile::from_path(mid_path).unwrap();
 
         Ok(())
     }
