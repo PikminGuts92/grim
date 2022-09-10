@@ -1,13 +1,15 @@
 use crate::apps::{SubApp};
 use clap::Parser;
+use grim::dta::DataArray;
 use std::error::Error;
 use std::fs;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 use grim::{Platform, SystemInfo};
 use grim::io::*;
-use grim::midi::{MidiFile, MidiTrack};
+use grim::midi::{MidiEvent, MidiTextType, MidiFile, MidiText, MidiTrack};
 use grim::scene::{Object, ObjectDir, ObjectDirBase, PackedObject, PropAnim, Tex};
 use grim::texture::{Bitmap, write_rgba_to_file};
 
@@ -79,8 +81,83 @@ impl SubApp for Milo2MidiApp {
     }
 }
 
-fn process_prop_anim(prop_anim: &PropAnim, base_mid: &MidiFile) -> Vec<MidiTrack> {
+fn process_prop_anim(prop_anim: &PropAnim, _base_mid: &MidiFile) -> Vec<MidiTrack> {
+    // TODO: Pre-parse tempo track for faster realtime to tick pos calculation
 
+    const GDRB_CHARACTERS: [(&str, &str); 3] = [
+        ("BILLIE", "BILLIEJOE"),
+        ("MIKE", "MIKEDIRNT"),
+        ("TRE", "TRECOOL"),
+    ];
 
-    Vec::new()
+    // Create tracks
+    let mut mapped_tracks = GDRB_CHARACTERS
+        .iter()
+        .map(|(c_short, c_long)| (format!("_{}", c_long.to_lowercase()), MidiTrack {
+            name: Some(c_short.to_string()),
+            events: Vec::new()
+        }))
+        .collect::<HashMap<_, _>>();
+
+    let mut events_track = MidiTrack {
+        name: Some(String::from("EVENTS GDRB")),
+        events: Vec::new()
+    };
+
+    let track_keys = mapped_tracks.keys().map(|k| k.to_string()).collect::<Vec<_>>();
+
+    for prop_keys in prop_anim.keys.iter() {
+        let _target = prop_keys.target.as_str(); // Don't care for now
+
+        // Assume single symbol for now (most common for TBRB/GDRB song anims)
+        let property = prop_keys
+            .property
+            .first()
+            .and_then(|node| match node {
+                DataArray::Symbol(s) => s.as_utf8(),
+                _ => None,
+            });
+
+        if property.is_none() {
+            continue;
+        }
+
+        let mut property = (unsafe { property.unwrap_unchecked() }).to_string();
+        let mut track = &mut events_track; // Use events by default
+
+        for track_key in track_keys.iter() {
+            if property.contains(track_key) {
+                // Update property name and use dedicated character track
+                property = property.replace(track_key, "");
+                track = unsafe { mapped_tracks.get_mut(track_key).unwrap_unchecked() };
+
+                break;
+            }
+        }
+
+        // TODO: Match on events and iterate
+
+        // TODO: Calculate abs tick position
+        let tick_pos = 0;
+
+        let text = format!("[{property}]");
+
+        // Add event
+        track.events.push(MidiEvent::Meta(MidiText {
+            pos: tick_pos,
+            pos_realtime: None,
+            text: MidiTextType::Event(text.as_bytes().into())
+        }))
+    }
+
+    let mut new_tracks = Vec::new();
+    for (_, char_long) in GDRB_CHARACTERS.iter() {
+        let key = format!("_{}", char_long.to_lowercase());
+
+        let track = mapped_tracks.remove(key.as_str()).unwrap();
+        new_tracks.push(track);
+    }
+
+    new_tracks.push(events_track);
+    new_tracks
 }
