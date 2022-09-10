@@ -52,6 +52,8 @@ impl MidiFile {
             }
         }
 
+        let mut pending_notes: [Option<MidiNote>; 0x80] = [(); 0x80].map(|_| None);
+
         // TODO: Parse tempo track individually. Maybe use accumulator too.
         for track in smf.tracks.iter().skip(1) {
             let mut abs_pos = 0;
@@ -61,8 +63,6 @@ impl MidiFile {
             // TODO: Parse track name event
             for ev in track.iter() {
                 abs_pos += ev.delta.as_int() as u64;
-
-                let mut pending_notes: [Option<MidiNote>; 0x80] = [(); 0x80].map(|_| None);
 
                 match &ev.kind {
                     TrackEventKind::Meta(meta) => match meta {
@@ -143,19 +143,19 @@ impl MidiFile {
                     },
                     _ => {}
                 }
+            }
 
-                // Add remaining notes
-                for mut note in pending_notes {
-                    if let Some(mut note) = note.take() {
-                        let length = abs_pos - note.pos;
-                        if length == 0 {
-                            continue;
-                        }
-
-                        // Edit length and add note
-                        note.length = length;
-                        mid_track_events.push(MidiEvent::Note(note));
+            // Add remaining notes
+            for note in pending_notes.iter_mut() {
+                if let Some(mut note) = note.take() {
+                    let length = abs_pos - note.pos;
+                    if length == 0 {
+                        continue;
                     }
+
+                    // Edit length and add note
+                    note.length = length;
+                    mid_track_events.push(MidiEvent::Note(note));
                 }
             }
 
