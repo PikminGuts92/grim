@@ -103,10 +103,24 @@ impl MidiFile {
                                 // Edit length and add note
                                 note.length = length;
                                 mid_track_events.push(MidiEvent::Note(note));
+                                continue;
+                            } else if note.velocity != vel.as_int() || note.channel != channel.as_int() {
+                                // End existing note and create new
+
+                                let length = abs_pos - note.pos;
+                                if length > 0 {
+                                    // Add existing note
+                                    // Edit length and add note
+                                    note.length = length;
+                                    mid_track_events.push(MidiEvent::Note(note));
+                                }
                             } else {
                                 // Restore
                                 pending_notes[index] = Some(note);
+                                continue;
                             }
+                        } else if vel.as_int() == 0 {
+                            // Orphaned note off, ignore
                             continue;
                         }
 
