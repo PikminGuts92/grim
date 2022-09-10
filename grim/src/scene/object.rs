@@ -11,6 +11,7 @@ pub enum Object {
     Mat(MatObject),
     Mesh(MeshObject),
     P9SongPref(P9SongPref),
+    PropAnim(PropAnim),
     Tex(Tex),
     Trans(TransObject),
     Packed(PackedObject),
@@ -34,6 +35,7 @@ impl Object {
             Object::Mat(mat) => &mat.name,
             Object::Mesh(mesh) => &mesh.name,
             Object::P9SongPref(pref) => &pref.name,
+            Object::PropAnim(prop) => &prop.name,
             Object::Tex(tex) => &tex.name,
             Object::Trans(trans) => &trans.name,
             Object::Packed(packed) => &packed.name,
@@ -50,6 +52,7 @@ impl Object {
             Object::Mat(_) => "Mat",
             Object::Mesh(_) => "Mesh",
             Object::P9SongPref(_) => "P9SongPref",
+            Object::PropAnim(_) => "PropAnim",
             Object::Tex(_) => "Tex",
             Object::Trans(_) => "Trans",
             Object::Packed(packed) => &packed.object_type,
@@ -77,6 +80,7 @@ impl Object {
             Object::Mat(obj) => obj,
             Object::Mesh(obj) => obj,
             Object::P9SongPref(obj) => obj,
+            Object::PropAnim(obj) => obj,
             Object::Tex(obj) => obj,
             Object::Trans(obj) => obj,
             _ => todo!("Test"),
@@ -110,6 +114,7 @@ impl Object {
                     "Mat" => unpack_object(packed, info).map(|o| Object::Mat(o)),
                     "Mesh" => unpack_object(packed, info).map(|o| Object::Mesh(o)),
                     "P9SongPref" => unpack_object(packed, info).map(|o| Object::P9SongPref(o)),
+                    "PropAnim" => unpack_object(packed, info).map(|o| Object::PropAnim(o)),
                     "Tex" => {
                         let mut stream = MemoryStream::from_slice_as_read(packed.data.as_slice());
 
