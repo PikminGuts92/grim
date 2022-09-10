@@ -17,7 +17,7 @@ pub struct Milo2MidiApp {
     pub milo_path: String,
     #[clap(help = "Path to output MIDI file", required = true)]
     pub midi_path: String,
-    #[clap(long, help = "Base MIDI file")]
+    #[clap(short = 'm', long, help = "Base MIDI file")]
     pub base_midi: Option<String>
 }
 
@@ -30,6 +30,18 @@ impl SubApp for Milo2MidiApp {
             .as_ref()
             .and_then(|path| MidiFile::from_path(path))
             .unwrap_or_default();
+
+        // TODO: Remove debug output
+        for track in mid.tracks.iter() {
+            let track_name = track.name
+                .as_ref()
+                .map(|n| n.as_str())
+                .unwrap_or("???");
+
+            let ev_count = track.events.len();
+
+            println!("\"{track_name}\" : {ev_count} events");
+        }
 
         // Open milo
         let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(&milo_path)?);
