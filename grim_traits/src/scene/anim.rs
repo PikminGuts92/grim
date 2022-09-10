@@ -1,7 +1,7 @@
 use super::MiloObject;
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[repr(u32)]
 pub enum AnimRate {
     k30_fps,
