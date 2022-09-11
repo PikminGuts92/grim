@@ -91,9 +91,9 @@ fn load_prop_keys(reader: &mut Box<BinaryStream>) -> Result<PropKeys, Box<dyn Er
 
     // Read events
     let event_count = reader.read_uint32()?;
-    let mut key_events = PropKeysEvents::from_enum_value(type_1);
+    keys.events = PropKeysEvents::from_enum_value(type_1);
 
-    match &mut key_events {
+    match &mut keys.events {
         PropKeysEvents::Float(events)   => {
             for _ in 0..event_count {
                 let mut ev = AnimEventFloat::default();
