@@ -4,6 +4,7 @@ mod reader;
 pub use self::io::*;
 pub use self::reader::*;
 use std::cmp::Ordering;
+use std::collections::HashMap;
 
 const MPQ_120BPM: u32 = 60_000_000 / 120;
 
@@ -205,42 +206,104 @@ impl MidiFile {
     }
 
     fn calculate_tracks_realtime(&mut self) {
-        let tpq = self.ticks_per_quarter;
-        let mut tempo_nav = TempoNavigator::new(&self.tempo);
+        let mut tempo_nav = TempoNavigator::new(&self.tempo, self.ticks_per_quarter);
 
         for ev in self.tracks.iter_mut().flat_map(|t| &mut t.events) {
             match ev {
                 MidiEvent::Note(MidiNote { pos, pos_realtime, length, length_realtime, pitch: _, channel: _, velocity: _ }) => {
-                    let pos_start_realtime = tempo_nav.get_realtime_position(*pos, tpq);
+                    let pos_start_realtime = tempo_nav.get_realtime_position(*pos);
 
                     // Calculate length
                     let pos_end = *pos + *length;
-                    let pos_end_realtime = tempo_nav.get_realtime_position(pos_end, tpq);
+                    let pos_end_realtime = tempo_nav.get_realtime_position(pos_end);
                     let realtime_length = pos_end_realtime - pos_start_realtime;
 
                     *pos_realtime = Some(pos_start_realtime);
                     *length_realtime = Some(realtime_length);
                 },
                 MidiEvent::Meta(MidiText { pos, pos_realtime, text: _ }) => {
-                    *pos_realtime = Some(tempo_nav.get_realtime_position(*pos, tpq));
+                    *pos_realtime = Some(tempo_nav.get_realtime_position(*pos));
                 },
                 MidiEvent::SysEx(MidiSysex { pos, pos_realtime, data: _ }) => {
-                    *pos_realtime = Some(tempo_nav.get_realtime_position(*pos, tpq));
+                    *pos_realtime = Some(tempo_nav.get_realtime_position(*pos));
                 }
             }
+        }
+    }
+
+    pub fn add_tracks_with_realtime_positions(&mut self, mut tracks: Vec<MidiTrack>, merge_same_tracks: bool) {
+        self.calculate_tempo_realtime(); // Just in case
+
+        let mut tempo_nav = TempoNavigator::new(&self.tempo, self.ticks_per_quarter);
+
+        // Calculate tick position for every note
+        for ev in tracks.iter_mut().flat_map(|t| &mut t.events) {
+            match ev {
+                MidiEvent::Note(MidiNote { pos, pos_realtime, length, length_realtime, pitch: _, channel: _, velocity: _ }) => {
+                    let pos_start_ticks = pos_realtime.map(|p| tempo_nav.get_tick_position(p)).unwrap_or_default();
+
+                    // Calculate length
+                    let pos_end = pos_realtime.unwrap_or_default() + length_realtime.unwrap_or_default();
+                    let pos_end_ticks = tempo_nav.get_tick_position(pos_end);
+                    let tick_length = pos_end_ticks - pos_start_ticks;
+
+                    *pos = pos_start_ticks;
+                    *length = tick_length;
+                },
+                MidiEvent::Meta(MidiText { pos, pos_realtime, text: _ }) => {
+                    *pos = pos_realtime.map(|p| tempo_nav.get_tick_position(p)).unwrap_or_default();
+                },
+                MidiEvent::SysEx(MidiSysex { pos, pos_realtime, data: _ }) => {
+                    *pos = pos_realtime.map(|p| tempo_nav.get_tick_position(p)).unwrap_or_default();
+                }
+            }
+        }
+
+        // Map track name to track collection index
+        let track_name_map = self
+            .tracks
+            .iter()
+            .enumerate()
+            .fold(HashMap::new(), |mut acc, (i, track)| {
+                if let Some(track_name) = track.name.as_ref() {
+                    acc.insert(track_name.to_owned(), i);
+                }
+
+                acc
+            });
+
+        for mut track in tracks {
+            // Merge track events if existing found and option enabled
+            if merge_same_tracks && track.name.is_some() {
+                let existing_track = track_name_map
+                    .get(track.name.as_ref().unwrap())
+                    .map(|i| &mut self.tracks[*i]);
+
+                if let Some(existing_track) = existing_track {
+                    existing_track.events.append(&mut track.events);
+                    existing_track.sort();
+                    continue;
+                }
+            }
+
+            // Just add track
+            track.sort();
+            self.tracks.push(track);
         }
     }
 }
 
 struct TempoNavigator<'a> {
     index: usize,
+    tpq: u16,
     tempo: &'a [MidiTempo]
 }
 
 impl<'a> TempoNavigator<'a> {
-    fn new(tempo: &'a [MidiTempo]) -> Self {
+    fn new(tempo: &'a [MidiTempo], tpq: u16) -> Self {
         TempoNavigator {
             index: 0,
+            tpq,
             tempo
         }
     }
@@ -270,6 +333,44 @@ impl<'a> TempoNavigator<'a> {
         // Stop when next tempo pos is greater than input pos or end reached
         while let Some(next_tempo) = self.get_next_tempo() {
             if current_tempo.pos == pos || next_tempo.pos > pos {
+                break;
+            }
+
+            self.index += 1;
+            current_tempo = next_tempo;
+        }
+
+        return Some(current_tempo);
+    }
+
+    fn get_tempo_at_pos_realtime(&mut self, pos: f64) -> Option<&'a MidiTempo> {
+        if self.tempo.is_empty() {
+            return None;
+        }
+
+        let mut current_tempo = self.get_current_tempo().unwrap();
+        let curr_pos_realtime = current_tempo.pos_realtime.unwrap();
+
+        if curr_pos_realtime > pos {
+            // Find first tempo pos less than or equal to input pos
+            while let Some(prev_tempo) = self.get_prev_tempo() {
+                self.index -= 1;
+                current_tempo = prev_tempo;
+
+                if curr_pos_realtime <= pos {
+                    return Some(current_tempo);
+                }
+            }
+
+            // Not found
+            return None;
+        }
+
+        // Stop when next tempo pos is greater than input pos or end reached
+        while let Some(next_tempo) = self.get_next_tempo() {
+            let next_pos_realtime = next_tempo.pos_realtime.unwrap();
+
+            if curr_pos_realtime == pos || next_pos_realtime > pos {
                 break;
             }
 
@@ -310,7 +411,7 @@ impl<'a> TempoNavigator<'a> {
         Some(&self.tempo[next_index])
     }
 
-    fn get_realtime_position(&mut self, pos: u64, tpq: u16) -> f64 {
+    fn get_realtime_position(&mut self, pos: u64) -> f64 {
         let (tempo_pos, tempo_pos_realtime, mpq) = self
             .get_tempo_at_pos(pos)
             .map(|t| (t.pos, t.pos_realtime.unwrap(), t.mpq))
@@ -318,9 +419,21 @@ impl<'a> TempoNavigator<'a> {
 
 
         let delta_ticks = pos - tempo_pos;
-        let delta_realtime = (mpq as u64 * delta_ticks) as f64 / (1_000 * tpq as u32) as f64;
+        let delta_realtime = (mpq as u64 * delta_ticks) as f64 / (1_000 * self.tpq as u32) as f64;
 
         tempo_pos_realtime + delta_realtime
+    }
+
+    fn get_tick_position(&mut self, pos: f64) -> u64 {
+        let (tempo_pos, tempo_pos_realtime, mpq) = self
+            .get_tempo_at_pos_realtime(pos)
+            .map(|t| (t.pos, t.pos_realtime.unwrap(), t.mpq))
+            .unwrap_or((0, 0., MPQ_120BPM));
+
+        let delta_realtime = pos - tempo_pos_realtime;
+        let delta_ticks = (1000. * self.tpq as f64 * delta_realtime) as u64 / mpq as u64;
+
+        tempo_pos + delta_ticks
     }
 }
 
