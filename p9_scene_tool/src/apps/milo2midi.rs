@@ -2,6 +2,7 @@ use crate::apps::{SubApp};
 use clap::Parser;
 use grim::dta::DataArray;
 use std::error::Error;
+use std::fmt::Display;
 use std::fs;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -47,7 +48,7 @@ impl SubApp for Milo2MidiApp {
 
         // Open milo
         let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(&milo_path)?);
-        let mut milo = MiloArchive::from_stream(&mut stream)?;
+        let milo = MiloArchive::from_stream(&mut stream)?;
 
         // Unpack dir and entries
         let system_info = SystemInfo::guess_system_info(&milo, &milo_path);
@@ -63,8 +64,8 @@ impl SubApp for Milo2MidiApp {
             println!("{name} | {obj_type} (packed: {is_packed})");
 
             if let Object::PropAnim(prop_anim) = entry {
-                let mut extra_tracks = process_prop_anim(prop_anim, &mid);
-                mid.tracks.append(&mut extra_tracks);
+                let extra_tracks = process_prop_anim(prop_anim, &mid);
+                mid.add_tracks_with_realtime_positions(extra_tracks, false);
             }
         }
 
@@ -99,8 +100,8 @@ fn process_prop_anim(prop_anim: &PropAnim, _base_mid: &MidiFile) -> Vec<MidiTrac
         }))
         .collect::<HashMap<_, _>>();
 
-    let mut events_track = MidiTrack {
-        name: Some(String::from("EVENTS GDRB")),
+    let mut venue_track = MidiTrack {
+        name: Some(String::from("VENUE GDRB")),
         events: Vec::new()
     };
 
@@ -123,7 +124,7 @@ fn process_prop_anim(prop_anim: &PropAnim, _base_mid: &MidiFile) -> Vec<MidiTrac
         }
 
         let mut property = (unsafe { property.unwrap_unchecked() }).to_string();
-        let mut track = &mut events_track; // Use events by default
+        let mut track = &mut venue_track; // Use venue track by default
 
         for track_key in track_keys.iter() {
             if property.contains(track_key) {
@@ -135,24 +136,80 @@ fn process_prop_anim(prop_anim: &PropAnim, _base_mid: &MidiFile) -> Vec<MidiTrac
             }
         }
 
-        // TODO: Match on events and iterate
-        let test = match &prop_keys.events {
-            PropKeysEvents::Float(events) => events.iter().map(|ev| (ev.pos, ev.value.to_string())),
-            //PropKeysEvents::Color(events) => events.iter().map(|ev| (ev.pos, format!("{}"))),
-            _ => todo!(),
+        // Map events to display vecs
+        let events_as_display: Vec<(f32, Vec<&dyn Display>)> = match &prop_keys.events {
+            PropKeysEvents::Float(events) => events
+                .iter()
+                .map(|ev| (ev.pos, vec![
+                    &ev.value as &dyn Display
+                ]))
+                .collect(),
+            PropKeysEvents::Color(events) => events
+                .iter()
+                .map(|ev| (ev.pos, vec![
+                    &ev.value.r as &dyn Display,
+                    &ev.value.g as &dyn Display,
+                    &ev.value.b as &dyn Display,
+                    &ev.value.a as &dyn Display
+                ]))
+                .collect(),
+            PropKeysEvents::Object(events) => events
+                .iter()
+                .map(|ev| (ev.pos, vec![
+                    &ev.text1 as &dyn Display,
+                    &ev.text2 as &dyn Display
+                ]))
+                .collect(),
+            PropKeysEvents::Bool(events) => events
+                .iter()
+                .map(|ev| (ev.pos, vec![
+                    if ev.value { &"TRUE" } else { &"FALSE" } as &dyn Display
+                ]))
+                .collect(),
+            PropKeysEvents::Quat(events) => events
+                .iter()
+                .map(|ev| (ev.pos, vec![
+                    &ev.value.x as &dyn Display,
+                    &ev.value.y as &dyn Display,
+                    &ev.value.z as &dyn Display,
+                    &ev.value.w as &dyn Display
+                ]))
+                .collect(),
+            PropKeysEvents::Vector3(events) => events
+                .iter()
+                .map(|ev| (ev.pos, vec![
+                    &ev.value.x as &dyn Display,
+                    &ev.value.y as &dyn Display,
+                    &ev.value.z as &dyn Display
+                ]))
+                .collect(),
+            PropKeysEvents::Symbol(events) => events
+                .iter()
+                .map(|ev| (ev.pos, vec![
+                    &ev.text as &dyn Display
+                ]))
+                .collect()
         };
 
-        // TODO: Calculate abs tick position
-        let tick_pos = 0;
+        for (pos, values) in events_as_display {
+            let realtime_pos = (pos as f64 / 30.) * 1000.; // Convert from frame pos to realtime (ms)
 
-        let text = format!("[{property}]");
+            // Joins values into single string
+            // TODO: Look at making this more efficient
+            let mut values_formatted = values.first().unwrap().to_string();
+            for value in values.iter().skip(1) {
+                values_formatted.push_str(&format!(" {value}"));
+            }
 
-        // Add event
-        track.events.push(MidiEvent::Meta(MidiText {
-            pos: tick_pos,
-            pos_realtime: None,
-            text: MidiTextType::Event(text.as_bytes().into())
-        }))
+            let text = format!("[{property} ({values_formatted})]");
+
+            // Add event
+            track.events.push(MidiEvent::Meta(MidiText {
+                pos: 0, // Calculated elsewhere
+                pos_realtime: Some(realtime_pos),
+                text: MidiTextType::Event(text.into_bytes().into_boxed_slice())
+            }))
+        }
     }
 
     let mut new_tracks = Vec::new();
@@ -163,6 +220,6 @@ fn process_prop_anim(prop_anim: &PropAnim, _base_mid: &MidiFile) -> Vec<MidiTrac
         new_tracks.push(track);
     }
 
-    new_tracks.push(events_track);
+    new_tracks.push(venue_track);
     new_tracks
 }
