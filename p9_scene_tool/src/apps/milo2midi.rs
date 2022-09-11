@@ -10,7 +10,7 @@ use thiserror::Error;
 use grim::{Platform, SystemInfo};
 use grim::io::*;
 use grim::midi::{MidiEvent, MidiTextType, MidiFile, MidiText, MidiTrack};
-use grim::scene::{Object, ObjectDir, ObjectDirBase, PackedObject, PropAnim, Tex};
+use grim::scene::{Object, ObjectDir, ObjectDirBase, PackedObject, PropAnim, PropKeysEvents, Tex};
 use grim::texture::{Bitmap, write_rgba_to_file};
 
 #[derive(Parser, Debug)]
@@ -136,6 +136,11 @@ fn process_prop_anim(prop_anim: &PropAnim, _base_mid: &MidiFile) -> Vec<MidiTrac
         }
 
         // TODO: Match on events and iterate
+        let test = match &prop_keys.events {
+            PropKeysEvents::Float(events) => events.iter().map(|ev| (ev.pos, ev.value.to_string())),
+            //PropKeysEvents::Color(events) => events.iter().map(|ev| (ev.pos, format!("{}"))),
+            _ => todo!(),
+        };
 
         // TODO: Calculate abs tick position
         let tick_pos = 0;
