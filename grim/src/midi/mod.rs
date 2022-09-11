@@ -412,7 +412,7 @@ impl<'a> TempoNavigator<'a> {
         }
 
         let next_index = self.index + 1;
-        if self.tempo.len() >= next_index {
+        if next_index >= self.tempo.len() {
             return None;
         }
 
@@ -551,6 +551,67 @@ mod tests {
             let actual_pos = ev.get_pos();
 
             assert_eq!(expected_pos, actual_pos);
+        }
+    }
+
+    #[rstest]
+    #[case([], [0], [None])]
+    #[case([(4, 120.)], [0], [None])]
+    #[case([(4, 120.)], [0, 8], [None, Some(4)])]
+    #[case([(4, 120.)], [0, 8, 0], [None, Some(4), None])]
+    #[case([(2, 120.), (6, 120.)], [0, 4, 1, 8, 3], [None, Some(2), None, Some(6), Some(2)])]
+    fn tempo_navigation_ticks<const N: usize, const M: usize>(#[case] input_tempo: [(u64, f64); N], #[case] input_pos: [u64; M], #[case] expected: [Option<u64>; M]) {
+        let tempos = input_tempo
+            .iter()
+            .map(|(beat, bpm)| MidiTempo {
+                pos: beat * (TICKS_PER_QUARTER as u64),
+                pos_realtime: None,
+                mpq: (60_000_000. / bpm).ceil() as u32
+            })
+            .collect::<Vec<_>>();
+
+        let mut tempo_nav = TempoNavigator::new(tempos.as_slice(), TICKS_PER_QUARTER);
+
+        let results = input_pos
+            .iter()
+            .map(|p| tempo_nav.get_tempo_at_pos(*p * (TICKS_PER_QUARTER as u64)))
+            .collect::<Vec<_>>();
+
+        for (i, tempo) in results.iter().enumerate() {
+            let expected_tempo_pos = expected[i];
+            let actual_tempo_pos = tempo.map(|t| t.pos / (TICKS_PER_QUARTER as u64));
+
+            assert_eq!(expected_tempo_pos, actual_tempo_pos);
+        }
+    }
+
+    #[rstest]
+    #[case([], [0.], [None])]
+    #[case([(2000., 120.)], [0.], [None])]
+    #[case([(2000., 120.)], [0., 4000., 1000.], [None, Some(2000.), None])]
+    #[case([(2000., 200.), (6000., 120.)], [0., 4000., 1000., 8000., 3000.], [None, Some(2000.), None, Some(6000.), Some(2000.)])]
+    fn tempo_navigation_realtime<const N: usize, const M: usize>(#[case] input_tempo: [(f64, f64); N], #[case] input_pos: [f64; M], #[case] expected: [Option<f64>; M]) {
+        let tempos = input_tempo
+            .iter()
+            .map(|(real_pos, bpm)| MidiTempo {
+                pos: 0, // Doesn't matter for test
+                pos_realtime: Some(*real_pos),
+                mpq: (60_000_000. / bpm).ceil() as u32
+            })
+            .collect::<Vec<_>>();
+
+        let mut tempo_nav = TempoNavigator::new(tempos.as_slice(), TICKS_PER_QUARTER);
+
+        let results = input_pos
+            .iter()
+            .map(|p| tempo_nav.get_tempo_at_pos_realtime(*p))
+            .collect::<Vec<_>>();
+
+        for (i, tempo) in results.iter().enumerate() {
+            let expected_tempo_pos = expected[i];
+            let actual_tempo_pos = tempo.and_then(|t| t.pos_realtime);
+
+            assert_eq!(expected_tempo_pos, actual_tempo_pos);
         }
     }
 }
