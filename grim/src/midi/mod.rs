@@ -143,7 +143,7 @@ pub struct MidiNote {
     pub velocity: u8
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, PartialEq, PartialOrd)]
 pub struct MidiText {
     pub pos: u64,
     pub pos_realtime: Option<f64>, // Milliseconds
@@ -154,6 +154,12 @@ pub struct MidiText {
 pub enum MidiTextType {
     Event(Box<[u8]>),
     Lyric(Box<[u8]>)
+}
+
+impl Default for MidiTextType {
+    fn default() -> MidiTextType {
+        MidiTextType::Event(Default::default())
+    }
 }
 
 impl MidiText {
@@ -349,13 +355,14 @@ impl<'a> TempoNavigator<'a> {
         }
 
         let mut current_tempo = self.get_current_tempo().unwrap();
-        let curr_pos_realtime = current_tempo.pos_realtime.unwrap();
+        let mut curr_pos_realtime = current_tempo.pos_realtime.unwrap();
 
         if curr_pos_realtime > pos {
             // Find first tempo pos less than or equal to input pos
             while let Some(prev_tempo) = self.get_prev_tempo() {
                 self.index -= 1;
                 current_tempo = prev_tempo;
+                curr_pos_realtime = prev_tempo.pos_realtime.unwrap();
 
                 if curr_pos_realtime <= pos {
                     return Some(current_tempo);
@@ -376,6 +383,7 @@ impl<'a> TempoNavigator<'a> {
 
             self.index += 1;
             current_tempo = next_tempo;
+            curr_pos_realtime = next_pos_realtime;
         }
 
         return Some(current_tempo);
@@ -470,6 +478,7 @@ mod tests {
     #[case([], [(2, 1)], [(1000., 500.)])]
     #[case([(4, 200.)], [(2, 4)], [(1000., 1600.)])] // Note overlaps tempo change
     #[case([(4, 200.)], [(0, 8), (2, 4), (2,1)], [(0., 3200.), (1000., 1600.), (1000., 500.)])]
+    #[case([(4, 240.)], [(8, 1)], [(3000., 250.)])]
     fn calc_realtime_note_positions<const N: usize, const M: usize>(#[case] input_tempo: [(u64, f64); N], #[case] input_notes: [(u64, u64); M], #[case] expected: [(f64, f64); M]) {
         let mut mid = MidiFile {
             ticks_per_quarter: TICKS_PER_QUARTER,
@@ -502,6 +511,46 @@ mod tests {
 
             assert_eq!(Some(expected_pos), actual_pos);
             assert_eq!(Some(expected_length), actual_length);
+        }
+    }
+
+    #[rstest]
+    #[case([], [0.], [0])]
+    #[case([], [500.], [1 * TICKS_PER_QUARTER as u64])]
+    #[case([(0, 240.)], [250.], [1 * TICKS_PER_QUARTER as u64])]
+    #[case([(4, 240.)], [500., 2000., 3000.], [1 * TICKS_PER_QUARTER as u64, 4 * TICKS_PER_QUARTER as u64, 8 * TICKS_PER_QUARTER as u64])]
+    #[case([(4, 240.)], [500., 2000., 1000.], [1 * TICKS_PER_QUARTER as u64, 2 * TICKS_PER_QUARTER as u64, 4 * TICKS_PER_QUARTER as u64])] // Events are re-sorted by position
+    fn calc_realtime_to_ticks<const N: usize, const M: usize>(#[case] input_tempo: [(u64, f64); N], #[case] input_notes: [f64; M], #[case] expected: [u64; M]) {
+        let mut mid = MidiFile {
+            ticks_per_quarter: TICKS_PER_QUARTER,
+            tempo: input_tempo.iter().map(|(beat, bpm)| MidiTempo {
+                pos: beat * (TICKS_PER_QUARTER as u64),
+                pos_realtime: None,
+                mpq: (60_000_000. / bpm).ceil() as u32
+            }).collect(),
+            tracks: Vec::new(),
+            ..Default::default()
+        };
+        mid.calculate_tempo_realtime();
+
+        let realtime_tracks = vec![
+            MidiTrack {
+                name: None,
+                events: input_notes.iter().map(|real_pos| MidiEvent::Meta(MidiText {
+                    pos_realtime: Some(*real_pos),
+                    ..Default::default()
+                })).collect()
+            }
+        ];
+
+        // Add notes
+        mid.add_tracks_with_realtime_positions(realtime_tracks, false);
+
+        for (i, ev) in mid.tracks.iter().flat_map(|t| &t.events).enumerate() {
+            let expected_pos = expected[i];
+            let actual_pos = ev.get_pos();
+
+            assert_eq!(expected_pos, actual_pos);
         }
     }
 }
