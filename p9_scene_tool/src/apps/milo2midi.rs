@@ -11,7 +11,7 @@ use thiserror::Error;
 use grim::{Platform, SystemInfo};
 use grim::io::*;
 use grim::midi::{MidiEvent, MidiTextType, MidiFile, MidiText, MidiTrack};
-use grim::scene::{Object, ObjectDir, ObjectDirBase, PackedObject, PropAnim, PropKeysEvents, Tex};
+use grim::scene::{Object, ObjectDir, ObjectDirBase, PackedObject, PropAnim, PropKeysEvents, Tex, AnimRate};
 use grim::texture::{Bitmap, write_rgba_to_file};
 
 #[derive(Parser, Debug)]
@@ -105,6 +105,11 @@ fn process_prop_anim(prop_anim: &PropAnim, _base_mid: &MidiFile) -> Vec<MidiTrac
         events: Vec::new()
     };
 
+    let fps = match prop_anim.rate {
+        AnimRate::k30_fps | AnimRate::k30_fps_ui | AnimRate::k30_fps_tutorial => 30.,
+        _ => panic!("Unsupported anim rate of {:?}", prop_anim.rate)
+    };
+
     let track_keys = mapped_tracks.keys().map(|k| k.to_string()).collect::<Vec<_>>();
 
     for prop_keys in prop_anim.keys.iter() {
@@ -192,7 +197,7 @@ fn process_prop_anim(prop_anim: &PropAnim, _base_mid: &MidiFile) -> Vec<MidiTrac
         };
 
         for (pos, values) in events_as_display {
-            let realtime_pos = (pos as f64 / 30.) * 1000.; // Convert from frame pos to realtime (ms)
+            let realtime_pos = (pos as f64 / fps) * 1000.; // Convert from frame pos to realtime (ms)
 
             // Joins values into single string
             // TODO: Look at making this more efficient
