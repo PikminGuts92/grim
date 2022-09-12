@@ -2,7 +2,7 @@
 name = "p9_scene_tool"
 version = "0.1.0"
 authors = ["PikminGuts92"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 clap = { version = "3.2.20", features = ["derive"] }
