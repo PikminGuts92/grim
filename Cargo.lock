@@ -2511,6 +2511,9 @@ dependencies = [
 [[package]]
 name = "milo_export"
 version = "0.1.0"
+dependencies = [
+ "grim",
+]
 
 [[package]]
 name = "minimal-lexical"
