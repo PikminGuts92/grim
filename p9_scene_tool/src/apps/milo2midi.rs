@@ -201,10 +201,12 @@ fn process_prop_anim(prop_anim: &PropAnim, _base_mid: &MidiFile) -> Vec<MidiTrac
 
             // Joins values into single string
             // TODO: Look at making this more efficient
-            let mut values_formatted = values.first().unwrap().to_string();
-            for value in values.iter().skip(1) {
-                values_formatted.push_str(&format!(" {value}"));
-            }
+            let values_formatted = values
+                .iter()
+                .map(|v| v.to_string())
+                .filter(|v| !v.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ");
 
             let text = format!("[{property} ({values_formatted})]");
 
