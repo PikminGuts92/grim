@@ -57,7 +57,7 @@ impl GameAnalyzer {
             let entry_count = venue_milo_dir.get_entries().len();
             println!("Found {entry_count} entries");
 
-            let cams = get_cams_from_dir(&venue_milo_dir);
+            let cams = get_names_for_type_from_dir(&venue_milo_dir, "BandCamShot");
 
             self.cams.venues.push(StringValues {
                 id: venue_name.to_string(),
@@ -74,7 +74,7 @@ impl GameAnalyzer {
             let milo_cams_file_name = format!("{song_name}_cams.milo");
             let cams_path = song_dir.join(&milo_cams_file_name);
             if let Ok((_, cams_milo_dir)) = try_open_milo(cams_path.as_path()) {
-                let cams = get_cams_from_dir(&cams_milo_dir);
+                let cams = get_names_for_type_from_dir(&cams_milo_dir, "BandCamShot");
 
                 if cams.is_empty() {
                     continue;
@@ -94,12 +94,7 @@ impl GameAnalyzer {
             .join("camera.milo");
 
         if let Ok((_, post_procs_dir)) = try_open_milo(post_procs_path.as_path()) {
-            let mut post_procs = post_procs_dir
-                .get_entries()
-                .iter()
-                .filter(|e| e.get_type().eq("PostProc"))
-                .map(|e| e.get_name().to_string())
-                .collect::<Vec<_>>();
+            let mut post_procs = get_names_for_type_from_dir(&post_procs_dir, "PostProc");
 
             post_procs.sort();
 
@@ -170,16 +165,16 @@ fn open_milo(milo_path: &Path) -> Result<(SystemInfo, ObjectDir), Box<dyn Error>
     Ok((system_info, obj_dir))
 }
 
-fn get_cams_from_dir(obj_dir: &ObjectDir) -> Vec<String> {
-    let mut cams = obj_dir
+fn get_names_for_type_from_dir(obj_dir: &ObjectDir, entry_type: &str) -> Vec<String> {
+    let mut entries = obj_dir
         .get_entries()
         .iter()
-        .filter(|e| e.get_type().eq("BandCamShot"))
+        .filter(|e| e.get_type().eq(entry_type))
         .map(|e| e.get_name().to_string())
         .collect::<Vec<_>>();
 
-    cams.sort();
-    cams
+    entries.sort();
+    entries
 }
 
 #[derive(Default, Deserialize, Serialize)]
