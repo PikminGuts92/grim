@@ -9,7 +9,7 @@ use std::path::{PathBuf, Path};
 #[derive(Default)]
 pub struct GameAnalyzer {
     pub game_dir: PathBuf,
-    pub venues: Vec<Venue>
+    pub cams: Cams
 }
 
 impl GameAnalyzer {
@@ -40,7 +40,6 @@ impl GameAnalyzer {
             "twentyfirst"
         ];
 
-        self.venues.clear();
         for venue_name in venue_names.iter() {
             let milo_file_name = format!("{venue_name}.milo");
 
@@ -57,33 +56,48 @@ impl GameAnalyzer {
             let entry_count = venue_milo_dir.get_entries().len();
             println!("Found {entry_count} entries");
 
-            let mut cams = venue_milo_dir
-                .get_entries()
-                .iter()
-                .filter(|e| e.get_type().eq("BandCamShot"))
-                .map(|e| e.get_name().to_string())
-                .collect::<Vec<_>>();
+            let cams = get_cams_from_dir(&venue_milo_dir);
 
-            cams.sort();
-
-            self.venues.push(Venue {
+            self.cams.venues.push(StringValues {
                 id: venue_name.to_string(),
-                cams
+                values: cams
             })
+        }
+
+        for song_name in songs.iter() {
+            let song_dir = self.game_dir
+                .join("songs")
+                .join(song_name);
+
+            // Get cams
+            let milo_cams_file_name = format!("{song_name}_cams.milo");
+            let cams_path = song_dir.join(&milo_cams_file_name);
+            if let Ok((_, cams_milo_dir)) = try_open_milo(cams_path.as_path()) {
+                let cams = get_cams_from_dir(&cams_milo_dir);
+
+                if cams.is_empty() {
+                    continue;
+                }
+
+                self.cams.songs.push(StringValues {
+                    id: song_name.to_string(),
+                    values: cams
+                })
+            }
         }
     }
 
     pub fn export<T: AsRef<Path>>(&self, output_dir: T) {
         let output_dir = output_dir.as_ref();
-        let json_venues = serde_json::to_string_pretty(&self.venues).unwrap();
+        let json_venues = serde_json::to_string_pretty(&self.cams).unwrap();
 
         // Create dir
         if !output_dir.exists() {
             std::fs::create_dir(output_dir).unwrap();
         }
 
-        std::fs::write(output_dir.join("venues.json"), json_venues)
-            .expect("Error \"venues.json\" to file");
+        std::fs::write(output_dir.join("cams.json"), json_venues)
+            .expect("Error \"cams.json\" to file");
     }
 }
 
@@ -130,10 +144,28 @@ fn open_milo(milo_path: &Path) -> Result<(SystemInfo, ObjectDir), Box<dyn Error>
     Ok((system_info, obj_dir))
 }
 
+fn get_cams_from_dir(obj_dir: &ObjectDir) -> Vec<String> {
+    let mut cams = obj_dir
+        .get_entries()
+        .iter()
+        .filter(|e| e.get_type().eq("BandCamShot"))
+        .map(|e| e.get_name().to_string())
+        .collect::<Vec<_>>();
+
+    cams.sort();
+    cams
+}
+
 #[derive(Default, Deserialize, Serialize)]
-pub struct Venue {
+pub struct StringValues {
     pub id: String,
-    pub cams: Vec<String>
+    pub values: Vec<String>
+}
+
+#[derive(Default, Deserialize, Serialize)]
+pub struct Cams {
+    pub venues: Vec<StringValues>,
+    pub songs: Vec<StringValues>
 }
 
 /*#[derive(Default)]
