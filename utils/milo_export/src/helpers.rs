@@ -1,3 +1,4 @@
+use grim::dta::DataArray;
 use grim::{Platform, SystemInfo};
 use grim::io::*;
 use grim::scene::{Object, ObjectDir, ObjectDirBase, PackedObject, PropAnim, PropKeysEvents, Tex, AnimRate};
@@ -9,50 +10,58 @@ use std::path::{PathBuf, Path};
 const PLATFORMS: [&str; 3] = ["ps3", "wii", "xbox"];
 
 const GDRB_CHARACTERS: [(&str, &str); 3] = [
-    ("BILLIE", "BILLIEJOE"),
-    ("MIKE", "MIKEDIRNT"),
-    ("TRE", "TRECOOL"),
+    ("BILLIE", "billiejoe"),
+    ("MIKE", "mikedirnt"),
+    ("TRE", "trecool")
+];
+
+const GDRB_VENUE_NAMES: [&str; 3] = [
+    "americanidiot",
+    "dookie",
+    "twentyfirst"
 ];
 
 #[derive(Default)]
 pub struct GameAnalyzer {
     pub game_dir: PathBuf,
+    pub song_ids: Vec<String>,
     pub cams: Cams,
     pub post_procs: Vec<String>,
     pub char_clips: CharClips,
     pub light_presets: Vec<ValueCollection<String>>,
-    pub trigger_groups: Vec<ValueCollection<String>>
+    pub trigger_groups: Vec<ValueCollection<String>>,
+    pub prop_anims: Vec<ValueCollection<PropAnimInfo>>
 }
 
 impl GameAnalyzer {
     pub fn new(game_path: PathBuf) -> GameAnalyzer {
+        let song_ids = find_song_ids(game_path.as_path());
+
         GameAnalyzer {
             game_dir: game_path,
+            song_ids,
             ..Default::default()
          }
     }
 
     pub fn process(&mut self) {
-        let songs = self
-            .game_dir
-            .join("songs")
-            .read_dir()
-            .unwrap()
-            .map(|d| d.unwrap().path())
-            .filter(|d| d.is_dir())
-            .map(|p| p.file_name().and_then(|f| f.to_str()).map(|s| s.to_string()).unwrap())
-            .filter(|s| s.ne("gen"))
-            .collect::<Vec<_>>();
+        self.process_venues();
+        self.process_songs();
+        self.process_prop_anims();
 
-        println!("Found {} songs", songs.len());
+        // Read post procs
+        let post_procs_path = self.game_dir
+            .join("world")
+            .join("shared")
+            .join("camera.milo");
 
-        let venue_names = [
-            "americanidiot",
-            "dookie",
-            "twentyfirst"
-        ];
+        if let Ok((_, post_procs_dir)) = try_open_milo(post_procs_path.as_path()) {
+            self.post_procs = get_names_for_type_from_dir(&post_procs_dir.get_entries(), "PostProc");
+        }
+    }
 
-        for venue_name in venue_names.iter() {
+    fn process_venues(&mut self) {
+        for venue_name in GDRB_VENUE_NAMES.iter() {
             let mut entries = Vec::new();
 
             // Open venue milo
@@ -110,8 +119,10 @@ impl GameAnalyzer {
                 values: get_names_for_type_from_dir(&entries, "TriggerGroup")
             });
         }
+    }
 
-        for song_name in songs.iter() {
+    fn process_songs(&mut self) {
+        for song_name in self.song_ids.iter() {
             let song_dir = self.game_dir
                 .join("songs")
                 .join(song_name);
@@ -122,14 +133,10 @@ impl GameAnalyzer {
             if let Ok((_, cams_milo_dir)) = try_open_milo(cams_path.as_path()) {
                 let cams = get_names_for_type_from_dir(&cams_milo_dir.get_entries(), "BandCamShot");
 
-                if cams.is_empty() {
-                    continue;
-                }
-
                 self.cams.songs.push(ValueCollection {
                     id: song_name.to_string(),
                     values: cams
-                })
+                });
             }
 
             // Get char clips
@@ -140,40 +147,190 @@ impl GameAnalyzer {
 
             let anims_file_name = format!("{song_name}.milo");
             for (_, long_char_name) in GDRB_CHARACTERS.iter() {
-                let char_id = long_char_name.to_ascii_lowercase();
-
                 let anims_path = self.game_dir
                     .join("char")
-                    .join(&char_id)
+                    .join(long_char_name)
                     .join("song")
                     .join(&anims_file_name);
 
                 if let Ok((_, anims_milo_dir)) = try_open_milo(anims_path.as_path()) {
                     let clips = get_names_for_type_from_dir(&anims_milo_dir.get_entries(), "CharClipGroup");
 
-                    if clips.is_empty() {
-                        continue;
-                    }
-
                     song_clips.values.push(ValueCollection {
-                        id: char_id,
+                        id: long_char_name.to_string(),
                         values: clips
-                    })
+                    });
                 }
             }
 
             self.char_clips.songs.push(song_clips);
         }
+    }
 
-        // Read post procs
-        let post_procs_path = self.game_dir
-            .join("world")
-            .join("shared")
-            .join("camera.milo");
+    fn process_prop_anims(&mut self) {
+        let mut tracked_prop_anims: HashMap<String, HashMap<String, (String, Option<String>, HashSet<String>)>> = HashMap::default();
 
-        if let Ok((_, post_procs_dir)) = try_open_milo(post_procs_path.as_path()) {
-            self.post_procs = get_names_for_type_from_dir(&post_procs_dir.get_entries(), "PostProc");
+        for (_, char_long_name) in GDRB_CHARACTERS.iter() {
+            tracked_prop_anims.insert(char_long_name.to_string(), HashMap::new());
         }
+        tracked_prop_anims.insert(String::from("venue"), HashMap::new());
+
+        let mapped_cams = self
+            .cams
+            .songs
+            .iter()
+            .flat_map(|c| &c.values)
+            .chain(self
+                .cams
+                .venues
+                .iter()
+                .flat_map(|c| &c.values)
+            )
+            .map(|s| s.as_str())
+            .collect::<HashSet<_>>();
+
+        let mapped_clips = self
+            .char_clips
+            .songs
+            .iter()
+            .flat_map(|c| &c.values)
+            .flat_map(|c| &c.values)
+            .map(|s| s.as_str())
+            .collect::<HashSet<_>>();
+
+        let mapped_post_procs = self
+            .post_procs
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<HashSet<_>>();
+
+        let mapped_light_presets = self
+            .light_presets
+            .iter()
+            .flat_map(|lp| &lp.values)
+            .map(|s| s.as_str())
+            .collect::<HashSet<_>>();
+
+        let is_mapped = |value: &str| -> bool {
+            mapped_cams.contains(value)
+                || mapped_clips.contains(value)
+                || mapped_post_procs.contains(value)
+                || mapped_light_presets.contains(value)
+        };
+
+        mapped_cams.contains(&"test");
+
+        for song_name in self.song_ids.iter() {
+            let song_dir = self.game_dir
+                .join("songs")
+                .join(song_name);
+
+            // Get prop anims
+            let milo_file_name = format!("{song_name}_ap.milo");
+            let milo_path = song_dir.join(&milo_file_name);
+            let prop_anim_entry = try_open_milo(milo_path.as_path())
+                .ok()
+                .and_then(|(sys_info, milo_dir)| milo_dir
+                    .get_entries()
+                    .iter()
+                    .find_map(|e| match e.get_name() {
+                        "song.anim" => e.unpack(&sys_info)
+                            .and_then(|e| match e {
+                                Object::PropAnim(p) => Some(p),
+                                _ => None
+                            }),
+                        _ => None
+                    }));
+
+            if let Some(prop_anim) = prop_anim_entry {
+                for prop_keys in prop_anim.keys {
+                    // Assume single symbol for now (most common for TBRB/GDRB song anims)
+                    let property = prop_keys
+                        .property
+                        .first()
+                        .and_then(|node| match node {
+                            DataArray::Symbol(s) => s.as_utf8(),
+                            _ => None,
+                        })
+                        .unwrap()
+                        .to_owned();
+
+                    let mut property_short = None;
+
+                    let mut track = tracked_prop_anims.get_mut("venue").unwrap(); // Use venue group by default
+
+                    for (_, char_long_name) in GDRB_CHARACTERS.iter() {
+                        if property.contains(char_long_name) {
+                            let key_slice = format!("_{char_long_name}");
+
+                            // Update short property name and use dedicated character track
+                            property_short = Some(property.replace(&key_slice, ""));
+                            track = tracked_prop_anims.get_mut(*char_long_name).unwrap();
+                            break;
+                        }
+                    }
+
+                    let (ev_type, mut ev_values) = match prop_keys.events {
+                        PropKeysEvents::Float(_) => ("float", None),
+                        PropKeysEvents::Color(_) => ("color", None),
+                        PropKeysEvents::Object(evs) => ("object", Some(evs
+                            .into_iter()
+                            .map(|e| e.text2)
+                            .filter(|s| !s.is_empty() && !is_mapped(&s))
+                            .collect::<Vec<_>>()
+                        )),
+                        PropKeysEvents::Bool(_) => ("bool", None),
+                        PropKeysEvents::Quat(_) => ("quat", None),
+                        PropKeysEvents::Vector3(_) => ("vector3", None),
+                        PropKeysEvents::Symbol(evs) => ("symbol", Some(evs
+                            .into_iter()
+                            .map(|e| e.text)
+                            .filter(|s| !s.is_empty() && !is_mapped(&s))
+                            .collect::<Vec<_>>()
+                        )),
+                    };
+
+                    let (_, _, values) = track
+                        .entry(property)
+                        .or_insert_with(|| (ev_type.to_owned(), property_short, HashSet::new()));
+
+                    if let Some(ev_values) = ev_values.take() {
+                        values.extend(ev_values);
+                    }
+                }
+            }
+        }
+
+        // Map to prop anim values and sort
+        self.prop_anims = tracked_prop_anims
+            .into_iter()
+            .map(|(key, value)| ValueCollection {
+                id: key,
+                values: {
+                    let mut vals = value
+                        .into_iter()
+                        .map(|(key, (anim_type, key_short, values))| PropAnimInfo {
+                            property: key,
+                            property_short: key_short, 
+                            r#type: anim_type,
+                            values: {
+                                let mut vals = values.into_iter().collect::<Vec<_>>();
+                                vals.sort();
+                                vals
+                            }
+                        })
+                        .collect::<Vec<_>>();
+
+                    vals.sort_by(|a, b| match (&a.property_short, &b.property_short) {
+                        (Some(a), Some(b)) => a.cmp(b),
+                        _ => a.property.cmp(&b.property)
+                    });
+                    vals
+                }
+            })
+            .collect();
+
+        self.prop_anims.sort_by(|a, b| a.id.cmp(&b.id));
     }
 
     pub fn export<T: AsRef<Path>>(&self, output_dir: T) {
@@ -208,6 +365,11 @@ impl GameAnalyzer {
         let trigger_groups_json = serde_json::to_string_pretty(&self.trigger_groups).unwrap();
         std::fs::write(output_dir.join("trigger_groups.json"), trigger_groups_json)
             .expect("Error \"trigger_groups.json\" to file");
+
+        // Write prop anims
+        let prop_anims_json = serde_json::to_string_pretty(&self.prop_anims).unwrap();
+        std::fs::write(output_dir.join("prop_anims.json"), prop_anims_json)
+            .expect("Error \"prop_anims.json\" to file");
     }
 }
 
@@ -264,6 +426,17 @@ fn get_names_for_type_from_dir(entries: &[Object], entry_type: &str) -> Vec<Stri
     entries
 }
 
+fn find_song_ids(game_dir: &Path) -> Vec<String> {
+    game_dir.join("songs")
+        .read_dir()
+        .unwrap()
+        .map(|d| d.unwrap().path())
+        .filter(|d| d.is_dir())
+        .map(|p| p.file_name().and_then(|f| f.to_str()).map(|s| s.to_string()).unwrap())
+        .filter(|s| s.ne("gen"))
+        .collect::<Vec<_>>()
+}
+
 #[derive(Default, Deserialize, Serialize)]
 pub struct ValueCollection<T> {
     pub id: String,
@@ -279,4 +452,12 @@ pub struct Cams {
 #[derive(Default, Deserialize, Serialize)]
 pub struct CharClips {
     pub songs: Vec<ValueCollection<ValueCollection<String>>>
+}
+
+#[derive(Default, Deserialize, Serialize)]
+pub struct PropAnimInfo {
+    pub property: String,
+    pub property_short: Option<String>,
+    pub r#type: String,
+    pub values: Vec<String>
 }
