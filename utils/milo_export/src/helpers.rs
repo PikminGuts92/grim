@@ -1,6 +1,7 @@
 use grim::{Platform, SystemInfo};
 use grim::io::*;
 use grim::scene::{Object, ObjectDir, ObjectDirBase, PackedObject, PropAnim, PropKeysEvents, Tex, AnimRate};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::path::{PathBuf, Path};
@@ -72,8 +73,17 @@ impl GameAnalyzer {
         }
     }
 
-    pub fn export<T: AsRef<Path>>(&self, _output_dir: T) {
+    pub fn export<T: AsRef<Path>>(&self, output_dir: T) {
+        let output_dir = output_dir.as_ref();
+        let json_venues = serde_json::to_string_pretty(&self.venues).unwrap();
 
+        // Create dir
+        if !output_dir.exists() {
+            std::fs::create_dir(output_dir).unwrap();
+        }
+
+        std::fs::write(output_dir.join("venues.json"), json_venues)
+            .expect("Error \"venues.json\" to file");
     }
 }
 
@@ -120,7 +130,7 @@ fn open_milo(milo_path: &Path) -> Result<(SystemInfo, ObjectDir), Box<dyn Error>
     Ok((system_info, obj_dir))
 }
 
-#[derive(Default)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct Venue {
     pub id: String,
     pub cams: Vec<String>
