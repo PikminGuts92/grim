@@ -96,8 +96,6 @@ impl GameAnalyzer {
         if let Ok((_, post_procs_dir)) = try_open_milo(post_procs_path.as_path()) {
             let mut post_procs = get_names_for_type_from_dir(&post_procs_dir, "PostProc");
 
-            post_procs.sort();
-
             self.post_procs = post_procs;
         }
     }
@@ -173,7 +171,8 @@ fn get_names_for_type_from_dir(obj_dir: &ObjectDir, entry_type: &str) -> Vec<Str
         .map(|e| e.get_name().to_string())
         .collect::<Vec<_>>();
 
-    entries.sort();
+    // Ugh rust std doesn't provide way to compare case-insensitive
+    entries.sort_by(|a, b| a.to_ascii_lowercase().cmp(&b.to_ascii_lowercase()));
     entries
 }
 
