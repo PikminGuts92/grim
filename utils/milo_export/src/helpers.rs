@@ -9,7 +9,8 @@ use std::path::{PathBuf, Path};
 #[derive(Default)]
 pub struct GameAnalyzer {
     pub game_dir: PathBuf,
-    pub cams: Cams
+    pub cams: Cams,
+    pub post_procs: Vec<String>
 }
 
 impl GameAnalyzer {
@@ -85,19 +86,44 @@ impl GameAnalyzer {
                 })
             }
         }
+
+        // Read post procs
+        let post_procs_path = self.game_dir
+            .join("world")
+            .join("shared")
+            .join("camera.milo");
+
+        if let Ok((_, post_procs_dir)) = try_open_milo(post_procs_path.as_path()) {
+            let mut post_procs = post_procs_dir
+                .get_entries()
+                .iter()
+                .filter(|e| e.get_type().eq("PostProc"))
+                .map(|e| e.get_name().to_string())
+                .collect::<Vec<_>>();
+
+            post_procs.sort();
+
+            self.post_procs = post_procs;
+        }
     }
 
     pub fn export<T: AsRef<Path>>(&self, output_dir: T) {
         let output_dir = output_dir.as_ref();
-        let json_venues = serde_json::to_string_pretty(&self.cams).unwrap();
 
         // Create dir
         if !output_dir.exists() {
             std::fs::create_dir(output_dir).unwrap();
         }
 
-        std::fs::write(output_dir.join("cams.json"), json_venues)
+        // Write cams
+        let cams_json = serde_json::to_string_pretty(&self.cams).unwrap();
+        std::fs::write(output_dir.join("cams.json"), cams_json)
             .expect("Error \"cams.json\" to file");
+
+        // Write post procs
+        let post_procs_json = serde_json::to_string_pretty(&self.post_procs).unwrap();
+        std::fs::write(output_dir.join("post_procs.json"), post_procs_json)
+            .expect("Error \"post_procs.json\" to file");
     }
 }
 
