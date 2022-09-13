@@ -6,11 +6,18 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::path::{PathBuf, Path};
 
+const GDRB_CHARACTERS: [(&str, &str); 3] = [
+    ("BILLIE", "BILLIEJOE"),
+    ("MIKE", "MIKEDIRNT"),
+    ("TRE", "TRECOOL"),
+];
+
 #[derive(Default)]
 pub struct GameAnalyzer {
     pub game_dir: PathBuf,
     pub cams: Cams,
-    pub post_procs: Vec<String>
+    pub post_procs: Vec<String>,
+    pub char_clips: CharClips
 }
 
 impl GameAnalyzer {
@@ -59,7 +66,7 @@ impl GameAnalyzer {
 
             let cams = get_names_for_type_from_dir(&venue_milo_dir, "BandCamShot");
 
-            self.cams.venues.push(StringValues {
+            self.cams.venues.push(ValueCollection {
                 id: venue_name.to_string(),
                 values: cams
             })
@@ -80,11 +87,43 @@ impl GameAnalyzer {
                     continue;
                 }
 
-                self.cams.songs.push(StringValues {
+                self.cams.songs.push(ValueCollection {
                     id: song_name.to_string(),
                     values: cams
                 })
             }
+
+            // Get char clips
+            let mut song_clips = ValueCollection {
+                id: song_name.to_string(),
+                values: Vec::new()
+            };
+
+            let anims_file_name = format!("{song_name}.milo");
+            for (_, long_char_name) in GDRB_CHARACTERS.iter() {
+                let char_id = long_char_name.to_ascii_lowercase();
+
+                let anims_path = self.game_dir
+                    .join("char")
+                    .join(&char_id)
+                    .join("song")
+                    .join(&anims_file_name);
+
+                if let Ok((_, anims_milo_dir)) = try_open_milo(anims_path.as_path()) {
+                    let clips = get_names_for_type_from_dir(&anims_milo_dir, "CharClipGroup");
+
+                    if clips.is_empty() {
+                        continue;
+                    }
+
+                    song_clips.values.push(ValueCollection {
+                        id: char_id,
+                        values: clips
+                    })
+                }
+            }
+
+            self.char_clips.songs.push(song_clips);
         }
 
         // Read post procs
@@ -94,9 +133,7 @@ impl GameAnalyzer {
             .join("camera.milo");
 
         if let Ok((_, post_procs_dir)) = try_open_milo(post_procs_path.as_path()) {
-            let mut post_procs = get_names_for_type_from_dir(&post_procs_dir, "PostProc");
-
-            self.post_procs = post_procs;
+            self.post_procs = get_names_for_type_from_dir(&post_procs_dir, "PostProc");
         }
     }
 
@@ -117,6 +154,11 @@ impl GameAnalyzer {
         let post_procs_json = serde_json::to_string_pretty(&self.post_procs).unwrap();
         std::fs::write(output_dir.join("post_procs.json"), post_procs_json)
             .expect("Error \"post_procs.json\" to file");
+
+        // Write char clips
+        let char_clips_json = serde_json::to_string_pretty(&self.char_clips).unwrap();
+        std::fs::write(output_dir.join("char_clips.json"), char_clips_json)
+            .expect("Error \"char_clips.json\" to file");
     }
 }
 
@@ -177,15 +219,20 @@ fn get_names_for_type_from_dir(obj_dir: &ObjectDir, entry_type: &str) -> Vec<Str
 }
 
 #[derive(Default, Deserialize, Serialize)]
-pub struct StringValues {
+pub struct ValueCollection<T> {
     pub id: String,
-    pub values: Vec<String>
+    pub values: Vec<T>
 }
 
 #[derive(Default, Deserialize, Serialize)]
 pub struct Cams {
-    pub venues: Vec<StringValues>,
-    pub songs: Vec<StringValues>
+    pub venues: Vec<ValueCollection<String>>,
+    pub songs: Vec<ValueCollection<String>>
+}
+
+#[derive(Default, Deserialize, Serialize)]
+pub struct CharClips {
+    pub songs: Vec<ValueCollection<ValueCollection<String>>>
 }
 
 /*#[derive(Default)]
