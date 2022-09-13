@@ -6,6 +6,8 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::path::{PathBuf, Path};
 
+const PLATFORMS: [&str; 3] = ["ps3", "wii", "xbox"];
+
 const GDRB_CHARACTERS: [(&str, &str); 3] = [
     ("BILLIE", "BILLIEJOE"),
     ("MIKE", "MIKEDIRNT"),
@@ -17,7 +19,9 @@ pub struct GameAnalyzer {
     pub game_dir: PathBuf,
     pub cams: Cams,
     pub post_procs: Vec<String>,
-    pub char_clips: CharClips
+    pub char_clips: CharClips,
+    pub light_presets: Vec<ValueCollection<String>>,
+    pub trigger_groups: Vec<ValueCollection<String>>
 }
 
 impl GameAnalyzer {
@@ -49,27 +53,62 @@ impl GameAnalyzer {
         ];
 
         for venue_name in venue_names.iter() {
-            let milo_file_name = format!("{venue_name}.milo");
+            let mut entries = Vec::new();
 
-            let venue_path = self.game_dir.join("world").join(venue_name).join(&milo_file_name);
+            // Open venue milo
+            let venue_file_name = format!("{venue_name}.milo");
+            let venue_path = self.game_dir.join("world").join(venue_name).join(&venue_file_name);
             let venue_milo_dir = try_open_milo(venue_path.as_path());
-
             if venue_milo_dir.is_err() {
                 continue;
             }
 
-            let (_, venue_milo_dir) = venue_milo_dir.unwrap();
-            //venue_milo_dir.unpack_entries(&system_info).unwrap();
+            if let Ok((_, mut venue_milo_dir)) = venue_milo_dir {
+                entries.append(venue_milo_dir.get_entries_mut());
+            }
 
-            let entry_count = venue_milo_dir.get_entries().len();
-            println!("Found {entry_count} entries");
+            // Open venue lighting milo
+            let venue_lighting_file_name = format!("{venue_name}_lighting.milo");
+            let mut venue_lighting_path = self.game_dir.join("world").join(venue_name).join(&venue_lighting_file_name);
+            let mut venue_lighting_milo_dir = try_open_milo(venue_lighting_path.as_path());
 
-            let cams = get_names_for_type_from_dir(&venue_milo_dir, "BandCamShot");
+            if venue_lighting_milo_dir.is_err() {
+                // Try looking in platform specific directory
+                for platform in ["ps3", "xbx"] {
+                    venue_lighting_path = self.game_dir
+                        .join("world")
+                        .join(venue_name)
+                        .join(platform)
+                        .join(&venue_lighting_file_name);
 
+                    venue_lighting_milo_dir = try_open_milo(venue_lighting_path.as_path());
+                    if venue_lighting_milo_dir.is_ok() {
+                        break;
+                    }
+                }
+            }
+
+            if let Ok((_, mut venue_lighting_milo_dir)) = venue_lighting_milo_dir {
+                entries.append(venue_lighting_milo_dir.get_entries_mut());
+            }
+
+            // Get cams
             self.cams.venues.push(ValueCollection {
                 id: venue_name.to_string(),
-                values: cams
-            })
+                values: get_names_for_type_from_dir(&entries, "BandCamShot")
+            });
+
+            // Get light presets
+            self.light_presets.push(ValueCollection {
+                id: venue_name.to_string(),
+                values: get_names_for_type_from_dir(&entries, "LightPreset")
+            });
+
+            // Get trigger groups
+            self.trigger_groups.push(ValueCollection {
+                id: venue_name.to_string(),
+                values: get_names_for_type_from_dir(&entries, "TriggerGroup")
+            });
         }
 
         for song_name in songs.iter() {
@@ -81,7 +120,7 @@ impl GameAnalyzer {
             let milo_cams_file_name = format!("{song_name}_cams.milo");
             let cams_path = song_dir.join(&milo_cams_file_name);
             if let Ok((_, cams_milo_dir)) = try_open_milo(cams_path.as_path()) {
-                let cams = get_names_for_type_from_dir(&cams_milo_dir, "BandCamShot");
+                let cams = get_names_for_type_from_dir(&cams_milo_dir.get_entries(), "BandCamShot");
 
                 if cams.is_empty() {
                     continue;
@@ -110,7 +149,7 @@ impl GameAnalyzer {
                     .join(&anims_file_name);
 
                 if let Ok((_, anims_milo_dir)) = try_open_milo(anims_path.as_path()) {
-                    let clips = get_names_for_type_from_dir(&anims_milo_dir, "CharClipGroup");
+                    let clips = get_names_for_type_from_dir(&anims_milo_dir.get_entries(), "CharClipGroup");
 
                     if clips.is_empty() {
                         continue;
@@ -133,7 +172,7 @@ impl GameAnalyzer {
             .join("camera.milo");
 
         if let Ok((_, post_procs_dir)) = try_open_milo(post_procs_path.as_path()) {
-            self.post_procs = get_names_for_type_from_dir(&post_procs_dir, "PostProc");
+            self.post_procs = get_names_for_type_from_dir(&post_procs_dir.get_entries(), "PostProc");
         }
     }
 
@@ -159,12 +198,20 @@ impl GameAnalyzer {
         let char_clips_json = serde_json::to_string_pretty(&self.char_clips).unwrap();
         std::fs::write(output_dir.join("char_clips.json"), char_clips_json)
             .expect("Error \"char_clips.json\" to file");
+
+        // Write light presets
+        let light_presets_json = serde_json::to_string_pretty(&self.light_presets).unwrap();
+        std::fs::write(output_dir.join("light_presets.json"), light_presets_json)
+            .expect("Error \"light_presets.json\" to file");
+
+        // Write trigger groups
+        let trigger_groups_json = serde_json::to_string_pretty(&self.trigger_groups).unwrap();
+        std::fs::write(output_dir.join("trigger_groups.json"), trigger_groups_json)
+            .expect("Error \"trigger_groups.json\" to file");
     }
 }
 
 fn try_open_milo(milo_path: &Path) -> Result<(SystemInfo, ObjectDir), Box<dyn Error>> {
-    const PLATFORMS: [&str; 3] = ["ps3", "wii", "xbox"];
-
     let dir_path = milo_path
         .parent()
         .unwrap();
@@ -205,9 +252,8 @@ fn open_milo(milo_path: &Path) -> Result<(SystemInfo, ObjectDir), Box<dyn Error>
     Ok((system_info, obj_dir))
 }
 
-fn get_names_for_type_from_dir(obj_dir: &ObjectDir, entry_type: &str) -> Vec<String> {
-    let mut entries = obj_dir
-        .get_entries()
+fn get_names_for_type_from_dir(entries: &[Object], entry_type: &str) -> Vec<String> {
+    let mut entries = entries
         .iter()
         .filter(|e| e.get_type().eq(entry_type))
         .map(|e| e.get_name().to_string())
@@ -234,8 +280,3 @@ pub struct Cams {
 pub struct CharClips {
     pub songs: Vec<ValueCollection<ValueCollection<String>>>
 }
-
-/*#[derive(Default)]
-pub struct Character {
-
-}*/
