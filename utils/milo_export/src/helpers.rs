@@ -47,17 +47,8 @@ impl GameAnalyzer {
     pub fn process(&mut self) {
         self.process_venues();
         self.process_songs();
+        self.process_post_procs();
         self.process_prop_anims();
-
-        // Read post procs
-        let post_procs_path = self.game_dir
-            .join("world")
-            .join("shared")
-            .join("camera.milo");
-
-        if let Ok((_, post_procs_dir)) = try_open_milo(post_procs_path.as_path()) {
-            self.post_procs = get_names_for_type_from_dir(&post_procs_dir.get_entries(), "PostProc");
-        }
     }
 
     fn process_venues(&mut self) {
@@ -211,11 +202,19 @@ impl GameAnalyzer {
             .map(|s| s.as_str())
             .collect::<HashSet<_>>();
 
+        let mapped_trigger_groups = self
+            .trigger_groups
+            .iter()
+            .flat_map(|lp| &lp.values)
+            .map(|s| s.as_str())
+            .collect::<HashSet<_>>();
+
         let is_mapped = |value: &str| -> bool {
             mapped_cams.contains(value)
                 || mapped_clips.contains(value)
                 || mapped_post_procs.contains(value)
                 || mapped_light_presets.contains(value)
+                || mapped_trigger_groups.contains(value)
         };
 
         mapped_cams.contains(&"test");
@@ -275,7 +274,7 @@ impl GameAnalyzer {
                         PropKeysEvents::Color(_) => ("color", None),
                         PropKeysEvents::Object(evs) => ("object", Some(evs
                             .into_iter()
-                            .map(|e| e.text2)
+                            .map(|e| e.text2) // Only text2 is used in songs
                             .filter(|s| !s.is_empty() && !is_mapped(&s))
                             .collect::<Vec<_>>()
                         )),
@@ -331,6 +330,18 @@ impl GameAnalyzer {
             .collect();
 
         self.prop_anims.sort_by(|a, b| a.id.cmp(&b.id));
+    }
+
+    fn process_post_procs(&mut self) {
+        // Read post procs
+        let post_procs_path = self.game_dir
+            .join("world")
+            .join("shared")
+            .join("camera.milo");
+
+        if let Ok((_, post_procs_dir)) = try_open_milo(post_procs_path.as_path()) {
+            self.post_procs = get_names_for_type_from_dir(&post_procs_dir.get_entries(), "PostProc");
+        }
     }
 
     pub fn export<T: AsRef<Path>>(&self, output_dir: T) {
