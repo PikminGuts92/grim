@@ -1,0 +1,9 @@
+[package]
+name = "milo_export"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+grim = { path = "../../core/grim" }
+serde = { version = "1.0.144", features = ["derive"] }
+serde_json = "1.0.85"

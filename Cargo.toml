@@ -2,6 +2,12 @@
 members = [
     "apps/cli/*",
     "apps/ui/*",
+    "core/*",
+    "utils/*"
+]
+default-members = [
+    "apps/cli/*",
+    "apps/ui/*",
     "core/*"
 ]
 resolver = "2" # Super duper important for bevy!
