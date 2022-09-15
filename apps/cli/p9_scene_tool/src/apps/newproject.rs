@@ -139,7 +139,7 @@ fn create_default_mid(mid_path: &Path, gdrb: bool) -> Result<(), std::io::Error>
         "BILLIE",
         "MIKE",
         "TRE",
-        "VENUE"
+        "VENUE GDRB"
     ];
 
     let mut midi = MidiFile::default();

@@ -19,9 +19,10 @@ pub struct GDRBSongPreferences {
 
     pub era: String,
 
-    pub cam_directory: String,
-    pub media_directory: String,
+    // TODO: Investigate if wanted/needed
+    #[serde(skip_serializing)] pub cam_directory: String,
+    #[serde(skip_serializing)] pub media_directory: String,
 
-    pub song_intro_cam: String,
-    pub win_cam: String,
+    #[serde(skip_serializing)] pub song_intro_cam: String,
+    #[serde(skip_serializing)] pub win_cam: String,
 }
