@@ -159,7 +159,7 @@ impl GameAnalyzer {
     }
 
     fn process_prop_anims(&mut self) {
-        let mut tracked_prop_anims: HashMap<String, HashMap<String, (String, Option<String>, HashSet<String>)>> = HashMap::default();
+        let mut tracked_prop_anims: HashMap<String, HashMap<String, (String, Option<String>, u32, Option<String>, u32, HashSet<String>)>> = HashMap::default();
 
         for (_, char_long_name) in GDRB_CHARACTERS.iter() {
             tracked_prop_anims.insert(char_long_name.to_string(), HashMap::new());
@@ -289,9 +289,16 @@ impl GameAnalyzer {
                         )),
                     };
 
-                    let (_, _, values) = track
+                    let (_, _, _, _, _, values) = track
                         .entry(property)
-                        .or_insert_with(|| (ev_type.to_owned(), property_short, HashSet::new()));
+                        .or_insert_with(|| (
+                            ev_type.to_owned(),
+                            property_short,
+                            prop_keys.interpolation,
+                            if !prop_keys.interp_handler.is_empty() { Some(prop_keys.interp_handler.to_owned()) } else { None },
+                            prop_keys.unknown_enum,
+                            HashSet::new()
+                        ));
 
                     if let Some(ev_values) = ev_values.take() {
                         values.extend(ev_values);
@@ -308,9 +315,12 @@ impl GameAnalyzer {
                 values: {
                     let mut vals = value
                         .into_iter()
-                        .map(|(key, (anim_type, key_short, values))| PropAnimInfo {
+                        .map(|(key, (anim_type, key_short, interpolation, interp_handler, unknown_enum, values))| PropAnimInfo {
                             property: key,
                             property_short: key_short, 
+                            interpolation,
+                            interp_handler,
+                            unknown_enum,
                             r#type: anim_type,
                             values: {
                                 let mut vals = values.into_iter().collect::<Vec<_>>();
@@ -469,6 +479,9 @@ pub struct CharClips {
 pub struct PropAnimInfo {
     pub property: String,
     pub property_short: Option<String>,
+    pub interpolation: u32,
+    pub interp_handler: Option<String>,
+    pub unknown_enum: u32,
     pub r#type: String,
     pub values: Vec<String>
 }
