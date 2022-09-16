@@ -170,6 +170,13 @@ impl MidiText {
         }
     }
 
+    pub fn is_text(&self) -> bool {
+        match self.text {
+            MidiTextType::Event(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn as_str<'a>(&'a self) -> Option<&'a str> {
         match &self.text {
             MidiTextType::Lyric(text) => std::str::from_utf8(text).ok(),
