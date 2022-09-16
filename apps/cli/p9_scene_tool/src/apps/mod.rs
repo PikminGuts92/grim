@@ -9,8 +9,8 @@ use self::newproject::*;
 use self::project2milo::*;
 
 // From Cargo.toml
-const PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+pub const PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
+pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 pub(crate) trait SubApp {
     fn process(&mut self) -> Result<(), Box<dyn Error>>;
