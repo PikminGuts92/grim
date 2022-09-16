@@ -7,6 +7,8 @@ edition = "2021"
 [dependencies]
 clap = { version = "3.2.20", features = ["derive"] }
 grim = { path = "../../../core/grim", features = [ "midi" ] }
+log = "0.4.17"
 serde = { version = "1.0.144", features = ["derive"] }
 serde_json = "1.0.85"
+simplelog = "0.12.0"
 thiserror = "1.0.34"

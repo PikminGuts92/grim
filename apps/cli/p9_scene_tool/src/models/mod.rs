@@ -25,6 +25,22 @@ impl Default for SongPreferences {
     }
 }
 
+impl SongPreferences {
+    pub fn is_tbrb(&self) -> bool {
+        match self {
+            SongPreferences::TBRB(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_gdrb(&self) -> bool {
+        match self {
+            SongPreferences::GDRB(_) => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LyricConfig {
