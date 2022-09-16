@@ -96,7 +96,6 @@ fn get_property_values<'a>(text: &'a str) -> Option<(&'a str, Vec<&'a str>)> {
     ))
 }
 
-
 #[cfg(test)]
 mod tests {
     use rstest::*;
