@@ -1,4 +1,5 @@
-use crate::apps::{SubApp};
+use crate::apps::SubApp;
+use crate::helpers::*;
 use crate::models::*;
 use clap::Parser;
 use grim::io::*;
@@ -203,8 +204,10 @@ fn load_venue_track(track: &MidiTrack) -> Vec<PropKeys> {
             continue;
         };
 
-        
+        // Note: Target is implicitly P9Director
     }
+
+    // TODO: Output something loaded 24 events from [track_name]
 
     //prop_keys
     Vec::new()

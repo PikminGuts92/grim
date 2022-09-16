@@ -3,6 +3,7 @@
 
 mod apps;
 mod formatter;
+mod helpers;
 mod models;
 use apps::P9SceneTool;
 use simplelog::*;
