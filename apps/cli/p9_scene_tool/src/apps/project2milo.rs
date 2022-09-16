@@ -3,7 +3,7 @@ use crate::models::*;
 use clap::Parser;
 use grim::io::*;
 use grim::midi::{MidiFile, MidiTrack};
-use grim::scene::{Object, PackedObject};
+use grim::scene::{Object, PackedObject, PropAnim};
 use log::{debug, error, info, warn};
 use serde::Deserialize;
 use serde_json::Deserializer;
@@ -40,12 +40,11 @@ impl SubApp for Project2MiloApp {
 
         //dbg!(&song);
 
-        // Open midi
-        let mid_path = input_dir.join("venue.mid");
-        let _mid = MidiFile::from_path(mid_path).unwrap();
-
         // Get lipsync file(s)
-        let _lipsyncs = get_lipsync(input_dir.join("lipsync").as_path(), song.preferences.is_gdrb());
+        let lipsyncs = get_lipsync(&input_dir.join("lipsync").as_path(), song.preferences.is_gdrb());
+
+        // Load venue midi
+        let prop_anim = load_midi(&input_dir, song.preferences.is_gdrb());
 
         Ok(())
     }
@@ -122,4 +121,39 @@ fn get_lipsync(lipsync_dir: &Path, is_gdrb: bool) -> Vec<Object> {
             })
         })
         .collect()
+}
+
+fn load_midi(project_dir: &Path, is_gdrb: bool) -> Option<Object> {
+    const GDRB_CHARACTERS: [(&str, &str); 3] = [
+        ("BILLIE", "billiejoe"),
+        ("MIKE", "mikedirnt"),
+        ("TRE", "trecool"),
+    ];
+
+    const TBRB_CHARACTERS: [(&str, &str); 4] = [
+        ("GEORGE", "george"),
+        ("JOHN", "john"),
+        ("PAUL", "paul"),
+        ("RINGO", "ringo"),
+    ];
+
+    // Open midi
+    let mid_path = project_dir.join("venue.mid");
+    let mid = MidiFile::from_path(mid_path).unwrap();
+
+    // Parse venue track
+    let venue_track_name = if is_gdrb { "VENUE GDRB" } else { "VENUE" };
+    let venue_track = mid
+        .tracks
+        .iter()
+        .filter(|t| t
+            .name
+            .as_ref()
+            .map(|n| n.eq(venue_track_name))
+            .unwrap_or_default())
+        .next();
+
+    // Parse each character
+
+    todo!()
 }
