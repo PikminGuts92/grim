@@ -297,6 +297,26 @@ impl MidiFile {
             self.tracks.push(track);
         }
     }
+
+    pub fn get_track_with_name<'a>(&'a self, name: &str) -> Option<&'a MidiTrack> {
+        self.tracks
+            .iter()
+            .find(|t| t
+                .name
+                .as_ref()
+                .map(|n| n.eq(name))
+                .unwrap_or_default())
+    }
+
+    pub fn get_track_with_name_mut<'a>(&'a mut self, name: &str) -> Option<&'a mut MidiTrack> {
+        self.tracks
+            .iter_mut()
+            .find(|t| t
+                .name
+                .as_ref()
+                .map(|n| n.eq(name))
+                .unwrap_or_default())
+    }
 }
 
 struct TempoNavigator<'a> {
