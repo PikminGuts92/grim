@@ -78,7 +78,7 @@ impl PropKeysEvents {
         }
     }
 
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         match self {
             PropKeysEvents::Float(evs)   => evs.len(),
             PropKeysEvents::Color(evs)   => evs.len(),
