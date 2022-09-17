@@ -23,6 +23,6 @@ pub struct GDRBSongPreferences {
     #[serde(skip_serializing)] pub cam_directory: String,
     #[serde(skip_serializing)] pub media_directory: String,
 
-    #[serde(skip_serializing)] pub song_intro_cam: String,
-    #[serde(skip_serializing)] pub win_cam: String,
+    pub song_intro_cam: String,
+    pub win_cam: String,
 }
