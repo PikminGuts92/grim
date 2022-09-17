@@ -29,7 +29,9 @@ pub struct Project2MiloApp {
     #[clap(name = "output_path", help = "Path to build output", required = true)]
     pub output_path: String,
     #[clap(short, long, help = "Enable to leave output milo archive(s) uncompressed", required = false)]
-    pub uncompressed: bool
+    pub uncompressed: bool,
+    #[clap(short, long, help = "Platform (ps3, wii, x360)", required = false, default_value = "x360")]
+    pub platform: String
 }
 
 impl SubApp for Project2MiloApp {
@@ -77,9 +79,16 @@ impl SubApp for Project2MiloApp {
             create_dir_all(&output_dir).expect("Failed to create output directory");
         }
 
+        // Get platform ext
+        let platform_ext = match self.platform.to_ascii_lowercase().as_str() {
+            "ps3" => "ps3",
+            "wii" => "wii",
+            _ => "xbox"
+        };
+
         // Name, object dir init
         let object_dirs = [
-            (format!("{}_ap.milo", &song.name), {
+            (format!("{}_ap.milo_{platform_ext}", &song.name), {
                 let mut obj_dir = create_object_dir_for_song(&song.name, &sys_info);
 
                 let entries = obj_dir.get_entries_mut();
@@ -91,7 +100,7 @@ impl SubApp for Project2MiloApp {
 
                 obj_dir
             }),
-            (format!("{}.milo", &song.name), {
+            (format!("{}.milo_{platform_ext}", &song.name), {
                 let mut obj_dir = create_object_dir_for_lipsync(&sys_info);
 
                 // Add lipsync files
