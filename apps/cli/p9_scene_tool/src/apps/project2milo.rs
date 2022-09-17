@@ -6,8 +6,7 @@ use grim::dta::DataArray;
 use grim::dta::DataString;
 use grim::io::*;
 use grim::midi::{MidiFile, MidiTrack, MidiEvent, MidiTextType, MidiText};
-use grim::scene::AnimEventSymbol;
-use grim::scene::{Object, PackedObject, PropAnim, PropKeysEvents, PropKeys};
+use grim::scene::*;
 use log::{debug, error, info, warn};
 use serde::Deserialize;
 use serde_json::Deserializer;
@@ -232,7 +231,7 @@ fn load_venue_track(track: &MidiTrack, is_gdrb: bool) -> Vec<PropKeys> {
     let mut prop_keys = HashMap::new(); // property -> keys
 
     for ev in track.events.iter() {
-        let (_pos, pos_realtime, text) = match ev {
+        let (_pos, _pos_realtime, text) = match ev {
             MidiEvent::Meta(MidiText { pos, pos_realtime, text: MidiTextType::Event(text), .. }) => (*pos, pos_realtime.unwrap(), std::str::from_utf8(text).ok()),
             _ => continue,
         };
@@ -275,30 +274,123 @@ fn load_venue_track(track: &MidiTrack, is_gdrb: bool) -> Vec<PropKeys> {
         }
 
         let key = prop_keys.get_mut(property).unwrap();
-        let pos = (ev.get_pos_realtime().unwrap() * 30.) / 1000.; // TODO: Probably make fps a variable
+        let pos = ((ev.get_pos_realtime().unwrap() * 30.) / 1000.) as f32; // TODO: Probably make fps a variable
 
         match &mut key.events {
             PropKeysEvents::Float(evs) => {
-                
+                let anim_ev = AnimEventFloat {
+                    pos,
+                    value: match parsed_text.try_parse_values::<1, f32>() {
+                        [Some(f)] => f,
+                        _ => {
+                            // TODO: Show position
+                            warn!("Unable to parse \"{}\"", parsed_text.get_text());
+                            continue;
+                        }
+                    }
+                };
+
+                evs.push(anim_ev);
             },
             PropKeysEvents::Color(evs) => {
+                let color = match parsed_text.try_parse_values::<4, f32>() {
+                    [Some(r), Some(g), Some(b), Some(a)] => Color4 { r, g, b, a },
+                    _ => {
+                        // TODO: Show position
+                        warn!("Unable to parse \"{}\"", parsed_text.get_text());
+                        continue;
+                    }
+                };
 
+                let anim_ev = AnimEventColor {
+                    pos,
+                    value: color
+                };
+
+                evs.push(anim_ev);
             },
             PropKeysEvents::Object(evs) => {
-                
+                let values = parsed_text.get_values();
+                let parsed_values = [ values.get(0), values.get(1) ];
+
+                let mut anim_ev = AnimEventObject {
+                    pos,
+                    ..Default::default()
+                };
+
+                match parsed_values {
+                    [Some(v1), Some(v2)] => {
+                        // First value is usually reserved for milo directory name
+                        anim_ev.text1 = v1.to_string();
+                        anim_ev.text2 = v2.to_string();
+                    },
+                    [Some(v1), ..] => {
+                        anim_ev.text2 = v1.to_string();
+                    },
+                    _ => {
+                        // TODO: Show position
+                        warn!("Unable to parse \"{}\"", parsed_text.get_text());
+                        continue;
+                    }
+                }
+
+                evs.push(anim_ev);
             },
             PropKeysEvents::Bool(evs) => {
+                let anim_ev = AnimEventBool {
+                    pos,
+                    value: match parsed_text.get_values().get(0) {
+                        Some(&"TRUE") => true,
+                        Some(&"FALSE") => false,
+                        _ => {
+                            // TODO: Show position
+                            warn!("Unable to parse \"{}\"", parsed_text.get_text());
+                            continue;
+                        }
+                    }
+                };
 
+                evs.push(anim_ev);
             },
             PropKeysEvents::Quat(evs) => {
+                let quat = match parsed_text.try_parse_values::<4, f32>() {
+                    [Some(x), Some(y), Some(z), Some(w)] => Quat { x, y, z, w },
+                    _ => {
+                        // TODO: Show position
+                        warn!("Unable to parse \"{}\"", parsed_text.get_text());
+                        continue;
+                    }
+                };
 
+                let anim_ev = AnimEventQuat {
+                    pos,
+                    value: quat
+                };
+
+                evs.push(anim_ev);
             },
             PropKeysEvents::Vector3(evs) => {
+                let parsed_values = parsed_text.try_parse_values::<3, f32>();
 
+                let vector3 = match parsed_values {
+                    [Some(x), Some(y), Some(z)] => Vector3 { x, y, z },
+                    _ => {
+                        // TODO: Show position
+                        warn!("Unable to parse \"{}\"", parsed_text.get_text());
+                        continue;
+                    }
+                };
+
+                let anim_ev = AnimEventVector3 {
+                    pos,
+                    value: vector3
+                };
+
+                evs.push(anim_ev);
             },
             PropKeysEvents::Symbol(evs) => {
                 let anim_ev = AnimEventSymbol {
-                    pos: pos as f32,
+                    pos,
                     text: match parsed_text.get_values().get(0) {
                         Some(value) => value.to_string(),
                         _ => {
@@ -315,9 +407,7 @@ fn load_venue_track(track: &MidiTrack, is_gdrb: bool) -> Vec<PropKeys> {
     }
 
     // TODO: Output something loaded 24 events from [track_name]
-
-    //prop_keys
-    Vec::new()
+    prop_keys.into_values().collect()
 }
 
 fn load_char_track(track: &MidiTrack, char_name: &str, is_gdrb: bool) -> Vec<PropKeys> {

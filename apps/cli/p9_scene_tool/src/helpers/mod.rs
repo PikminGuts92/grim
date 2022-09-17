@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 
 pub struct FormattedAnimEvent<'a> {
     text: &'a str,
@@ -30,6 +32,17 @@ impl<'a> FormattedAnimEvent<'a> {
 
     pub fn get_values(&'a self) -> &'a [&'a str] {
         &self.values
+    }
+
+    pub fn try_parse_values<const N: usize, T: FromStr + Copy>(&self) -> [Option<T>; N] {
+        let text_values = self.get_values();
+        let mut parsed_values = [None; N];
+
+        for (i, p) in parsed_values.iter_mut().enumerate() {
+            *p = text_values.get(i).and_then(|t| t.parse::<T>().ok());
+        }
+
+        parsed_values
     }
 }
 
