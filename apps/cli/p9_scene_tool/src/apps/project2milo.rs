@@ -150,6 +150,12 @@ fn load_midi(project_dir: &Path, is_gdrb: bool) -> Option<Object> {
 
     // Open midi
     let mid_path = project_dir.join("venue.mid"); // TODO: Check if midi exists first?
+    if !mid_path.exists() {
+        // TODO: Throw proper error. Not sure if should halt process though...
+        error!("Can't find \"venue.mid\"");
+        return None;
+    }
+
     let mid = MidiFile::from_path(mid_path).unwrap();
     let mut prop_keys = Vec::new();
 
