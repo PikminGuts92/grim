@@ -199,6 +199,7 @@ fn load_midi(project_dir: &Path, is_gdrb: bool) -> Option<Object> {
 
 fn load_track(track: &MidiTrack, properties: &[(&str, u32, Option<&str>, u32, fn() -> PropKeysEvents)]) -> Vec<PropKeys> {
     let mut prop_keys = HashMap::new(); // property -> keys
+    let track_name = track.name.as_ref().map(|n| n.as_str()).unwrap_or("???");
 
     for ev in track.events.iter() {
         let (_pos, _pos_realtime, text) = match ev {
@@ -373,7 +374,18 @@ fn load_track(track: &MidiTrack, properties: &[(&str, u32, Option<&str>, u32, fn
     }
 
     // TODO: Output something loaded 24 events from [track_name]
-    prop_keys.into_values().collect()
+    let keys = prop_keys.into_values().collect::<Vec<_>>();
+
+    let (property_count, event_count) = keys
+        .iter()
+        .fold(
+            (0, 0),
+            |(pc, ec), key| (pc + 1, ec + key.events.len())
+        );
+
+    info!("[{track_name:>010}] Loaded {event_count:>4} events for {property_count:>4} properties");
+
+    keys
 }
 
 fn load_venue_track(track: &MidiTrack, is_gdrb: bool) -> Vec<PropKeys> {
