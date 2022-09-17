@@ -298,9 +298,8 @@ fn load_track(track: &MidiTrack, properties: &[(&str, u32, Option<&str>, u32, fn
                         anim_ev.text2 = v1.to_string();
                     },
                     _ => {
-                        // TODO: Show position
-                        warn!("Unable to parse \"{}\"", parsed_text.get_text());
-                        continue;
+                        // Treat empty array as null symbol
+                        // So do nothing. Maybe further validate symbol syntax?
                     }
                 }
 
@@ -361,14 +360,11 @@ fn load_track(track: &MidiTrack, properties: &[(&str, u32, Option<&str>, u32, fn
             PropKeysEvents::Symbol(evs) => {
                 let anim_ev = AnimEventSymbol {
                     pos,
-                    text: match parsed_text.get_values().get(0) {
-                        Some(value) => value.to_string(),
-                        _ => {
-                            // TODO: Show position
-                            warn!("Unable to parse \"{}\"", parsed_text.get_text());
-                            continue;
-                        }
-                    }
+                    text: parsed_text // Treat empty array as null symbol
+                        .get_values()
+                        .get(0)
+                        .map(|s| s.to_string())
+                        .unwrap_or_default()
                 };
 
                 evs.push(anim_ev);
