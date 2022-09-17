@@ -2,6 +2,8 @@ use crate::apps::SubApp;
 use crate::helpers::*;
 use crate::models::*;
 use clap::Parser;
+use grim::Platform;
+use grim::SystemInfo;
 use grim::dta::DataArray;
 use grim::dta::DataString;
 use grim::io::*;
@@ -12,8 +14,10 @@ use serde::Deserialize;
 use serde_json::Deserializer;
 use std::collections::HashMap;
 use std::error::Error;
+use std::fs::OpenOptions;
 use std::fs::{copy, create_dir_all, File, read, remove_dir_all, write};
 use std::io::Read;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -48,17 +52,100 @@ impl SubApp for Project2MiloApp {
         //dbg!(&song);
 
         // Get lipsync file(s)
-        let lipsyncs = get_lipsync(&input_dir.join("lipsync").as_path(), song.preferences.is_gdrb());
+        let mut lipsyncs = get_lipsync(&input_dir.join("lipsync").as_path(), song.preferences.is_gdrb());
 
         // Load venue midi
-        let prop_anim = load_midi(&input_dir, song.preferences.is_gdrb());
+        let mut prop_anim = load_midi(&input_dir, song.preferences.is_gdrb());
 
-        // TODO: Create song prefs file
+        // Create song prefs file
+        let song_pref = create_song_pref(&song);
 
-        // TODO: Create milo(s)
+        // TODO: Is "LightPreset.pst" needed?
+
+        // Create milos files...
+
+        // Write everything?
+        let sys_info = SystemInfo {
+            version: 25,
+            platform: Platform::PS3,
+            endian: IOEndian::Big,
+        };
+
+        let output_dir = PathBuf::from(&self.output_path);
+        if !output_dir.exists() {
+            // Create outout path if it doesn't exist
+            create_dir_all(&output_dir).expect("Failed to create output directory");
+        }
+
+        // Name, object dir init
+        let object_dirs = [
+            (format!("{}_ap.milo", &song.name), {
+                let mut obj_dir = create_object_dir_for_song(&song.name, &sys_info);
+
+                let entries = obj_dir.get_entries_mut();
+                entries.push(song_pref);
+
+                if let Some(prop_anim) = prop_anim.take() {
+                    entries.push(prop_anim);
+                }
+
+                obj_dir
+            }),
+            (format!("{}.milo", &song.name), {
+                let mut obj_dir = create_object_dir_for_lipsync(&sys_info);
+
+                // Add lipsync files
+                obj_dir.get_entries_mut().append(&mut lipsyncs);
+
+                obj_dir
+            }),
+        ];
+
+        for (file_name, object_dir) in object_dirs {
+            let block_type = match self.uncompressed {
+                true => BlockType::TypeA,
+                _ => BlockType::TypeB
+            };
+
+            let archive = MiloArchive::from_object_dir(&object_dir, &sys_info, Some(block_type))?;
+
+            // Write to file
+            let milo_path = output_dir.join(&file_name);
+            let mut stream = FileStream::from_path_as_read_write_create(&milo_path)?;
+            archive.write_to_stream(&mut stream)?;
+
+            info!("Wrote \"{file_name}\"")
+        }
 
         Ok(())
     }
+}
+
+fn create_song_pref(song: &P9Song) -> Object {
+    let song_pref = match &song.preferences {
+        SongPreferences::GDRB(prefs) => P9SongPref {
+            name: String::from("P9SongPref"),
+            venue: prefs.venue.to_string(),
+            instruments: [
+                prefs.mike_instruments.to_owned(),
+                prefs.billie_instruments.to_owned(),
+                Vec::new(),
+                prefs.tre_instruments.to_owned()
+            ],
+            tempo: prefs.tempo.to_owned(),
+            song_clips: prefs.song_clips.to_owned(),
+            normal_outfit: prefs.normal_outfit.to_string(),
+            bonus_outfit: prefs.bonus_outfit.to_string(),
+            drum_set: prefs.drum_set.to_owned(),
+            era: prefs.era.to_owned(),
+            song_intro_cam: prefs.song_intro_cam.to_owned(),
+            win_cam: prefs.win_cam.to_owned(),
+            ..Default::default()
+        },
+        _ => todo!()
+    };
+
+    Object::P9SongPref(song_pref)
 }
 
 fn get_lipsync(lipsync_dir: &Path, is_gdrb: bool) -> Vec<Object> {
@@ -373,7 +460,6 @@ fn load_track(track: &MidiTrack, properties: &[(&str, u32, Option<&str>, u32, fn
         }
     }
 
-    // TODO: Output something loaded 24 events from [track_name]
     let keys = prop_keys.into_values().collect::<Vec<_>>();
 
     let (property_count, event_count) = keys
@@ -490,4 +576,111 @@ fn init_events_object() -> PropKeysEvents {
 
 fn init_events_symbol() -> PropKeysEvents {
     PropKeysEvents::Symbol(Vec::new())
+}
+
+fn create_object_dir_for_song(name: &str, info: &SystemInfo) -> ObjectDir {
+    let mut obj_dir = ObjectDirBase {
+        name: name.to_string(),
+        ..ObjectDirBase::new()
+    };
+
+    let dir_entry = create_object_dir_entry(
+        &format!("{name}_ap"),
+        "song",
+        &[
+            "../../world/shared/director.milo",
+            "../../world/shared/camera.milo",
+            &format!("{name}.milo") // Lipsync milo
+        ],
+        info
+    );
+
+    obj_dir.entries.push(dir_entry.unwrap()); // Uhh... shouldn't fail. All this will be refactored anyways
+
+    ObjectDir::ObjectDir(obj_dir)
+}
+
+fn create_object_dir_for_lipsync(info: &SystemInfo) -> ObjectDir {
+    let mut obj_dir = ObjectDirBase {
+        name: String::from("lipsync"),
+        ..ObjectDirBase::new()
+    };
+
+    let dir_entry = create_object_dir_entry(
+        "lipsync", // Great naming there, HMX
+        "",
+        &[],
+        info
+    );
+
+    obj_dir.entries.push(dir_entry.unwrap()); // Uhh... shouldn't fail. All this will be refactored anyways
+
+    ObjectDir::ObjectDir(obj_dir)
+}
+
+fn create_object_dir_entry(name: &str, obj_type: &str, subdir_paths: &[&str], info: &SystemInfo) -> Result<Object, Box<dyn Error>> {
+    // Create stream
+    let mut data = Vec::<u8>::new();
+    let mut stream = MemoryStream::from_vector_as_read_write(&mut data);
+    let mut writer = BinaryStream::from_stream_with_endian(&mut stream, info.endian);
+
+    // Version, revision, type
+    writer.write_int32(22)?;
+    writer.write_int32(2)?;
+    writer.write_prefixed_string(obj_type)?;
+
+    // Viewports
+    const VIEWPORT_COUNT: i32 = 7;
+    let mat = Matrix::indentity();
+    writer.write_int32(VIEWPORT_COUNT)?;
+
+    for _ in 0..VIEWPORT_COUNT {
+        writer.write_float32(mat.m11)?;
+        writer.write_float32(mat.m12)?;
+        writer.write_float32(mat.m13)?;
+
+        writer.write_float32(mat.m21)?;
+        writer.write_float32(mat.m22)?;
+        writer.write_float32(mat.m23)?;
+
+        writer.write_float32(mat.m31)?;
+        writer.write_float32(mat.m32)?;
+        writer.write_float32(mat.m33)?;
+
+        writer.write_float32(mat.m41)?;
+        writer.write_float32(mat.m42)?;
+        writer.write_float32(mat.m43)?;
+    }
+    writer.write_int32(0)?; // Current viewport index
+
+    // Inline proxy, proxy file
+    writer.write_boolean(true)?;
+    writer.write_prefixed_string("")?;
+
+    // Subdir count, subdirs
+    writer.write_int32(subdir_paths.len() as i32)?;
+    for subdir_path in subdir_paths {
+        writer.write_prefixed_string(subdir_path)?;
+    }
+
+    // Inline subdir, inline subdir count
+    writer.write_boolean(false)?;
+    writer.write_int32(0)?;
+
+    // Unknown strings
+    writer.write_prefixed_string("")?;
+    writer.write_prefixed_string("")?;
+
+    // Props (dta). Just ignore for now
+    writer.write_boolean(false)?;
+
+    // Note
+    let note = format!("Generated by {} v{}", super::PKG_NAME, super::VERSION);
+    writer.write_prefixed_string(&note)?;
+
+    Ok(Object::Packed(PackedObject {
+        name: name.to_string(),
+        object_type: String::from("ObjectDir"),
+        data
+    }))
 }
