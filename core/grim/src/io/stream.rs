@@ -191,6 +191,7 @@ impl FileStream {
             .read(ops.read)
             .write(ops.write)
             .create(ops.create)
+            .truncate(ops.create && ops.write)
             .open(path)?;
         
         Ok(FileStream {
@@ -205,32 +206,26 @@ impl FileStream {
     }
 
     pub fn from_path_as_read_open(path: &Path) -> Result<FileStream, Box<dyn Error>> {
-        Self::from_options(path, FileOptions {
-            read: true,
-            write: false,
-            create: false
-        })
-    }
+        let file = File::open(path)?;
 
-    pub fn from_path_as_read_create(path: &Path) -> Result<FileStream, Box<dyn Error>> {
-        Self::from_options(path, FileOptions {
-            read: true,
-            write: false,
-            create: true
-        })
-    }
-
-    pub fn from_path_as_read_write_open(path: &Path) -> Result<FileStream, Box<dyn Error>> {
-        Self::from_options(path, FileOptions {
-            read: true,
-            write: true,
-            create: false
+        Ok(FileStream {
+            position: 0,
+            file,
+            writeable: false
         })
     }
 
     pub fn from_path_as_read_write_create(path: &Path) -> Result<FileStream, Box<dyn Error>> {
         Self::from_options(path, FileOptions {
             read: true,
+            write: true,
+            create: true
+        })
+    }
+
+    pub fn from_path_as_write_create(path: &Path) -> Result<FileStream, Box<dyn Error>> {
+        Self::from_options(path, FileOptions {
+            read: false,
             write: true,
             create: true
         })
