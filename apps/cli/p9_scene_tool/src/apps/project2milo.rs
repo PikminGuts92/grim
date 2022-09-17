@@ -191,43 +191,7 @@ fn load_midi(project_dir: &Path, is_gdrb: bool) -> Option<Object> {
     }))
 }
 
-fn load_venue_track(track: &MidiTrack, is_gdrb: bool) -> Vec<PropKeys> {
-    // Property, interpolation, interp_handler, unknown_enum, type
-    const GDRB_PROPERTIES_VENUE: [(&str, u32, Option<&str>, u32, fn() -> PropKeysEvents); 30] = [
-        ("configuration",                 0, None,                    6, init_events_symbol),
-        ("crash_ignore_triggers",         0, None,                    0, init_events_bool),
-        ("crowd_anim_override",           0, None,                    0, init_events_symbol),
-        ("crowd_extras_command",          0, None,                    0, init_events_symbol),
-        ("crowd_preset",                  0, None,                    0, init_events_symbol),
-        ("floortom_ignore_triggers",      0, None,                    0, init_events_bool),
-        ("hihat_clip",                    0, None,                    0, init_events_symbol),
-        ("hihat_ignore_triggers",         0, None,                    0, init_events_bool),
-        ("jumbotron_post_proc",           0, None,                    0, init_events_symbol),
-        ("jumbotron_shot",                0, None,                    0, init_events_symbol),
-        ("kick_ignore_triggers",          0, None,                    0, init_events_bool),
-        ("left_crash_clip",               0, None,                    0, init_events_symbol),
-        ("left_crash_ignore_triggers",    0, None,                    0, init_events_bool),
-        ("left_crash_weight",             1, None,                    0, init_events_float),
-        ("left_floortom_ignore_triggers", 0, None,                    0, init_events_bool),
-        ("left_foot_ignore_triggers",     0, None,                    0, init_events_bool),
-        ("left_tom_ignore_triggers",      0, None,                    0, init_events_bool),
-        ("lighting_preset",               0, None,                    0, init_events_symbol),
-        ("lighting_preset_modifier",      0, None,                    0, init_events_symbol),
-        ("mic_stand_visibility",          0, None,                    0, init_events_symbol),
-        ("postproc",                      0, Some("postproc_interp"), 5, init_events_object),
-        ("postproc_blending_enabled",     0, None,                    0, init_events_bool),
-        ("ride_clip",                     0, None,                    0, init_events_symbol),
-        ("ride_ignore_triggers",          0, None,                    0, init_events_bool),
-        ("right_crash_clip",              0, None,                    0, init_events_symbol),
-        ("right_crash_ignore_triggers",   0, None,                    0, init_events_bool),
-        ("right_tom_ignore_triggers",     0, None,                    0, init_events_bool),
-        ("shot",                          0, None,                    0, init_events_symbol),
-        ("snare_ignore_triggers",         0, None,                    0, init_events_bool),
-        ("trigger_group",                 0, None,                    0, init_events_symbol),
-    ];
-
-    let venue_properties = if is_gdrb { GDRB_PROPERTIES_VENUE.as_slice() } else { todo!("TBRB venue not supported right now") };
-
+fn load_track(track: &MidiTrack, properties: &[(&str, u32, Option<&str>, u32, fn() -> PropKeysEvents)]) -> Vec<PropKeys> {
     let mut prop_keys = HashMap::new(); // property -> keys
 
     for ev in track.events.iter() {
@@ -248,7 +212,7 @@ fn load_venue_track(track: &MidiTrack, is_gdrb: bool) -> Vec<PropKeys> {
 
         if !prop_keys.contains_key(property) {
             // Validate property
-            match venue_properties.iter().find(|(p, ..)| p.eq(&parsed_text.get_property())) {
+            match properties.iter().find(|(p, ..)| p.eq(&parsed_text.get_property())) {
                 Some((property, interpolation, interp_handler, unk_enum, init_events)) => {
                     // Create and insert new prop key
                     prop_keys.insert(*property, PropKeys {
@@ -410,9 +374,91 @@ fn load_venue_track(track: &MidiTrack, is_gdrb: bool) -> Vec<PropKeys> {
     prop_keys.into_values().collect()
 }
 
+fn load_venue_track(track: &MidiTrack, is_gdrb: bool) -> Vec<PropKeys> {
+    // Property, interpolation, interp_handler, unknown_enum, type
+    const GDRB_PROPERTIES_VENUE: [(&str, u32, Option<&str>, u32, fn() -> PropKeysEvents); 30] = [
+        ("configuration",                 0, None,                    6, init_events_symbol),
+        ("crash_ignore_triggers",         0, None,                    0, init_events_bool),
+        ("crowd_anim_override",           0, None,                    0, init_events_symbol),
+        ("crowd_extras_command",          0, None,                    0, init_events_symbol),
+        ("crowd_preset",                  0, None,                    0, init_events_symbol),
+        ("floortom_ignore_triggers",      0, None,                    0, init_events_bool),
+        ("hihat_clip",                    0, None,                    0, init_events_symbol),
+        ("hihat_ignore_triggers",         0, None,                    0, init_events_bool),
+        ("jumbotron_post_proc",           0, None,                    0, init_events_symbol),
+        ("jumbotron_shot",                0, None,                    0, init_events_symbol),
+        ("kick_ignore_triggers",          0, None,                    0, init_events_bool),
+        ("left_crash_clip",               0, None,                    0, init_events_symbol),
+        ("left_crash_ignore_triggers",    0, None,                    0, init_events_bool),
+        ("left_crash_weight",             1, None,                    0, init_events_float),
+        ("left_floortom_ignore_triggers", 0, None,                    0, init_events_bool),
+        ("left_foot_ignore_triggers",     0, None,                    0, init_events_bool),
+        ("left_tom_ignore_triggers",      0, None,                    0, init_events_bool),
+        ("lighting_preset",               0, None,                    0, init_events_symbol),
+        ("lighting_preset_modifier",      0, None,                    0, init_events_symbol),
+        ("mic_stand_visibility",          0, None,                    0, init_events_symbol),
+        ("postproc",                      0, Some("postproc_interp"), 5, init_events_object),
+        ("postproc_blending_enabled",     0, None,                    0, init_events_bool),
+        ("ride_clip",                     0, None,                    0, init_events_symbol),
+        ("ride_ignore_triggers",          0, None,                    0, init_events_bool),
+        ("right_crash_clip",              0, None,                    0, init_events_symbol),
+        ("right_crash_ignore_triggers",   0, None,                    0, init_events_bool),
+        ("right_tom_ignore_triggers",     0, None,                    0, init_events_bool),
+        ("shot",                          0, None,                    0, init_events_symbol),
+        ("snare_ignore_triggers",         0, None,                    0, init_events_bool),
+        ("trigger_group",                 0, None,                    0, init_events_symbol),
+    ];
+
+    let venue_properties = if is_gdrb { GDRB_PROPERTIES_VENUE.as_slice() } else { todo!("TBRB venue not supported right now") };
+
+    load_track(track, venue_properties)
+}
+
 fn load_char_track(track: &MidiTrack, char_name: &str, is_gdrb: bool) -> Vec<PropKeys> {
-    let mut prop_keys = Vec::new();
-    
+    // Property, interpolation, interp_handler, unknown_enum, type
+    const GDRB_PROPERTIES_CHARS: [(&str, u32, Option<&str>, u32, fn() -> PropKeysEvents); 20] = [
+        ("add_face_clip",            0, None, 0, init_events_symbol),
+        ("add_face_weight",          4, None, 0, init_events_float),
+        ("attention",                0, None, 0, init_events_symbol),
+        ("body",                     0, None, 0, init_events_symbol),
+        ("brow_clip",                0, None, 0, init_events_symbol),
+        ("brow_clip_b",              0, None, 0, init_events_symbol),
+        ("brow_clip_balance",        1, None, 0, init_events_float),
+        ("brow_weight",              1, None, 0, init_events_float),
+        ("face_clip",                0, None, 0, init_events_symbol),
+        ("face_clip_b",              0, None, 0, init_events_symbol),
+        ("face_clip_balance",        4, None, 0, init_events_float),
+        ("face_weight",              4, None, 0, init_events_float),
+        ("hist_clip",                0, None, 0, init_events_symbol),
+        ("lid_clip",                 0, None, 0, init_events_symbol),
+        ("lid_clip_b",               0, None, 0, init_events_symbol),
+        ("lid_clip_balance",         1, None, 0, init_events_float),
+        ("lid_weight",               1, None, 0, init_events_float),
+        ("lookat",                   1, None, 0, init_events_float),
+        ("procedural_blink_enabled", 0, None, 0, init_events_bool),
+        ("vox_clone_enabled",        0, None, 0, init_events_bool),
+    ];
+
+    let char_properties = if is_gdrb { GDRB_PROPERTIES_CHARS.as_slice() } else { todo!("TBRB characters not supported right now") };
+
+    let mut prop_keys = load_track(track, char_properties);
+
+    // Rename properties for specific char
+    for prop_key in prop_keys.iter_mut() {
+        let property = prop_key.property.first_mut().map(|p| match p {
+            DataArray::Symbol(s) => s,
+            _ => panic!("Shouldn't be hit")
+        }).unwrap();
+
+        let transformed_value = match property.as_utf8().unwrap() {
+            "procedural_blink_enabled" => format!("procedural_blink_{}_enabled", char_name),
+            "vox_clone_enabled" => format!("vox_clone_{}_enabled", char_name),
+            default @ _ => format!("{}_{}", default, char_name)
+        };
+
+        *property = DataString::from_string(transformed_value);
+    }
+
     prop_keys
 }
 
