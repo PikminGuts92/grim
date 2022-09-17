@@ -383,7 +383,7 @@ fn load_track(track: &MidiTrack, properties: &[(&str, u32, Option<&str>, u32, fn
             |(pc, ec), key| (pc + 1, ec + key.events.len())
         );
 
-    info!("[{track_name:>010}] Loaded {event_count:>4} events for {property_count:>4} properties");
+    info!("[{track_name:>10}] Loaded {event_count:>4} events for {property_count:>2} properties");
 
     keys
 }
