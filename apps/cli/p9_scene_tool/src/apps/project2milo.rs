@@ -120,7 +120,7 @@ impl SubApp for Project2MiloApp {
 
             // Write to file
             let milo_path = output_dir.join(&file_name);
-            let mut stream = FileStream::from_path_as_read_write_create(&milo_path)?;
+            let mut stream = FileStream::from_path_as_write_create(&milo_path)?;
             archive.write_to_stream(&mut stream)?;
 
             info!("Wrote \"{file_name}\"")
