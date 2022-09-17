@@ -10,7 +10,13 @@ use self::project2milo::*;
 
 // From Cargo.toml
 pub const PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
-pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+// pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+pub const VERSION: &'static str = get_prerelease_version();
+
+const fn get_prerelease_version() -> &'static str {
+    const BUILD_DATE: &str = build_time::build_time_local!("%Y%m%d");
+    const_format::formatcp!("prealpha-{}", BUILD_DATE)
+}
 
 pub(crate) trait SubApp {
     fn process(&mut self) -> Result<(), Box<dyn Error>>;

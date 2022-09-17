@@ -5,7 +5,9 @@ authors = ["PikminGuts92"]
 edition = "2021"
 
 [dependencies]
+build-time = "0.1.2"
 clap = { version = "3.2.22", features = ["derive"] }
+const_format = "0.2.26"
 grim = { path = "../../../core/grim", features = [ "midi" ] }
 log = "0.4.17"
 serde = { version = "1.0.144", features = ["derive"] }
