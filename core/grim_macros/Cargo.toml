@@ -1,0 +1,15 @@
+[package]
+name = "grim_macros"
+version = "0.1.0"
+authors = ["PikminGuts92"]
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+grim_traits = { path = "../grim_traits" }
+lazy_static = "1.4.0"
+proc-macro2 = "1.0.43"
+quote = "1.0.21"
+syn = { version = "1.0.99", default-features = false, features = ["derive"] }
