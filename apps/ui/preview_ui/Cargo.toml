@@ -10,7 +10,7 @@ bevy_egui = { version = "0.16.0", features = [ "immutable_ctx" ] }
 bevy_fly_camera = { git = "https://github.com/PikminGuts92/bevy_fly_camera", branch = "bevy-0.8" }
 bevy_infinite_grid = "0.5.2"
 console_error_panic_hook = "0.1.7"
-grim = { path = "../../../core/grim" }
+grim = { workspace = true }
 itertools = { workspace = true }
 # native-dialog = "0.6.1"
 serde = { workspace = true }

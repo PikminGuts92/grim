@@ -6,5 +6,5 @@ edition.workspace = true
 
 [dependencies]
 clap = { workspace = true }
-grim = { path = "../../../core/grim", features = [ "model" ] }
+grim = { workspace = true, features = [ "model" ] }
 thiserror = { workspace = true }
