@@ -9,10 +9,10 @@ build-time = "0.1.2"
 clap = { workspace = true }
 const_format = "0.2.26"
 grim = { workspace = true, features = [ "midi" ] }
-log = "0.4.17"
+log = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-simplelog = "0.12.0"
+simplelog = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
