@@ -1,10 +1,10 @@
 [package]
 name = "mesh_tool"
-version = "0.1.0"
-authors = ["PikminGuts92"]
-edition = "2021"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
 
 [dependencies]
-clap = { version = "3.2.22", features = ["derive"] }
+clap = { workspace = true }
 grim = { path = "../../../core/grim", features = [ "model" ] }
-thiserror = "1.0.35"
+thiserror = { workspace = true }
