@@ -7,33 +7,26 @@ mod poll;
 mod trans;
 
 use crate::*;
-use lazy_static::*;
 pub use milo_object::*;
 use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::HashMap;
 use syn::{AttributeArgs, DeriveInput, Meta, MetaList, NestedMeta, Path, parse::Parser, parse_macro_input};
 
-type GetObjectTokensFn = fn() -> ObjectTokens;
-
-lazy_static! {
-    static ref OBJECT_TOKENS: HashMap<&'static str, GetObjectTokensFn> = {
-        let mut m: HashMap<&'static str, GetObjectTokensFn> = HashMap::new();
-        m.insert("Anim", anim::get_anim_tokens);
-        m.insert("Draw", draw::get_draw_tokens);
-        m.insert("Group", group::get_group_tokens);
-        m.insert("RndMesh", mesh::get_mesh_tokens);
-        m.insert("Poll", poll::get_poll_tokens);
-        m.insert("Trans", trans::get_trans_tokens);
-        m
-    };
-}
-
 pub fn get_object_tokens(obj_type: &str) -> Option<ObjectTokens> {
-    match OBJECT_TOKENS.get(obj_type) {
-        Some(impl_trait_fn) => Some(impl_trait_fn()),
-        _ => None,
-    }
+    let get_tokens: fn() -> ObjectTokens = match obj_type {
+        "Anim" => anim::get_anim_tokens,
+        "Draw" => draw::get_draw_tokens,
+        "Group" => group::get_group_tokens,
+        "RndMesh" => mesh::get_mesh_tokens,
+        "Poll" => poll::get_poll_tokens,
+        "Trans" => trans::get_trans_tokens,
+        _ => {
+            return None
+        },
+    };
+
+    Some(get_tokens())
 }
 
 pub struct ObjectTokens {
