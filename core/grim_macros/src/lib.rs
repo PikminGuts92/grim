@@ -82,7 +82,7 @@ pub fn milo(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut transformed_input = proc_macro2::TokenStream::new();
 
     // Inherit base milo object trait
-    let path: syn::Path = syn::parse_str("grim_traits::scene::MiloObject").unwrap();
+    let path: syn::Path = syn::parse_str("grim_traits::scene::Object").unwrap();
 
     let base_tokens = get_milo_object_tokens();
     insert_as_struct_fields(&mut input, base_tokens.struct_fields);

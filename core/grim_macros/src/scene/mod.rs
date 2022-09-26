@@ -2,12 +2,13 @@ mod anim;
 mod draw;
 mod group;
 mod mesh;
-mod milo_object;
+mod object;
+mod object_dir;
 mod poll;
 mod trans;
 
 use crate::*;
-pub use milo_object::*;
+pub use object::*;
 use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::HashMap;
@@ -18,7 +19,8 @@ pub fn get_object_tokens(obj_type: &str) -> Option<ObjectTokens> {
         "Anim" => anim::get_anim_tokens,
         "Draw" => draw::get_draw_tokens,
         "Group" => group::get_group_tokens,
-        "RndMesh" => mesh::get_mesh_tokens,
+        "Mesh" => mesh::get_mesh_tokens,
+        "ObjectDir" => object_dir::get_object_dir_tokens,
         "Poll" => poll::get_poll_tokens,
         "Trans" => trans::get_trans_tokens,
         _ => {
