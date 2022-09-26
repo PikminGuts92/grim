@@ -1,4 +1,4 @@
-use super::{MiloObject, Sphere};
+use super::{Object, Sphere};
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy)]
@@ -27,7 +27,7 @@ impl From<u32> for OverrideIncludeInDepthOnlyPass {
     }
 }
 
-pub trait Draw : MiloObject {
+pub trait Draw : Object {
     fn get_showing(&self) -> bool;
     fn set_showing(&mut self, showing: bool);
 

@@ -1,6 +1,6 @@
-use super::MiloObject;
+use super::Object;
 
-pub trait Poll : MiloObject {
+pub trait Poll : Object {
     fn get_target_1(&self) -> &String;
     fn get_target_1_mut(&mut self) -> &mut String;
     fn set_target_1(&mut self, target: String);

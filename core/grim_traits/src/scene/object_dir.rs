@@ -1,6 +1,6 @@
-use super::{Matrix, MiloObject, ObjectId};
+use super::{Matrix, Object, ObjectId};
 
-pub trait MiloObjectDir : MiloObject {
+pub trait ObjectDir : Object {
     fn get_entries_ids(&self) -> &Vec<ObjectId>;
     fn get_entries_ids_mut(&mut self) -> &mut Vec<ObjectId>;
     fn set_entries_ids(&mut self, ids: Vec<ObjectId>);

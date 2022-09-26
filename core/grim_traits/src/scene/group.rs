@@ -1,6 +1,6 @@
-use super::{Anim, Draw, MiloObject, Trans};
+use super::{Anim, Draw, Object, Trans};
 
-pub trait Group : Anim + Draw + MiloObject + Trans {
+pub trait Group : Anim + Draw + Object + Trans {
     fn get_objects(&self) -> &Vec<String>;
     fn get_objects_mut(&mut self) -> &mut Vec<String>;
     fn set_objects(&mut self, objects: Vec<String>);

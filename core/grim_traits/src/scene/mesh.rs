@@ -1,4 +1,4 @@
-use super::{Color4, Draw, Matrix, MiloObject, Trans, Vector4};
+use super::{Color4, Draw, Matrix, Object, Trans, Vector4};
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy)]
@@ -98,7 +98,7 @@ impl Default for Vert {
     }
 }
 
-pub trait RndMesh : Draw + MiloObject + Trans {
+pub trait Mesh : Draw + Object + Trans {
     fn get_mat(&self) -> &String;
     fn get_mat_mut(&mut self) -> &mut String;
     fn set_mat(&mut self, mat: String);

@@ -1,4 +1,4 @@
-pub trait MiloObject {
+pub trait Object {
     fn get_name(&self) -> &String;
     fn get_name_mut(&mut self) -> &mut String;
     fn set_name(&mut self, name: String);

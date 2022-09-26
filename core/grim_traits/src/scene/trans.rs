@@ -1,4 +1,4 @@
-use super::{Matrix, MiloObject};
+use super::{Matrix, Object};
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy)]
@@ -39,7 +39,7 @@ impl From<u32> for TransConstraint {
     }
 }
 
-pub trait Trans : MiloObject {
+pub trait Trans : Object {
     fn get_local_xfm(&self) -> &Matrix;
     fn get_local_xfm_mut(&mut self) -> &mut Matrix;
     fn set_local_xfm(&mut self, transform: Matrix);

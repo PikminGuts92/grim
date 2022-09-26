@@ -1,4 +1,4 @@
-use super::{Color3, Matrix, MiloObject};
+use super::{Color3, Matrix, Object};
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy)]
@@ -213,7 +213,7 @@ impl From<u32> for ZMode {
     }
 }
 
-pub trait Mat : MiloObject {
+pub trait Mat : Object {
     fn get_blend(&self) -> &Blend;
     fn get_blend_mut(&mut self) -> &mut Blend;
     fn set_blend(&mut self, blend: Blend);
