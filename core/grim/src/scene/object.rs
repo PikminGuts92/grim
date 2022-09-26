@@ -1,8 +1,15 @@
 use crate::{SystemInfo};
 use crate::io::MemoryStream;
 use crate::scene::*;
+use grim_macros::*;
 
-pub enum Object {
+#[milo]
+pub struct ObjectInstance {}
+
+#[milo(ObjectDir)]
+pub struct ObjectDirInstance {}
+
+pub enum MiloObject {
     Anim(AnimObject),
     Cam(CamObject),
     CubeTex(CubeTexObject),
@@ -10,6 +17,8 @@ pub enum Object {
     Group(GroupObject),
     Mat(MatObject),
     Mesh(MeshObject),
+    Object(ObjectInstance),
+    ObjectDir(ObjectDirInstance),
     P9SongPref(P9SongPref),
     PropAnim(PropAnim),
     Tex(Tex),
@@ -24,65 +33,69 @@ pub struct PackedObject {
     pub data: Vec<u8>
 }
 
-impl Object {
+impl MiloObject {
     pub fn get_name(&self) -> &str {
         match self {
-            Object::Anim(anim) => &anim.name,
-            Object::Cam(cam) => &cam.name,
-            Object::CubeTex(cube) => &cube.name,
-            Object::Draw(draw) => &draw.name,
-            Object::Group(grp) => &grp.name,
-            Object::Mat(mat) => &mat.name,
-            Object::Mesh(mesh) => &mesh.name,
-            Object::P9SongPref(pref) => &pref.name,
-            Object::PropAnim(prop) => &prop.name,
-            Object::Tex(tex) => &tex.name,
-            Object::Trans(trans) => &trans.name,
-            Object::Packed(packed) => &packed.name,
+            MiloObject::Anim(anim) => &anim.name,
+            MiloObject::Cam(cam) => &cam.name,
+            MiloObject::CubeTex(cube) => &cube.name,
+            MiloObject::Draw(draw) => &draw.name,
+            MiloObject::Group(grp) => &grp.name,
+            MiloObject::Mat(mat) => &mat.name,
+            MiloObject::Mesh(mesh) => &mesh.name,
+            MiloObject::Object(obj) => &obj.name,
+            MiloObject::ObjectDir(obj_dir) => &obj_dir.name,
+            MiloObject::P9SongPref(pref) => &pref.name,
+            MiloObject::PropAnim(prop) => &prop.name,
+            MiloObject::Tex(tex) => &tex.name,
+            MiloObject::Trans(trans) => &trans.name,
+            MiloObject::Packed(packed) => &packed.name,
         }
     }
 
     pub fn get_type(&self) -> &str {
         match self {
-            Object::Anim(_) => "Anim",
-            Object::Cam(_) => "Cam",
-            Object::CubeTex(_) => "CubeTex",
-            Object::Draw(_) => "Draw",
-            Object::Group(_) => "Group",
-            Object::Mat(_) => "Mat",
-            Object::Mesh(_) => "Mesh",
-            Object::P9SongPref(_) => "P9SongPref",
-            Object::PropAnim(_) => "PropAnim",
-            Object::Tex(_) => "Tex",
-            Object::Trans(_) => "Trans",
-            Object::Packed(packed) => &packed.object_type,
+            MiloObject::Anim(_) => "Anim",
+            MiloObject::Cam(_) => "Cam",
+            MiloObject::CubeTex(_) => "CubeTex",
+            MiloObject::Draw(_) => "Draw",
+            MiloObject::Group(_) => "Group",
+            MiloObject::Mat(_) => "Mat",
+            MiloObject::Mesh(_) => "Mesh",
+            MiloObject::Object(_) => "Object",
+            MiloObject::ObjectDir(_) => "ObjectDir",
+            MiloObject::P9SongPref(_) => "P9SongPref",
+            MiloObject::PropAnim(_) => "PropAnim",
+            MiloObject::Tex(_) => "Tex",
+            MiloObject::Trans(_) => "Trans",
+            MiloObject::Packed(packed) => &packed.object_type,
         }
     }
 
     pub fn is_packed(&self) -> bool {
         match self {
-            Object::Packed(_) => true,
+            MiloObject::Packed(_) => true,
             _ => false
         }
     }
 
-    pub fn pack(&self, info: &SystemInfo) -> Option<Object> {
+    pub fn pack(&self, info: &SystemInfo) -> Option<MiloObject> {
         if self.is_packed() {
             todo!("Already packed");
         }
 
         let obj: &dyn ObjectReadWrite  = match &self {
-            Object::Anim(obj) => obj,
-            Object::Cam(obj) => obj,
-            Object::CubeTex(obj) => obj,
-            Object::Draw(obj) => obj,
-            Object::Group(obj) => obj,
-            Object::Mat(obj) => obj,
-            Object::Mesh(obj) => obj,
-            Object::P9SongPref(obj) => obj,
-            Object::PropAnim(obj) => obj,
-            Object::Tex(obj) => obj,
-            Object::Trans(obj) => obj,
+            MiloObject::Anim(obj) => obj,
+            MiloObject::Cam(obj) => obj,
+            MiloObject::CubeTex(obj) => obj,
+            MiloObject::Draw(obj) => obj,
+            MiloObject::Group(obj) => obj,
+            MiloObject::Mat(obj) => obj,
+            MiloObject::Mesh(obj) => obj,
+            MiloObject::P9SongPref(obj) => obj,
+            MiloObject::PropAnim(obj) => obj,
+            MiloObject::Tex(obj) => obj,
+            MiloObject::Trans(obj) => obj,
             _ => todo!("Test"),
         };
 
@@ -95,26 +108,29 @@ impl Object {
         }
 
         // Return packed object
-        Some(Object::Packed(PackedObject {
+        Some(MiloObject::Packed(PackedObject {
             name: self.get_name().to_owned(),
             object_type: self.get_type().to_owned(),
             data,
         }))
     }
 
-    pub fn unpack(&self, info: &SystemInfo) -> Option<Object> {
-        match self {
+    pub fn unpack(&self, info: &SystemInfo) -> Option<MiloObject> {
+        todo!();
+
+        // TODO: (Refactor)
+        /*match self {
             Object::Packed(packed) => {
                 match packed.object_type.as_str() {
-                    "Anim" => unpack_object(packed, info).map(|o| Object::Anim(o)),
-                    "Cam" => unpack_object(packed, info).map(|o| Object::Cam(o)),
-                    "CubeTex" => unpack_object(packed, info).map(|o| Object::CubeTex(o)),
-                    "Draw" => unpack_object(packed, info).map(|o| Object::Draw(o)),
-                    "Group" => unpack_object(packed, info).map(|o| Object::Group(o)),
-                    "Mat" => unpack_object(packed, info).map(|o| Object::Mat(o)),
-                    "Mesh" => unpack_object(packed, info).map(|o| Object::Mesh(o)),
-                    "P9SongPref" => unpack_object(packed, info).map(|o| Object::P9SongPref(o)),
-                    "PropAnim" => unpack_object(packed, info).map(|o| Object::PropAnim(o)),
+                    "Anim" => unpack_object(packed, info).map(|o| MiloObject::Anim(o)),
+                    "Cam" => unpack_object(packed, info).map(|o| MiloObject::Cam(o)),
+                    "CubeTex" => unpack_object(packed, info).map(|o| MiloObject::CubeTex(o)),
+                    "Draw" => unpack_object(packed, info).map(|o| MiloObject::Draw(o)),
+                    "Group" => unpack_object(packed, info).map(|o| MiloObject::Group(o)),
+                    "Mat" => unpack_object(packed, info).map(|o| MiloObject::Mat(o)),
+                    "Mesh" => unpack_object(packed, info).map(|o| MiloObject::Mesh(o)),
+                    "P9SongPref" => unpack_object(packed, info).map(|o| MiloObject::P9SongPref(o)),
+                    "PropAnim" => unpack_object(packed, info).map(|o| MiloObject::PropAnim(o)),
                     "Tex" => {
                         let mut stream = MemoryStream::from_slice_as_read(packed.data.as_slice());
 
@@ -132,11 +148,25 @@ impl Object {
                 }
             },
             _ => None
+        }*/
+    }
+
+    pub fn as_dir(&self) -> Option<&dyn ObjectDir> {
+        match self {
+            MiloObject::ObjectDir(dir) => Some(dir as &dyn ObjectDir),
+            _ => None
+        }
+    }
+
+    pub fn as_dir_mut(&mut self) -> Option<&mut dyn ObjectDir> {
+        match self {
+            MiloObject::ObjectDir(dir) => Some(dir as &mut dyn ObjectDir),
+            _ => None
         }
     }
 }
 
-fn unpack_object<T: Default + MiloObject + ObjectReadWrite>(packed: &PackedObject, info: &SystemInfo) -> Option<T> {
+fn unpack_object<T: Default + Object + ObjectReadWrite>(packed: &PackedObject, info: &SystemInfo) -> Option<T> {
     let mut stream = MemoryStream::from_slice_as_read(packed.data.as_slice());
 
     let mut obj = T::default();

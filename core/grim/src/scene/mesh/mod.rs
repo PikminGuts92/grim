@@ -4,7 +4,7 @@ use grim_macros::*;
 use grim_traits::scene::*;
 pub use io::*;
 
-#[milo(RndMesh)]
+#[milo(Mesh)]
 #[milo_super(Draw, Trans)]
 pub struct MeshObject {
     // Using until packed next gen verts are figured out

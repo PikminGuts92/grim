@@ -1,7 +1,7 @@
 use crate::{SystemInfo};
 use crate::io::compression::*;
 use crate::io::stream::{BinaryStream, IOEndian, MemoryStream, SeekFrom, Stream};
-use crate::scene::{Object, ObjectDir, ObjectDirBase, PackedObject};
+use crate::scene::{Object, ObjectDir, PackedObject, MiloObject};
 use std::cmp::Ordering;
 use std::error::Error;
 
@@ -137,7 +137,7 @@ impl MiloArchive {
         Box::new(stream)
     }
 
-    pub fn unpack_directory(&self, info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
+    pub fn unpack_directory(&self, info: &SystemInfo) -> Result<MiloObject, Box<dyn Error>> {
         let mut stream = self.get_stream();
         let stream = stream.as_mut();
         let mut reader = BinaryStream::from_stream_with_endian(stream, info.endian);
@@ -159,7 +159,8 @@ impl MiloArchive {
             reader.seek(SeekFrom::Current(8))?; // Skip extra nums
 
             // Update class name
-            ObjectDir::fix_class_name(version, &mut dir_type);
+            // TODO: (Refactor)
+            //ObjectDir::fix_class_name(version, &mut dir_type);
         } else {
             dir_type = String::new();
             dir_name = String::new();
@@ -174,7 +175,8 @@ impl MiloArchive {
             let entry_name = reader.read_prefixed_string()?;
 
             // Update class name
-            ObjectDir::fix_class_name(version, &mut entry_type);
+            // TODO: (Refactor)
+            //ObjectDir::fix_class_name(version, &mut entry_type);
 
             packed_entries.push(PackedObject {
                 name: entry_name,
@@ -217,7 +219,10 @@ impl MiloArchive {
             }
         }
 
-        Ok(ObjectDir::ObjectDir(ObjectDirBase {
+        todo!();
+
+        // TODO: (Refactor)
+        /*Ok(ObjectDir::ObjectDir(ObjectDirInstance {
             entries: packed_entries
                 .into_iter()
                 .map(Object::Packed)
@@ -225,7 +230,7 @@ impl MiloArchive {
             name: dir_name,
             dir_type,
             sub_dirs: Vec::new()
-        }))
+        }))*/
     }
 
     fn guess_entry_size<'a>(&'a self, reader: &mut BinaryStream) -> Result<Option<usize>, Box<dyn Error>> {
@@ -282,7 +287,7 @@ impl MiloArchive {
         }
     }
 
-    fn compare_entries_by_type_and_name<'r, 's>(a: &'r &Object, b: &'s &Object) -> Ordering {
+    fn compare_entries_by_type_and_name<'a, 'b, T: Object, S: Object>(a: &'a &T, b: &'b &S) -> Ordering {
         // Get entry types
         let a_type = MiloArchive::get_type_order_value(a.get_type());
         let b_type = MiloArchive::get_type_order_value(b.get_type());
@@ -302,12 +307,16 @@ impl MiloArchive {
         }
     }
 
-    pub fn from_object_dir(obj_dir: &ObjectDir, info: &SystemInfo, block_type: Option<BlockType>) -> Result<MiloArchive, Box<dyn Error>> {
+    pub fn from_object_dir(obj_dir: &dyn ObjectDir, info: &SystemInfo, block_type: Option<BlockType>) -> Result<MiloArchive, Box<dyn Error>> {
         // Create stream
         let mut data = Vec::<u8>::new();
         let mut stream = MemoryStream::from_vector_as_read_write(&mut data);
         let mut writer = BinaryStream::from_stream_with_endian(&mut stream, info.endian);
 
+        todo!();
+
+        // TODO: (Refactor)
+        /*
         let mut entries: Vec<&Object> = obj_dir.get_entries().iter().collect();
 
         // Write version
@@ -421,7 +430,7 @@ impl MiloArchive {
                 block_sizes
             }),
             data
-        })
+        })*/
     }
 
     pub fn write_to_stream(&self, stream: &mut dyn Stream) -> Result<(), Box<dyn Error>> {

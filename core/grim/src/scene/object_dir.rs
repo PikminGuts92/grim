@@ -10,29 +10,7 @@ use std::path::{Path, PathBuf};
 lazy_static! {
     static ref MILO_ENTRY_REGEX: Regex = Regex::new(r"(?i)([/\\][a-z]+[/\\])[^/\\]+$").unwrap();
 }
-
-pub enum ObjectDir {
-    ObjectDir(ObjectDirBase)
-}
-
-pub struct ObjectDirBase {
-    pub entries: Vec<Object>,
-    pub name: String,
-    pub dir_type: String,
-    pub sub_dirs: Vec<ObjectDir>,
-}
-
-impl ObjectDirBase {
-    pub fn new() -> ObjectDirBase {
-        ObjectDirBase {
-            entries: Vec::new(),
-            name: String::new(),
-            dir_type: String::new(),
-            sub_dirs: Vec::new(),
-        }
-    }
-}
-
+/*
 impl<'a> ObjectDir {
     pub fn from_path(path: &Path, _info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
         let mut obj_dir = ObjectDirBase::new();
@@ -102,9 +80,9 @@ impl<'a> ObjectDir {
 
         Ok(())
     }
-}
+}*/
 
-impl ObjectDir {
+/*impl dyn ObjectDir {
     pub(crate) fn fix_class_name(version: u32, class_name: &mut String) {
         if version >= 25 {
             // Nothing to fix
@@ -135,4 +113,4 @@ impl ObjectDir {
             *class_name = name.to_owned();
         }
     }
-}
+}*/

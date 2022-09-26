@@ -1,7 +1,7 @@
 use crate::dta::*;
 use crate::io::{BinaryStream, FileStream, SeekFrom, Stream};
 use crate::SystemInfo;
-use grim_traits::scene::{Color3, Color4, Matrix, MiloObject, Quat, Rect, Sphere, Vector2, Vector3};
+use grim_traits::scene::{Color3, Color4, Matrix, Object, Quat, Rect, Sphere, Vector2, Vector3};
 use std::error::Error;
 use std::path::Path;
 
@@ -16,7 +16,7 @@ pub fn save_to_file<T: ObjectReadWrite, S: AsRef<Path>>(obj: &T, out_path: S, in
     obj.save(&mut stream, info)
 }
 
-pub(crate) fn load_object<T: MiloObject>(obj: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+pub(crate) fn load_object<T: Object>(obj: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
     if info.version < 24 {
         // Don't read metadata
         return Ok(());
@@ -28,7 +28,7 @@ pub(crate) fn load_object<T: MiloObject>(obj: &mut T, reader: &mut Box<BinaryStr
     Ok(())
 }
 
-pub(crate) fn save_object<T: MiloObject>(obj: &T, writer: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+pub(crate) fn save_object<T: Object>(obj: &T, writer: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
     save_object_type(obj, writer, info)?;
     save_object_rest(obj, writer, info)?;
 
@@ -36,7 +36,7 @@ pub(crate) fn save_object<T: MiloObject>(obj: &T, writer: &mut Box<BinaryStream>
 }
 
 
-pub(crate) fn load_object_type<T: MiloObject>(obj: &mut T, reader: &mut Box<BinaryStream>, _info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+pub(crate) fn load_object_type<T: Object>(obj: &mut T, reader: &mut Box<BinaryStream>, _info: &SystemInfo) -> Result<(), Box<dyn Error>> {
     // Skip revision for now
     reader.read_uint32()?;
 
@@ -46,7 +46,7 @@ pub(crate) fn load_object_type<T: MiloObject>(obj: &mut T, reader: &mut Box<Bina
     Ok(())
 }
 
-pub(crate) fn save_object_type<T: MiloObject>(obj: &T, writer: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+pub(crate) fn save_object_type<T: Object>(obj: &T, writer: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
     // Write revision
     writer.write_uint32(info.get_revision())?;
 
@@ -56,7 +56,7 @@ pub(crate) fn save_object_type<T: MiloObject>(obj: &T, writer: &mut Box<BinarySt
     Ok(())
 }
 
-pub(crate) fn load_object_rest<T: MiloObject>(obj: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+pub(crate) fn load_object_rest<T: Object>(obj: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
     // Read props
     // Parse dtb data but don't save for now
     let mut root = RootData::new();
@@ -70,7 +70,7 @@ pub(crate) fn load_object_rest<T: MiloObject>(obj: &mut T, reader: &mut Box<Bina
     Ok(())
 }
 
-pub(crate) fn save_object_rest<T: MiloObject>(obj: &T, writer: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+pub(crate) fn save_object_rest<T: Object>(obj: &T, writer: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
     // TODO: Write props
     writer.write_boolean(false)?;
 

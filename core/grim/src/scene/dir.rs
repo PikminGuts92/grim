@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use thiserror::Error as ThisError;
 
 use crate::SystemInfo;
-use super::Object;
+use super::{Object, MiloObject};
 
 pub type MiloDirId = u32;
 pub type ObjectId = u32;
@@ -47,7 +47,7 @@ pub struct MiloDir {
 pub struct MiloEnvironment {
     dir_files: Vec<DirFile>,
     object_dirs: HashMap<MiloDirId, MiloDir>,
-    objects: HashMap<ObjectId, Object>,
+    objects: HashMap<ObjectId, MiloObject>,
     next_id: u32,
 }
 
@@ -73,12 +73,12 @@ impl MiloEnvironment {
         id
     }
 
-    pub fn get_object(&self, id: ObjectId) -> &Object {
+    pub fn get_object(&self, id: ObjectId) -> &MiloObject {
         // TODO: Return option or result?
         self.objects.get(&id).unwrap()
     }
 
-    pub fn get_object_mut(&mut self, id: ObjectId) -> &mut Object {
+    pub fn get_object_mut(&mut self, id: ObjectId) -> &mut MiloObject {
         // TODO: Return option or result?
         self.objects.get_mut(&id).unwrap()
     }
@@ -126,3 +126,59 @@ impl MiloEnvironment {
         Ok(0)
     }
 }
+
+/*pub trait Object2 {
+
+}
+
+pub struct ObjectBase {
+
+}
+
+impl Object2 for ObjectBase {
+
+}
+
+pub enum MiloObject {
+    Object(ObjectBase)
+    // ObjectDir
+}
+
+impl MiloObject {
+    pub fn as_object<T: Object2>(&self) -> Option<&T> {
+        //let tp = std::any::
+
+        //let tp = std::any::TypeId::of::<T>();
+
+        /*match self {
+            MiloObject::Object(obj) => Some(obj.into())
+        }*/
+
+        match self {
+            MiloObject::Object(obj) => {
+                let o = obj as &dyn Object2;
+            }
+        }
+
+        todo!()
+    }
+}
+
+impl From<&ObjectBase> for &dyn Object2 {
+    fn from(_: &ObjectBase) -> Self {
+        todo!()
+    }
+}*/
+
+/*impl Into<T: Object2> for &ObjectBase {
+    fn into(self) -> T {
+        todo!()
+    }
+}*/
+
+
+/*impl std::any::Any for ObjectBase {
+    fn type_id(&self) -> std::any::TypeId {
+        todo!()
+    }
+}*/

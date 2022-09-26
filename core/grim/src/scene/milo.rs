@@ -2,8 +2,8 @@ use crate::{SystemInfo};
 use crate::scene::*;
 
 pub struct Milo {
-    pub entries: Vec<Object>,
-    pub directory: Option<ObjectDir>, // Used starting w/ v24?
+    pub entries: Vec<MiloObject>,
+    pub directory: Option<MiloObject>, // Used starting w/ v24?
 }
 
 impl Milo {
@@ -15,7 +15,7 @@ impl Milo {
     }
 
     pub fn unpack_entries(&mut self, info: &SystemInfo) {
-        let mut new_entries = Vec::<Object>::new();
+        let mut new_entries = Vec::new();
 
         while !self.entries.is_empty() {
             let object = self.entries.remove(0);
