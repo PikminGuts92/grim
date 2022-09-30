@@ -6,9 +6,6 @@ use grim_macros::*;
 #[milo]
 pub struct ObjectInstance {}
 
-#[milo(ObjectDir)]
-pub struct ObjectDirInstance {}
-
 pub enum MiloObject {
     Anim(AnimObject),
     Cam(CamObject),

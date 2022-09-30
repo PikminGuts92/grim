@@ -1,6 +1,10 @@
+mod io;
+
 use crate::{SystemInfo};
 use crate::io::{BinaryStream, FileSearchDepth, FileStream, MemoryStream, PathFinder, SeekFrom, Stream};
 use crate::scene::*;
+use grim_macros::*;
+use io::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::error::Error;
@@ -10,6 +14,10 @@ use std::path::{Path, PathBuf};
 lazy_static! {
     static ref MILO_ENTRY_REGEX: Regex = Regex::new(r"(?i)([/\\][a-z]+[/\\])[^/\\]+$").unwrap();
 }
+
+#[milo(ObjectDir)]
+pub struct ObjectDirInstance {}
+
 /*
 impl<'a> ObjectDir {
     pub fn from_path(path: &Path, _info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
