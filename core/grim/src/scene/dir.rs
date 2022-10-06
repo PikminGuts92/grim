@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use thiserror::Error as ThisError;
 
 use crate::SystemInfo;
+use crate::scene::milo;
 use super::{Object, MiloObject};
 
 pub type MiloDirId = u32;
@@ -98,7 +99,8 @@ impl MiloEnvironment {
         let milo_path = path.as_ref();
 
         // TODO: Check if path is already loaded
-        //let abs_path = std::fs::canonicalize(milo_path).unwrap();
+        let abs_path = milo_path.canonicalize().unwrap();
+        let dir_path = abs_path.parent().unwrap();
 
         /*match abs_path {
             Ok(_) => { print!("Successfully creating abs path"); },
