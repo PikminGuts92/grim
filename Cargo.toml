@@ -20,13 +20,13 @@ edition = "2021"
 [workspace.dependencies]
 clap = { version = "4.0.14", features = ["derive"] }
 grim = { path = "core/grim" }
-itertools = "0.10.4"
+itertools = "0.10.5"
 lazy_static = "1.4.0"
 log = "0.4.17"
-serde = { version = "1.0.144", features = ["derive"] }
-serde_json = "1.0.85"
+serde = { version = "1.0.145", features = ["derive"] }
+serde_json = "1.0.86"
 simplelog = "0.12.0"
-thiserror = "1.0.35"
+thiserror = "1.0.37"
 
 [profile.dev]
 opt-level = 1
