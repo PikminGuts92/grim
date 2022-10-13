@@ -26,19 +26,19 @@ pub enum TexExtractionError {
 
 #[derive(Parser, Debug)]
 pub struct Milo2DirApp {
-    #[clap(long, default_value = "24", help = "Milo archive version (10, 24, 25)")]
+    #[arg(long, default_value = "24", help = "Milo archive version (10, 24, 25)")]
     pub milo_version: u32,
-    #[clap(long, help = "Use big endian serialization")]
+    #[arg(long, help = "Use big endian serialization")]
     pub big_endian: bool,
-    #[clap(long, default_value = "ps2", help = "Platform (ps2, ps3, wii, x360)")]
+    #[arg(long, default_value = "ps2", help = "Platform (ps2, ps3, wii, x360)")]
     pub platform: String,
-    #[clap(long, help = "Game preset (gh1, gh2, gh80s, gh2_x360)")]
+    #[arg(long, help = "Game preset (gh1, gh2, gh80s, gh2_x360)")]
     pub preset: Option<String>, // Using Option<> because default of "" is unsupported
-    #[clap(help = "Path to input milo scene", required = true)]
+    #[arg(help = "Path to input milo scene", required = true)]
     pub milo_path: String,
-    #[clap(help = "Path to output directory", required = true)]
+    #[arg(help = "Path to output directory", required = true)]
     pub dir_path: String,
-    #[clap(long, help = "Automatically convert textures to PNG")]
+    #[arg(long, help = "Automatically convert textures to PNG")]
     pub convert_textures: bool
 }
 

@@ -14,15 +14,15 @@ use grim::texture::{Bitmap, Image, swap_image_bytes, write_rgba_to_file};
 
 #[derive(Parser, Debug)]
 pub struct SaveMiloApp {
-    #[clap(help = "Path to input milo scene", required = true)]
+    #[arg(help = "Path to input milo scene", required = true)]
     pub in_milo_path: String,
-    #[clap(help = "Path to output milo scene", required = true)]
+    #[arg(help = "Path to output milo scene", required = true)]
     pub out_milo_path: String,
-    #[clap(short = 'm', long, help = "Milo archive version (10, 24, 25)")]
+    #[arg(short = 'm', long, help = "Milo archive version (10, 24, 25)")]
     pub milo_version: Option<u32>,
-    #[clap(short = 'b' , long, help = "Use big endian serialization")]
+    #[arg(short = 'b' , long, help = "Use big endian serialization")]
     pub big_endian: Option<bool>,
-    #[clap(short = 'u' , long, help = "Leave output milo archive uncompressed")]
+    #[arg(short = 'u' , long, help = "Leave output milo archive uncompressed")]
     pub uncompressed: bool,
 }
 
