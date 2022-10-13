@@ -13,9 +13,9 @@ use grim::scene::{Object, ObjectDir, PackedObject, Tex};
 
 #[derive(Parser, Debug)]
 pub struct Dir2MiloApp {
-    #[clap(help = "Path to input directory", required = true)]
+    #[arg(help = "Path to input directory", required = true)]
     pub dir_path: String,
-    #[clap(help = "Path to output milo scene", required = true)]
+    #[arg(help = "Path to output milo scene", required = true)]
     pub milo_path: String,
 }
 

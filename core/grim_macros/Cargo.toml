@@ -9,6 +9,6 @@ proc-macro = true
 
 [dependencies]
 grim_traits = { path = "../grim_traits" }
-proc-macro2 = "1.0.43"
+proc-macro2 = "1.0.46"
 quote = "1.0.21"
-syn = { version = "1.0.99", default-features = false, features = ["derive"] }
+syn = { version = "1.0.102", default-features = false, features = ["derive"] }
