@@ -18,7 +18,7 @@ authors = ["PikminGuts92"]
 edition = "2021"
 
 [workspace.dependencies]
-clap = { version = "4.0.14", features = ["derive"] }
+clap = { version = "4.0.15", features = ["derive"] }
 grim = { path = "core/grim" }
 itertools = "0.10.5"
 lazy_static = "1.4.0"
