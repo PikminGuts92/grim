@@ -118,6 +118,7 @@ jobs:
     if: ${{ false }} # Skip for now
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     env:
@@ -177,6 +178,7 @@ jobs:
     name: Audit (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     env:
