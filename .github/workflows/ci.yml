@@ -172,3 +172,50 @@ jobs:
         with:
           name: ${{ env.ZIP_NAME }}
           path: ${{ env.OUTPUT_PATH }}/*
+
+  audit:
+    name: Audit (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      BIN_PATH: ./target/release
+    steps:
+      - name: Install linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+          sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
+      - uses: actions/checkout@v2
+      - name: Remove cargo and toolchain configurations
+        shell: bash
+        run: |
+          rm .cargo -rf
+          rm rust-toolchain.toml
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/
+            target/
+          key: ${{ runner.os }}-cargo-audit-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Install audit dependencies
+        shell: bash
+        run: |
+          cargo install cargo-auditable || true
+          cargo install cargo-audit --features=binary-scanning || true
+      - name: Build audit binaries
+        shell: bash
+        run: |
+          cargo auditable build --release --bins
+      - name: Audit binaries
+        shell: bash
+        run: |
+          cargo audit bin $(find $BIN_PATH -maxdepth 1 -type f -executable -print)
