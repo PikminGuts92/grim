@@ -198,6 +198,9 @@ fn setup(
             shadow_color: None, // No shadow
             ..InfiniteGrid::default()
         },
+        visibility: Visibility {
+            is_visible: settings.show_gridlines,
+        },
         ..InfiniteGridBundle::default()
     });
 }

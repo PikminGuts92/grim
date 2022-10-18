@@ -15,15 +15,15 @@ pub(crate) trait SubApp {
 }
 
 #[derive(Parser, Debug)]
-#[clap(name = PKG_NAME, version = VERSION, about = "Model importer for milo games")]
+#[command(name = PKG_NAME, version = VERSION, about = "Model importer for milo games")]
 struct Options {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     commands: SubCommand,
 }
 
 #[derive(Subcommand, Debug)]
 enum SubCommand {
-    #[clap(name = "model2group", about = "Convert model to milo group")]
+    #[command(name = "model2group", about = "Convert model to milo group")]
     Model2Group(Model2GroupApp)
 }
 
