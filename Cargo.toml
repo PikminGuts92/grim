@@ -1,13 +1,32 @@
 [workspace]
 members = [
-    "grim",
-    "grim_macros",
-    "grim_traits",
-    "mesh_tool",
-    "preview_ui",
-    "scene_tool"
+    "apps/cli/*",
+    "apps/ui/*",
+    "core/*",
+    "utils/*"
+]
+default-members = [
+    "apps/cli/*",
+    "apps/ui/*",
+    "core/*"
 ]
 resolver = "2" # Super duper important for bevy!
+
+[workspace.package]
+version = "0.1.0"
+authors = ["PikminGuts92"]
+edition = "2021"
+
+[workspace.dependencies]
+clap = { version = "4.0.15", features = ["derive"] }
+grim = { path = "core/grim" }
+itertools = "0.10.5"
+lazy_static = "1.4.0"
+log = "0.4.17"
+serde = { version = "1.0.145", features = ["derive"] }
+serde_json = "1.0.86"
+simplelog = "0.12.0"
+thiserror = "1.0.37"
 
 [profile.dev]
 opt-level = 1

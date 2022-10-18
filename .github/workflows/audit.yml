@@ -1,0 +1,65 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+name: Audit
+
+jobs:
+  audit:
+    name: Audit (${{ matrix.osname }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            osname: "osx-x64"
+          - os: ubuntu-latest
+            osname: "linux-x64"
+          - os: windows-latest
+            osname: "win-x64"
+          - os: windows-latest
+            osname: "win-x86"
+            toolchain: "stable-i686-pc-windows-msvc"
+    env:
+      BIN_PATH: ./target/release
+    steps:
+      - name: Install linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+          sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
+      - uses: actions/checkout@v2
+      - name: Remove cargo and toolchain configurations
+        shell: bash
+        run: |
+          rm -rf .cargo
+          rm rust-toolchain.toml
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/
+            target/
+          key: ${{ matrix.osname }}-cargo-audit-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain || 'stable' }}
+          override: true
+      - name: Install audit dependencies
+        shell: bash
+        run: |
+          cargo install cargo-auditable || true
+          cargo install cargo-audit --features=binary-scanning || true
+      - name: Build audit binaries
+        shell: bash
+        run: |
+          cargo auditable build --release --bins
+      - name: Audit binaries
+        shell: bash
+        run: |
+          cargo audit bin $(find $BIN_PATH -maxdepth 1 -type f ${{ matrix.os == 'macos-latest' && '-perm +0111' || '-executable' }} -print)

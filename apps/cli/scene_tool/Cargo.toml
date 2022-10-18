@@ -1,0 +1,10 @@
+[package]
+name = "scene_tool"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+clap = { workspace = true }
+grim = { workspace = true, features = [ "model" ] }
+thiserror = { workspace = true }
