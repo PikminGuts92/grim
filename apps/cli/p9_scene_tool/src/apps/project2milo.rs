@@ -24,13 +24,13 @@ use thiserror::Error;
 // TODO: Rename to something like 'compile' or 'build'
 #[derive(Parser, Debug)]
 pub struct Project2MiloApp {
-    #[clap(name = "dir_path", help = "Path to input project directory", required = true)]
+    #[arg(help = "Path to input project directory", required = true)]
     pub input_path: String,
-    #[clap(name = "output_path", help = "Path to build output", required = true)]
+    #[arg(help = "Path to build output", required = true)]
     pub output_path: String,
-    #[clap(short, long, help = "Enable to leave output milo archive(s) uncompressed", required = false)]
+    #[arg(short, long, help = "Enable to leave output milo archive(s) uncompressed", required = false)]
     pub uncompressed: bool,
-    #[clap(short, long, help = "Platform (ps3, wii, x360)", required = false, default_value = "x360")]
+    #[arg(short, long, help = "Platform (ps3, wii, x360)", required = false, default_value = "x360")]
     pub platform: String
 }
 

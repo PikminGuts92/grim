@@ -9,11 +9,11 @@ use thiserror::Error;
 
 #[derive(Parser, Debug)]
 pub struct NewProjectApp {
-    #[clap(name = "dir_path", help = "Path to output project directory", required = true)]
+    #[arg(help = "Path to output project directory", required = true)]
     pub output_path: String,
-    #[clap(short, long, help = "Shortname of song (ex. \"temporarysec\")", required = true)]
+    #[arg(short, long, help = "Shortname of song (ex. \"temporarysec\")", required = true)]
     pub name: String,
-    #[clap(short, long, help = "Use GDRB format", required = false)]
+    #[arg(short, long, help = "Use GDRB format", required = false)]
     pub gdrb: bool
 }
 

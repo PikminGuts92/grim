@@ -3057,7 +3057,7 @@ name = "p9_scene_tool"
 version = "0.1.0"
 dependencies = [
  "build-time",
- "clap",
+ "clap 4.0.15",
  "const_format",
  "criterion",
  "grim",

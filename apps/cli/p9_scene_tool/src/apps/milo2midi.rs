@@ -16,11 +16,11 @@ use grim::texture::{Bitmap, write_rgba_to_file};
 
 #[derive(Parser, Debug)]
 pub struct Milo2MidiApp {
-    #[clap(help = "Path to input milo scene", required = true)]
+    #[arg(help = "Path to input milo scene", required = true)]
     pub milo_path: String,
-    #[clap(help = "Path to output MIDI file", required = true)]
+    #[arg(help = "Path to output MIDI file", required = true)]
     pub midi_path: String,
-    #[clap(short = 'm', long, help = "Base MIDI file")]
+    #[arg(short = 'm', long, help = "Base MIDI file")]
     pub base_midi: Option<String>
 }
 
