@@ -9,10 +9,12 @@ bevy = { version = "0.8.1", default-features = false, features = [ "bevy_core_pi
 bevy_egui = { version = "0.16.1", features = [ "immutable_ctx" ] }
 bevy_fly_camera = { git = "https://github.com/PikminGuts92/bevy_fly_camera", branch = "bevy-0.8" }
 bevy_infinite_grid = "0.5.2"
-console_error_panic_hook = "0.1.7"
 grim = { workspace = true }
 itertools = { workspace = true }
 # native-dialog = "0.6.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+console_error_panic_hook = "0.1.7"
