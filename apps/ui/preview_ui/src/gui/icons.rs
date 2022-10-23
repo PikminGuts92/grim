@@ -27,4 +27,9 @@ lazy_static! {
         "fa_eye",
         fa::svg(fa::Type::Solid, "eye").unwrap()
     ).unwrap();
+
+    pub static ref FA_TRASH: RetainedImage = egui_extras::RetainedImage::from_svg_str(
+        "fa_trash",
+        fa::svg(fa::Type::Solid, "trash-can").unwrap()
+    ).unwrap();
 }
