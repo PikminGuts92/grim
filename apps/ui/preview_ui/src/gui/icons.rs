@@ -32,4 +32,25 @@ lazy_static! {
         "fa_trash",
         fa::svg(fa::Type::Solid, "trash-can").unwrap()
     ).unwrap();
+
+    pub static ref FA_EDIT: RetainedImage = egui_extras::RetainedImage::from_svg_str(
+        "fa_pen_to_square",
+        fa::svg(fa::Type::Solid, "pen-to-square").unwrap()
+    ).unwrap();
+
+    pub static ref FA_SEARCH: RetainedImage = egui_extras::RetainedImage::from_svg_str(
+        "fa_magnifying_glass",
+        fa::svg(fa::Type::Solid, "magnifying-glass").unwrap()
+    ).unwrap();
+
+    // Pro icon :(
+    /* pub static ref FA_GLOBE: RetainedImage = egui_extras::RetainedImage::from_svg_str(
+        "fa_globe",
+        fa::svg(fa::Type::Regular, "globe").unwrap()
+    ).unwrap(); */
+
+    pub static ref FA_CIRCLE: RetainedImage = egui_extras::RetainedImage::from_svg_str(
+        "fa_circle",
+        fa::svg(fa::Type::Regular, "circle").unwrap()
+    ).unwrap();
 }

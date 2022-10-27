@@ -60,6 +60,9 @@ fn main() {
         .add_event::<AppEvent>()
         .add_event::<AppFileEvent>()
         //.insert_resource(ClearColor(Color::BLACK))
+        .insert_resource(bevy::pbr::wireframe::WireframeConfig {
+            global: app_settings.show_wireframes
+        })
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(app_state)
         .insert_resource(app_settings)
@@ -260,6 +263,7 @@ fn consume_app_events(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut textures: ResMut<Assets<Image>>,
     mut grid: Query<&mut Visibility, With<InfiniteGrid>>,
+    mut wireframe_config: ResMut<bevy::pbr::wireframe::WireframeConfig>,
     world_meshes: Query<(Entity, &WorldMesh)>,
 ) {
     for e in app_events.iter() {
@@ -318,6 +322,10 @@ fn consume_app_events(
             },
             AppEvent::ToggleGridLines(show) => {
                 grid.single_mut().is_visible = *show;
+            },
+            AppEvent::ToggleWireframes(show) => {
+                //grid.single_mut().is_visible = *show;
+                wireframe_config.global = *show;
             }
             /*AppEvent::RefreshMilo => {
                 return;

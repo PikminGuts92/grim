@@ -25,7 +25,8 @@ impl PluginGroup for MinimalPlugins {
             .add(bevy::winit::WinitPlugin::default())
             .add(bevy::render::RenderPlugin::default())
             .add(bevy::core_pipeline::CorePipelinePlugin::default())
-            .add(bevy::pbr::PbrPlugin::default());
+            .add(bevy::pbr::PbrPlugin::default())
+            .add(bevy::pbr::wireframe::WireframePlugin);
     }
 }
 

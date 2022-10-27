@@ -147,6 +147,19 @@ pub fn render_gui(ctx: &mut &Context, settings: &mut AppSettings, state: &mut Ap
                     state.save_settings(&settings);
                 }
 
+                if ui.add(
+                    egui::ImageButton::new(
+                        icons::FA_CIRCLE.texture_id(ctx),
+                        ICON_SIZE
+                    ).selected(settings.show_wireframes))
+                    .on_hover_text("Wireframe")
+                    .clicked() {
+                    settings.show_wireframes = !settings.show_wireframes;
+                    state.add_event(AppEvent::ToggleWireframes(settings.show_wireframes));
+
+                    state.save_settings(&settings);
+                }
+
                 // TODO: Add to settings or something
                 ui.add(
                     egui::ImageButton::new(
