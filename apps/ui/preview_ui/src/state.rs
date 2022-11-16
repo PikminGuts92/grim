@@ -1,4 +1,5 @@
 use super::{AppSettings, AppEvent};
+use bevy::prelude::*;
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
@@ -14,7 +15,7 @@ pub struct MiloView {
     pub selected_entry: Option<String>,
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct AppState {
     pub ark: Option<Ark>,
     pub root: Option<ArkDirNode>,

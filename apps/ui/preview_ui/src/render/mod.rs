@@ -228,7 +228,7 @@ pub fn render_milo(
         };
 
         // Add mesh
-        commands.spawn_bundle(PbrBundle {
+        commands.spawn(PbrBundle {
             mesh: bevy_meshes.add(bevy_mesh),
             material: materials.add(bevy_mat),
             transform: Transform::from_matrix(base_matrix)

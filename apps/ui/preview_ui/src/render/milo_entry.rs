@@ -65,10 +65,10 @@ pub fn render_milo_entry(
     let global_trans = GlobalTransform::from(trans);
 
     // Root transform
-    let root_entity = commands.spawn()
+    let root_entity = commands.spawn_empty()
         .insert(trans)
         .insert(global_trans)
-        .insert_bundle(VisibilityBundle::default())
+        .insert(VisibilityBundle::default())
         .id();
 
     for mesh in meshes {
@@ -166,7 +166,7 @@ pub fn render_milo_entry(
         // Add mesh
         commands.entity(root_entity)
             .with_children(|parent| {
-                parent.spawn_bundle(PbrBundle {
+                parent.spawn(PbrBundle {
                     mesh: bevy_meshes.add(bevy_mesh),
                     material: materials.add(bevy_mat),
                     transform: Transform::from_matrix(mat),

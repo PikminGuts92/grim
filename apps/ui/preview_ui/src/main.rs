@@ -6,7 +6,6 @@
 
 mod events;
 mod gui;
-mod plugins;
 mod render;
 mod settings;
 mod state;
@@ -22,7 +21,6 @@ use bevy_infinite_grid::{GridShadowCamera, InfiniteGridBundle, InfiniteGrid, Inf
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
-use plugins::*;
 use state::*;
 use std::{env::args, path::{Path, PathBuf}};
 
@@ -48,22 +46,24 @@ fn main() {
     #[cfg(not(target_family = "wasm"))] let app_settings = load_settings(&app_state.settings_path);
 
     App::new()
-        .insert_resource(WindowDescriptor {
-            title: format!("Preview v{}", VERSION),
-            width: app_settings.window_width,
-            height: app_settings.window_height,
-            mode: WindowMode::Windowed,
-            present_mode: PresentMode::Fifo, // vsync
-            resizable: true,
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
+                title: format!("Preview v{}", VERSION),
+                width: app_settings.window_width,
+                height: app_settings.window_height,
+                mode: WindowMode::Windowed,
+                present_mode: PresentMode::Fifo, // vsync
+                resizable: true,
+                ..Default::default()
+            },
             ..Default::default()
-        })
+        }))
         .add_event::<AppEvent>()
         .add_event::<AppFileEvent>()
         //.insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(app_state)
         .insert_resource(app_settings)
-        .add_plugin(GrimPlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(FlyCameraPlugin)
         .add_plugin(InfiniteGridPlugin)
@@ -185,14 +185,14 @@ fn setup(
     camera.transform = Transform::from_xyz(-2.0, 2.5, 5.0)
         .looking_at(Vec3::ZERO, Vec3::Y);
 
-    commands.spawn_bundle(camera).insert(FlyCamera {
+    commands.spawn(camera).insert(FlyCamera {
         enabled: false,
         sensitivity: 0.0,
         ..Default::default()
     }).insert(GridShadowCamera); // Fix camera
 
     // Infinite grid
-    commands.spawn_bundle(InfiniteGridBundle {
+    commands.spawn(InfiniteGridBundle {
         grid: InfiniteGrid {
             fadeout_distance: 300.,
             shadow_color: None, // No shadow
