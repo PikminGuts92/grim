@@ -7,6 +7,7 @@ use itertools::*;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
+use std::num::NonZeroU8;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -348,7 +349,6 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
     loader.get_texture(tex_name)
         .and_then(|t| t.bitmap.as_ref())
         .and_then(|b| match (system_info.platform, b.encoding) {
-            // TODO: Uncomment when BCn textures are supported
             (Platform::X360 | Platform::PS3, 8 | 24 | 32) => {
                 let enc = match b.encoding {
                      8 => TextureEncoding::DXT1,
@@ -381,16 +381,20 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
 }
 
 fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
-    let (bitmap, rgba, enc) = tex;
+    let (tex, rgba, enc) = tex;
 
-    let bpp: usize = match enc {
-        TextureEncoding::DXT1 => 4,
-        TextureEncoding::DXT5 | TextureEncoding::ATI2 => 8,
-        TextureEncoding::RGBA => 32,
+    let (bpp, use_mips) = match enc {
+        TextureEncoding::DXT1 => (4, true),
+        TextureEncoding::DXT5 | TextureEncoding::ATI2 => (8, true),
+        TextureEncoding::RGBA => (32, false),// Disable for now
     };
 
-    // TODO: Figure out how bevy can support mip maps
-    let tex_size = ((bitmap.width as usize) * (bitmap.height as usize) * bpp) / 8;
+    let img_slice = if use_mips {
+        &rgba
+    } else {
+        let tex_size = ((tex.width as usize) * (tex.height as usize) * bpp) / 8;
+        &rgba[..tex_size]
+    };
 
     let image_new_fn = match enc {
         TextureEncoding::RGBA => image_new_fill, // Use fill method for older textures
@@ -399,12 +403,12 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
 
     let mut texture = /*Image::new_fill*/ image_new_fn(
         Extent3d {
-            width: bitmap.width.into(),
-            height: bitmap.height.into(),
+            width: tex.width.into(),
+            height: tex.height.into(),
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
-        &rgba[..tex_size],
+        img_slice,
         match enc {
             TextureEncoding::DXT1 => TextureFormat::Bc1RgbaUnormSrgb,
             TextureEncoding::DXT5 => TextureFormat::Bc3RgbaUnormSrgb,
@@ -417,8 +421,17 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
     texture.sampler_descriptor = ImageSampler::Descriptor(SamplerDescriptor {
         address_mode_u: AddressMode::Repeat,
         address_mode_v: AddressMode::Repeat,
+        anisotropy_clamp: NonZeroU8::new(16),
         ..SamplerDescriptor::default()
     });
+
+    // Set mipmap level
+    if use_mips {
+        texture.texture_descriptor.mip_level_count = tex
+            .bitmap
+            .as_ref()
+            .map_or(1, |b| (b.mip_maps as u32) + 1);
+    }
 
     texture
 }
