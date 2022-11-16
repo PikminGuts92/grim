@@ -6,6 +6,7 @@
 
 mod events;
 mod gui;
+mod plugins;
 mod render;
 mod settings;
 mod state;
@@ -21,14 +22,11 @@ use bevy_infinite_grid::{GridShadowCamera, InfiniteGridBundle, InfiniteGrid, Inf
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
+use plugins::*;
 use state::*;
 use std::{env::args, path::{Path, PathBuf}};
 
 use crate::render::open_and_unpack_milo;
-
-const SETTINGS_FILE_NAME: &str = "settings.json";
-const PROJECT_NAME: &str = env!("CARGO_PKG_NAME");
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Component)]
 pub struct WorldMesh {
@@ -38,32 +36,12 @@ pub struct WorldMesh {
 }
 
 fn main() {
-    #[cfg(target_family = "wasm")] std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-    #[cfg(target_family = "wasm")] let app_state = AppState::default();
-    #[cfg(target_family = "wasm")] let app_settings = AppSettings::default();
-
-    #[cfg(not(target_family = "wasm"))] let app_state = load_state();
-    #[cfg(not(target_family = "wasm"))] let app_settings = load_settings(&app_state.settings_path);
-
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
-                title: format!("Preview v{}", VERSION),
-                width: app_settings.window_width,
-                height: app_settings.window_height,
-                mode: WindowMode::Windowed,
-                present_mode: PresentMode::Fifo, // vsync
-                resizable: true,
-                ..Default::default()
-            },
-            ..Default::default()
-        }))
         .add_event::<AppEvent>()
         .add_event::<AppFileEvent>()
         //.insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Msaa { samples: 4 })
-        .insert_resource(app_state)
-        .insert_resource(app_settings)
+        .add_plugin(GrimPlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(FlyCameraPlugin)
         .add_plugin(InfiniteGridPlugin)
@@ -203,25 +181,6 @@ fn setup(
         },
         ..InfiniteGridBundle::default()
     });
-}
-
-fn load_state() -> AppState {
-    let exe_path = &std::env::current_exe().unwrap();
-    let exe_dir_path = exe_path.parent().unwrap();
-    let settings_path = exe_dir_path.join(&format!("{}.{}", PROJECT_NAME, SETTINGS_FILE_NAME));
-
-    AppState {
-        settings_path,
-        //show_options: true, // TODO: Remove after testing
-        ..Default::default()
-    }
-}
-
-fn load_settings(settings_path: &Path) -> AppSettings {
-    let settings = AppSettings::load_from_file(settings_path);
-    println!("Loaded settings from \"{}\"", settings_path.to_str().unwrap());
-
-    settings
 }
 
 fn setup_args(
