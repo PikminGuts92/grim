@@ -383,16 +383,18 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
 fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
     let (tex, rgba, enc) = tex;
 
-    let (bpp, use_mips) = match enc {
-        TextureEncoding::DXT1 => (4, true),
-        TextureEncoding::DXT5 | TextureEncoding::ATI2 => (8, true),
-        TextureEncoding::RGBA => (32, false),// Disable for now
+    let bpp: usize = match enc {
+        TextureEncoding::DXT1 => 4,
+        TextureEncoding::DXT5 | TextureEncoding::ATI2 => 8,
+        TextureEncoding::RGBA => 32,
     };
+
+    let tex_size = ((tex.width as usize) * (tex.height as usize) * bpp) / 8;
+    let use_mips = rgba.len() > tex_size; // TODO: Always support mips?
 
     let img_slice = if use_mips {
         &rgba
     } else {
-        let tex_size = ((tex.width as usize) * (tex.height as usize) * bpp) / 8;
         &rgba[..tex_size]
     };
 
