@@ -28,10 +28,6 @@ use std::{env::args, path::{Path, PathBuf}};
 
 use crate::render::open_and_unpack_milo;
 
-const SETTINGS_FILE_NAME: &str = "settings.json";
-const PROJECT_NAME: &str = env!("CARGO_PKG_NAME");
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-
 #[derive(Component)]
 pub struct WorldMesh {
     name: String,
@@ -40,29 +36,11 @@ pub struct WorldMesh {
 }
 
 fn main() {
-    #[cfg(target_family = "wasm")] std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-    #[cfg(target_family = "wasm")] let app_state = AppState::default();
-    #[cfg(target_family = "wasm")] let app_settings = AppSettings::default();
-
-    #[cfg(not(target_family = "wasm"))] let app_state = load_state();
-    #[cfg(not(target_family = "wasm"))] let app_settings = load_settings(&app_state.settings_path);
-
     App::new()
-        .insert_resource(WindowDescriptor {
-            title: format!("Preview v{}", VERSION),
-            width: app_settings.window_width,
-            height: app_settings.window_height,
-            mode: WindowMode::Windowed,
-            present_mode: PresentMode::Fifo, // vsync
-            resizable: true,
-            ..Default::default()
-        })
         .add_event::<AppEvent>()
         .add_event::<AppFileEvent>()
         //.insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Msaa { samples: 4 })
-        .insert_resource(app_state)
-        .insert_resource(app_settings)
         .add_plugin(GrimPlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(FlyCameraPlugin)
@@ -185,40 +163,24 @@ fn setup(
     camera.transform = Transform::from_xyz(-2.0, 2.5, 5.0)
         .looking_at(Vec3::ZERO, Vec3::Y);
 
-    commands.spawn_bundle(camera).insert(FlyCamera {
+    commands.spawn(camera).insert(FlyCamera {
         enabled: false,
         sensitivity: 0.0,
         ..Default::default()
     }).insert(GridShadowCamera); // Fix camera
 
     // Infinite grid
-    commands.spawn_bundle(InfiniteGridBundle {
+    commands.spawn(InfiniteGridBundle {
         grid: InfiniteGrid {
             fadeout_distance: 300.,
             shadow_color: None, // No shadow
             ..InfiniteGrid::default()
         },
+        visibility: Visibility {
+            is_visible: settings.show_gridlines,
+        },
         ..InfiniteGridBundle::default()
     });
-}
-
-fn load_state() -> AppState {
-    let exe_path = &std::env::current_exe().unwrap();
-    let exe_dir_path = exe_path.parent().unwrap();
-    let settings_path = exe_dir_path.join(&format!("{}.{}", PROJECT_NAME, SETTINGS_FILE_NAME));
-
-    AppState {
-        settings_path,
-        //show_options: true, // TODO: Remove after testing
-        ..Default::default()
-    }
-}
-
-fn load_settings(settings_path: &Path) -> AppSettings {
-    let settings = AppSettings::load_from_file(settings_path);
-    println!("Loaded settings from \"{}\"", settings_path.to_str().unwrap());
-
-    settings
 }
 
 fn setup_args(
