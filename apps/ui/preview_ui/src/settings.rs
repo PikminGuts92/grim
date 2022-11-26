@@ -1,3 +1,4 @@
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display, Formatter};
 use std::fs::{read_to_string, self};
@@ -36,7 +37,7 @@ impl Display for Platform {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Resource, Serialize)]
 pub struct AppSettings {
     pub show_controls: bool,
     pub game_paths: Vec<GamePath>,
