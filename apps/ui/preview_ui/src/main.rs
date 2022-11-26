@@ -40,9 +40,6 @@ fn main() {
         .add_event::<AppEvent>()
         .add_event::<AppFileEvent>()
         //.insert_resource(ClearColor(Color::BLACK))
-        .insert_resource(bevy::pbr::wireframe::WireframeConfig {
-            global: app_settings.show_wireframes
-        })
         .insert_resource(Msaa { samples: 4 })
         .add_plugin(GrimPlugin)
         .add_plugin(EguiPlugin)

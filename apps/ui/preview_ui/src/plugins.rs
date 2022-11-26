@@ -61,6 +61,9 @@ impl Plugin for GrimPlugin {
                 },
                 ..Default::default()
             }))
+            .insert_resource(bevy::pbr::wireframe::WireframeConfig {
+                global: app_settings.show_wireframes
+            })
             .insert_resource(app_state)
             .insert_resource(app_settings);
     }
