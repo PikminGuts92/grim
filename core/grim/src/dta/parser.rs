@@ -1,11 +1,12 @@
 use nom::*;
 use nom::branch::{alt};
-use nom::bytes::complete::{is_not, tag, take_till, take_while};
-use nom::combinator::{map};
+use nom::bytes::complete::{is_not, tag, take_till, take_while, take_while1};
+use nom::character::complete::{alpha1, alphanumeric0, alphanumeric1, digit1};
+use nom::combinator::{map, map_res};
 use nom::error::{context, Error};
-use nom::sequence::{delimited, pair, preceded, separated_pair, terminated};
-use nom::multi::{many0};
-use super::{DataArray, ParseDTAError, RootData};
+use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
+use nom::multi::{many0, separated_list0};
+use super::{DataArray, ParseDTAError, RootData, DataString};
 
 const WS_CHARACTERS: &[u8] = b" \t\r\n\x0c";
 const SPACE_CHARACTERS: &[u8] = b" \t";
@@ -198,43 +199,113 @@ fn take_node<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
 
     preceded(
         take_ws_or_comment,
-            // string
-            // int
-            // float
-            // node
-            delimited(
-                tag(OPEN_BRACKET),
-                preceded(
-                    take_ws_or_comment,
-                    take_while(|c| !CLOSE_BRACKET.contains(&c))
-                ),
-                preceded(
-                    take_ws_or_comment,
-                    tag(CLOSE_BRACKET)
-                )
+        // string
+        // int
+        // float
+        // node
+        delimited(
+            tag(OPEN_BRACKET),
+            preceded(
+                take_ws_or_comment,
+                take_while(|c| !CLOSE_BRACKET.contains(&c))
+            ),
+            preceded(
+                take_ws_or_comment,
+                tag(CLOSE_BRACKET)
             )
+        )
     )(text)
 }
 
 fn take_root_node<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
     preceded(
         take_ws_or_comment,
-            // string
-            // int
-            // float
-            // node
-            delimited(
-                tag(OPEN_BRACKET),
-                preceded(
-                    take_ws_or_comment,
-                    take_while(|c| !CLOSE_BRACKET.contains(&c))
-                ),
-                preceded(
-                    take_ws_or_comment,
-                    tag(CLOSE_BRACKET)
-                )
+        // string
+        // int
+        // float
+        // node
+        delimited(
+            tag(OPEN_BRACKET),
+            preceded(
+                take_ws_or_comment,
+                take_while(|c| !CLOSE_BRACKET.contains(&c))
+            ),
+            preceded(
+                take_ws_or_comment,
+                tag(CLOSE_BRACKET)
             )
+        )
     )(text)
+}
+
+fn parse_string<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
+    delimited(
+        tag(b"\""),
+        map(
+            take_while(|c: u8| c.ne(&b"\""[0])),
+            |s: &'a [u8]| DataArray::String(DataString::from_vec(s.to_owned()))
+        ),
+        tag(b"\"")
+    )(text)
+}
+
+fn parse_data_array<'a>(text: &'a [u8]) -> IResult<&'a [u8], Vec<DataArray>> {
+    many0(
+        preceded(
+            take_ws_or_comment,
+            alt((
+                // String
+                parse_string,
+                // Symbol
+                // TODO: Support ''
+                map(
+                    tuple((
+                        alpha1,
+                        alphanumeric0
+                    )),
+                    |(pre, post): (&'a [u8], &'a [u8])| DataArray::Symbol(DataString::from_vec(
+                        pre
+                            .iter()
+                            .chain(post.iter())
+                            .map(|c| *c)
+                            .collect()
+                    ))
+                ),
+                // Array
+                delimited(
+                    tag(OPEN_BRACKET),
+                    map(
+                        parse_data_array,
+                        |items: Vec<DataArray>| DataArray::Array(items)
+                    ),
+                    preceded(
+                        take_ws_or_comment,
+                        tag(CLOSE_BRACKET)
+                    )
+                )
+            ))
+        )
+    )(text)
+
+    /*preceded(
+        take_ws_or_comment,
+        // string
+        // int
+        // float
+        // node
+        delimited(
+            tag(OPEN_BRACKET),
+            preceded(
+                take_ws_or_comment,
+
+                take_while(|c| !CLOSE_BRACKET.contains(&c))
+            ),
+            preceded(
+                take_ws_or_comment,
+                tag(CLOSE_BRACKET)
+            )
+        )
+    )(text)*/
 }
 
 pub fn parse_dta<'a>(dta: &'a[u8]) -> Result<Vec<ParsedSong>, ParseDTAError> {
@@ -246,6 +317,11 @@ pub fn parse_dta<'a>(dta: &'a[u8]) -> Result<Vec<ParsedSong>, ParseDTAError> {
 
     println!("r1: {r1_str}");
     println!("r2: {r2_str}");
+
+    let (_, items) = parse_data_array(dta).unwrap();
+
+    println!("\n\n{}", String::from_utf8(dta.to_owned()).unwrap());
+    println!("{items:#?}");
 
     //let result = take_section(dta).map_err(|_| ParseDTAError::UnknownDTAParseError)?;
 
@@ -266,8 +342,8 @@ mod tests {
     //const DTA_PATH: Option<&str> = option_env!("GRIM_TEST_DTA_PATH");
 
     #[rstest]
-    #[case(2, b";whatever \n (wildhoneypie)\n(temporarysecretary\n   (name \"Temporary Secretary\")\n)")] // b"(wildhoneypie)\n(temporarysecretary\n   (name \"Temporary Secretary\")\n)")
-    fn parse_dta_test<const N: usize>(#[case] expected_count: usize, #[case] dta: &[u8; N]) {
+    #[case(b";whatever \n (wildhoneypie)\n(temporarysecretary\n   (name \"Temporary Secretary\")\n)", 2)] // b"(wildhoneypie)\n(temporarysecretary\n   (name \"Temporary Secretary\")\n)")
+    fn parse_dta_test<const N: usize>(#[case] dta: &[u8; N], #[case] expected_count: usize) {
         //let dta_path = DTA_PATH;
         /*match DTA_PATH {
             Some(dta_path) => println!("DTA path is \"{dta_path}\""),
