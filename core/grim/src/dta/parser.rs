@@ -249,6 +249,33 @@ fn parse_string<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
     )(text)
 }
 
+fn parse_symbol<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
+    // TODO: Suport wider range of chars instead of alphanumeric
+    map(
+        alt((
+            tuple((
+                alpha1,
+                alphanumeric0
+            )),
+            delimited(
+                tag(b"'"),
+                tuple((
+                    alpha1,
+                    alphanumeric0
+                )),
+                tag(b"'")
+            )
+        )),
+        |(pre, post): (&'a [u8], &'a [u8])| DataArray::Symbol(DataString::from_vec(
+            pre
+                .iter()
+                .chain(post.iter())
+                .map(|c| *c)
+                .collect()
+        ))
+    )(text)
+}
+
 fn parse_data_array<'a>(text: &'a [u8]) -> IResult<&'a [u8], Vec<DataArray>> {
     many0(
         preceded(
@@ -257,20 +284,7 @@ fn parse_data_array<'a>(text: &'a [u8]) -> IResult<&'a [u8], Vec<DataArray>> {
                 // String
                 parse_string,
                 // Symbol
-                // TODO: Support ''
-                map(
-                    tuple((
-                        alpha1,
-                        alphanumeric0
-                    )),
-                    |(pre, post): (&'a [u8], &'a [u8])| DataArray::Symbol(DataString::from_vec(
-                        pre
-                            .iter()
-                            .chain(post.iter())
-                            .map(|c| *c)
-                            .collect()
-                    ))
-                ),
+                parse_symbol,
                 // Array
                 delimited(
                     tag(OPEN_BRACKET),
