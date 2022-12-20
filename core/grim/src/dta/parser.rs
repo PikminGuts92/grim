@@ -1,16 +1,20 @@
 use nom::*;
-use nom::branch::{alt};
+use nom::branch::{alt, permutation};
 use nom::bytes::complete::{is_not, tag, take_till, take_while, take_while1};
+use nom::character::{is_digit, is_hex_digit};
 use nom::character::complete::{alpha1, alphanumeric0, alphanumeric1, digit1};
-use nom::combinator::{map, map_res};
+use nom::combinator::{map, map_res, opt, recognize};
 use nom::error::{context, Error};
-use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
 use nom::multi::{many0, separated_list0};
+use nom::number::complete::recognize_float;
+use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
 use super::{DataArray, ParseDTAError, RootData, DataString};
 
 const WS_CHARACTERS: &[u8] = b" \t\r\n\x0c";
 const SPACE_CHARACTERS: &[u8] = b" \t";
 const NEWLINE_CHARACTERS: &[u8] = b"\r\n";
+const DIGIT_CHARACTERS_10: &[u8] = b"0123456789";
+const DIGIT_CHARACTERS_16: &[u8] = b"0123456789AaBbCcDdEeFf";
 
 const OPEN_BRACKET: &[u8] = b"(";
 const CLOSE_BRACKET:&[u8] = b")";
@@ -276,11 +280,39 @@ fn parse_symbol<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
     )(text)
 }
 
+fn parse_int<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
+    alt((
+        // Base 16
+        map_res(
+            preceded(
+                alt((tag("0x"), tag("0X"))),
+                take_while1(|c: u8| is_hex_digit(c)),
+            ),
+            |num: &'a [u8]| i32::from_str_radix(std::str::from_utf8(num).unwrap(), 16) // Shouldn't fail
+                .map(|n| DataArray::Integer(n))
+        ),
+        // Base 10
+        map_res(
+            recognize(
+                pair(
+                    opt(tag("-")),
+                    take_while1(|c: u8| is_digit(c))
+                )
+            ),
+            |num: &'a [u8]| std::str::from_utf8(num).unwrap() // Shouldn't fail
+                .parse::<i32>()
+                .map(|n| DataArray::Integer(n))
+        )
+    ))(text)
+}
+
 fn parse_data_array<'a>(text: &'a [u8]) -> IResult<&'a [u8], Vec<DataArray>> {
     many0(
         preceded(
             take_ws_or_comment,
             alt((
+                // Int
+                parse_int,
                 // String
                 parse_string,
                 // Symbol
@@ -372,5 +404,28 @@ mod tests {
         if let Ok(songs) = result {
             assert_eq!(expected_count, songs.len());
         }
+    }
+
+    #[rstest]
+    #[case(b"", None)]
+    #[case(b"0", Some(0))]
+    #[case(b"1234", Some(1234))]
+    #[case(b"-5", Some(-5))]
+    #[case(b"2147483647", Some(2147483647))]
+    #[case(b"2147483648", None)] // i32::MAX + 1
+    #[case(b"-2147483648", Some(-2147483648))]
+    #[case(b"-2147483649", None)] // i32::MIN - 1
+    #[case(b"0xFF", Some(0xFF))]
+    #[case(b"0x1234", Some(0x1234))]
+    #[case(b"0xAB00", Some(0xAB00))]
+    //#[case(b"0xGG", None)]
+    fn parse_int_test<const N: usize>(#[case] data: &[u8; N], #[case] expected: Option<i32>) {
+        let result = parse_int(data)
+            .map(|(_, arr)| arr)
+            .ok();
+
+        // TODO: Verify expected exception too?
+
+        assert_eq!(expected.map(|i| DataArray::Integer(i)), result);
     }
 }

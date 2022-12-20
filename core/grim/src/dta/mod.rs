@@ -6,7 +6,7 @@ pub use errors::*;
 pub use io::*;
 use parser::*;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct DataString {
     data: Vec<u8>,
 }
@@ -39,7 +39,7 @@ impl From<Vec<u8>> for DataString {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum DataArray {
     Integer(i32),
     Float(f32),
