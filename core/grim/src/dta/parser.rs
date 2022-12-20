@@ -345,6 +345,13 @@ fn parse_variable<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
     )(text)
 }
 
+fn parse_kdata_unhandled<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
+    map(
+        all_consuming(tag("kDataUnhandled")),
+        |data: &'a [u8]| DataArray::KDataUnhandled
+    )(text)
+}
+
 /*fn map_int(text: &[u8]) -> Result<DataArray, ParseIntError> {
     let num = match text {
         // Base 16
@@ -380,7 +387,8 @@ fn parse_node<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
                     // Float
                     parse_float,
                     // Variable
-                    parse_variable
+                    parse_variable,
+                    parse_kdata_unhandled
                 ))
             ),
             // String
@@ -526,6 +534,7 @@ mod tests {
     #[case(b"$0", None)]
     #[case(b"$01234", None)]
     #[case(b"$0abc", None)]
+    #[case(b"kDataUnhandled", Some(DataArray::KDataUnhandled))]
     fn parse_node_test<const N: usize>(#[case] data: &[u8; N], #[case] expected: Option<DataArray>) {
         let result = parse_node(data)
             .map(|(_, arr)| arr)
