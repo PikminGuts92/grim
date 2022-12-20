@@ -18,9 +18,9 @@ impl DataString {
         }
     }
 
-    pub fn from_string(str: String) -> DataString {
+    pub fn from_string<S: Into<String>>(str: S) -> DataString {
         DataString {
-            data: str.into_bytes(),
+            data: str.into().into_bytes(),
         }
     }
 
