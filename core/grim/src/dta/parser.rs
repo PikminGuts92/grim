@@ -1,7 +1,7 @@
 use nom::*;
 use nom::branch::{alt, permutation};
 use nom::bytes::complete::{is_not, tag, take, take_till, take_till1, take_while, take_while1};
-use nom::character::{is_digit, is_hex_digit};
+use nom::character::{is_alphanumeric, is_digit, is_hex_digit};
 use nom::character::complete::{alpha1, alphanumeric0, alphanumeric1, digit1, hex_digit1, one_of};
 use nom::combinator::{all_consuming, map, map_parser, map_res, not, opt, recognize};
 use nom::error::{context, Error};
@@ -317,6 +317,34 @@ fn parse_float<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
     )(text)
 }
 
+fn parse_var_name<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
+    all_consuming(
+        recognize(
+            pair(
+                alt((
+                    alpha1,
+                    tag("_")
+                )),
+                take_while(|c: u8| is_alphanumeric(c) || c.eq(&b'_'))
+            )
+        )
+    )(text)
+}
+
+fn parse_variable<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
+    map(
+        all_consuming(
+            recognize(
+                pair(
+                    tag("$"),
+                    parse_var_name
+                )
+            )
+        ),
+        |data: &'a [u8]| DataArray::Variable(DataString::from_vec(data.to_vec()))
+    )(text)
+}
+
 /*fn map_int(text: &[u8]) -> Result<DataArray, ParseIntError> {
     let num = match text {
         // Base 16
@@ -350,7 +378,9 @@ fn parse_node<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
                     // Int
                     parse_int,
                     // Float
-                    parse_float
+                    parse_float,
+                    // Variable
+                    parse_variable
                 ))
             ),
             // String
@@ -367,6 +397,30 @@ fn parse_node<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
                 preceded(
                     take_ws_or_comment,
                     tag(CLOSE_BRACKET)
+                )
+            ),
+            // Property
+            delimited(
+                tag("["),
+                map(
+                    parse_data_array,
+                    |items: Vec<DataArray>| DataArray::Property(items)
+                ),
+                preceded(
+                    take_ws_or_comment,
+                    tag("]")
+                )
+            ),
+            // Command
+            delimited(
+                tag("{"),
+                map(
+                    parse_data_array,
+                    |items: Vec<DataArray>| DataArray::Command(items)
+                ),
+                preceded(
+                    take_ws_or_comment,
+                    tag("}")
                 )
             )
         ))
@@ -464,6 +518,14 @@ mod tests {
     #[case(b"\"Test\"", Some(DataArray::String(DataString::from_string("Test"))))]
     #[case(b"\'Test\'", Some(DataArray::Symbol(DataString::from_string("Test"))))]
     #[case(b"Test", Some(DataArray::Symbol(DataString::from_string("Test"))))]
+    #[case(b"$test", Some(DataArray::Variable(DataString::from_string("$test"))))]
+    #[case(b"$test_song", Some(DataArray::Variable(DataString::from_string("$test_song"))))]
+    #[case(b"$p9director", Some(DataArray::Variable(DataString::from_string("$p9director"))))]
+    #[case(b"$p9director_1985", Some(DataArray::Variable(DataString::from_string("$p9director_1985"))))]
+    #[case(b"$", None)]
+    #[case(b"$0", None)]
+    #[case(b"$01234", None)]
+    #[case(b"$0abc", None)]
     fn parse_node_test<const N: usize>(#[case] data: &[u8; N], #[case] expected: Option<DataArray>) {
         let result = parse_node(data)
             .map(|(_, arr)| arr)
