@@ -254,30 +254,28 @@ fn parse_string<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
     )(text)
 }
 
-fn parse_symbol<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
-    // TODO: Suport wider range of chars instead of alphanumeric
+fn parse_symbol_name<'a>(text: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
     map(
-        alt((
-            tuple((
-                alpha1,
-                alphanumeric0
+        take_while1(|c: u8| is_alphanumeric(c) || b"._/".contains(&c)),
+        |name: &'a [u8]| name,
+    )(text)
+}
+
+fn parse_symbol<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
+    all_consuming(
+        map(
+            alt((
+                parse_symbol_name,
+                delimited(
+                    tag(b"'"),
+                    parse_symbol_name,
+                    tag(b"'")
+                )
             )),
-            delimited(
-                tag(b"'"),
-                tuple((
-                    alpha1,
-                    alphanumeric0
-                )),
-                tag(b"'")
-            )
-        )),
-        |(pre, post): (&'a [u8], &'a [u8])| DataArray::Symbol(DataString::from_vec(
-            pre
-                .iter()
-                .chain(post.iter())
-                .map(|c| *c)
-                .collect()
-        ))
+            |symbol: &'a [u8]| DataArray::Symbol(DataString::from_vec(
+                symbol.to_vec()
+            ))
+        )
     )(text)
 }
 
@@ -382,19 +380,21 @@ fn parse_node<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
             map_parser(
                 take_until_ws_comment_array1,
                 alt((
+                    // Specific keywords...
+                    parse_kdata_unhandled,
+
                     // Int
                     parse_int,
                     // Float
                     parse_float,
                     // Variable
                     parse_variable,
-                    parse_kdata_unhandled
+                    // Symbol
+                    parse_symbol,
                 ))
             ),
             // String
             parse_string,
-            // Symbol
-            parse_symbol,
             // Array
             delimited(
                 tag(OPEN_BRACKET),
