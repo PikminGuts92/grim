@@ -128,10 +128,11 @@ pub fn open_model<T>(model_path: T, info: SystemInfo) -> Result<AssetManagager, 
     gltf_importer.process(info)
 }
 
-#[cfg_attr(feature = "python", pyfunction)]
+#[pyfunction]
+#[cfg(feature = "python")]
 pub(crate) fn print_test() -> PyResult<()> {
     Python::with_gil(|_py| {
-        println!("Hello python! -Ferris");
+        println!("Hello python, again! -Ferris");
         Ok(())
     })
 }

@@ -14,7 +14,8 @@ pub mod texture;
 pub use grim_traits::*;
 pub use system::*;
 
-#[cfg_attr(feature = "python", pymodule)]
+#[cfg(feature = "python")]
+#[pymodule]
 fn grim(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     #[cfg(feature = "model")] m.add_function(wrap_pyfunction!(model::print_test, m)?)?;
     Ok(())
