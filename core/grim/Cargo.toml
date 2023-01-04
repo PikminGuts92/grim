@@ -15,6 +15,7 @@ itertools = { workspace = true }
 lazy_static = { workspace = true }
 midly = { version = "0.5.2", optional = true }
 nalgebra = { version = "0.31.4", optional = true }
+pyo3 = { version = "0.17.3", optional = true, features = [ "extension-module" ] }
 rayon = "1.5.3"
 regex = { version = "1.7.0", default-features = false, features = [ "std" ] }
 thiserror = { workspace = true }
@@ -26,6 +27,7 @@ rstest = "0.15.0"
 [features]
 midi = [ "midly" ]
 model = [ "gltf", "nalgebra" ]
+python = [ "pyo3" ]
 
 [[bench]]
 name = "texture_benchmark"
@@ -33,3 +35,4 @@ harness = false
 
 [lib]
 bench = false
+crate-type = [ "lib", "cdylib" ]

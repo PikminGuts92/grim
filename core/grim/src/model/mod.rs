@@ -7,6 +7,7 @@ mod gltf;
 mod tex_path;
 //mod trans;
 
+#[cfg(feature = "python")] use pyo3::prelude::*;
 use std::{error::Error, fs::copy, path::Path};
 
 use crate::SystemInfo;
@@ -125,4 +126,12 @@ pub(crate) fn create_dir_if_not_exists<T>(dir_path: T) -> Result<(), Box<dyn Err
 pub fn open_model<T>(model_path: T, info: SystemInfo) -> Result<AssetManagager, Box<dyn Error>> where T: AsRef<Path> {
     let mut gltf_importer = GLTFImporter::new(&model_path)?;
     gltf_importer.process(info)
+}
+
+#[cfg_attr(feature = "python", pyfunction)]
+pub(crate) fn print_test() -> PyResult<()> {
+    Python::with_gil(|_py| {
+        println!("Hello python! -Ferris");
+        Ok(())
+    })
 }
