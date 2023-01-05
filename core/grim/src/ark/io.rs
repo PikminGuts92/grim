@@ -2,6 +2,7 @@ use crate::ark::*;
 use crate::io::*;
 use std::collections::HashMap;
 use std::path::Path;
+#[cfg(feature = "python")] use pyo3::prelude::*;
 
 const MAX_HDR_SIZE: u64 = 20 * 0x100000; // 20MB
 

@@ -18,5 +18,9 @@ pub use system::*;
 #[pymodule]
 fn grim(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     #[cfg(feature = "model")] m.add_function(wrap_pyfunction!(model::print_test, m)?)?;
+
+    m.add_class::<ark::Ark>()?;
+    m.add_class::<ark::ArkOffsetEntry>()?;
+
     Ok(())
 }
