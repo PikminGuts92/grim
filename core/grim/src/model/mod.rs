@@ -123,6 +123,36 @@ pub(crate) fn create_dir_if_not_exists<T>(dir_path: T) -> Result<(), Box<dyn Err
 }
 
 pub fn open_model<T>(model_path: T, info: SystemInfo) -> Result<AssetManagager, Box<dyn Error>> where T: AsRef<Path> {
+    // Check if path exists first
+    verify_path_exists(&model_path, Some("model_path"))?;
+
     let mut gltf_importer = GLTFImporter::new(&model_path)?;
     gltf_importer.process(info)
+}
+
+pub(crate) fn verify_path_exists<T: AsRef<Path>>(path: T, name: Option<&str>) -> Result<(), std::io::Error> {
+    path
+        .as_ref()
+        .try_exists()
+        .and_then(|exists| if exists {
+            Ok(())
+        } else {
+            Err(
+                std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    if let Some(name) = name {
+                        format!("Can't find \"{}\" with path \"{}\"", name, path_as_string(&path))
+                    } else {
+                        format!("Can't find \"{}\"", path_as_string(&path))
+                    }
+                )
+            )
+        })
+}
+
+pub(crate) fn path_as_string<'a, T: AsRef<Path>>(path: &'a T) -> &'a str {
+    path
+        .as_ref()
+        .to_str()
+        .unwrap()
 }
