@@ -106,26 +106,48 @@ impl GLTFImporter {
             if let Some(diffuse_tex) = doc_mat.pbr_metallic_roughness().base_color_texture() {
                 // For now copy exising png files
                 let tex_source = diffuse_tex.texture().source().source();
-                if let Source::Uri { uri, mime_type: _ } = tex_source {
-                    let png_path = self.model_path.parent().unwrap().join(uri);
 
-                    let tex_name = format!(
-                        "{}.tex",
-                        png_path.file_stem().unwrap().to_str().unwrap().to_ascii_lowercase()
-                    );
-                    mat.diffuse_tex = tex_name.to_owned();
+                match tex_source {
+                    Source::Uri { uri, mime_type: _ } => {
+                        let image_path = self.model_path
+                            .parent()
+                            .unwrap()
+                            .join(uri);
 
-                    // Existing texture not found, create new one
-                    if asset_manager.get_texture(&tex_name).is_none() {
-                        let tex = TexPath {
-                            name: tex_name,
-                            rgba: Vec::new(),
-                            png_path,
+                        if !image_path.is_file() {
+                            println!("Texture with path \"{}\", not found", super::path_as_string(&image_path));
+                            self.mats.push(mat); // Add mat anyways
+                            continue;
+                        }
+
+                        let file_name = image_path.file_stem().unwrap();
+
+                        let tex_name = format!(
+                            "{}.tex",
+                            super::path_as_string(&file_name).to_ascii_lowercase()
+                        );
+
+                        mat.diffuse_tex = tex_name.to_owned();
+
+                        // Existing texture not found, create new one
+                        if asset_manager.get_texture(&tex_name).is_none() {
+                            let tex = TexPath {
+                                name: tex_name,
+                                rgba: Vec::new(),
+                                png_path: image_path,
+                            };
+
+                            asset_manager.add_tex(tex);
+                        }
+                    },
+                    // TODO: Support embedded textures...
+                    Source::View { view, mime_type: _ } => {
+                        match view.name() {
+                            Some(name) => println!("Embedded texture with name \"{name}\" not supported"),
+                            _ => println!("Embedded texture at index {} not supported", view.index())
                         };
-
-                        asset_manager.add_tex(tex);
                     }
-                }
+                };
             }
 
             self.mats.push(mat);
