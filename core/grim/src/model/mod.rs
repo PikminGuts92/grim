@@ -1,5 +1,6 @@
 //mod anim;
 //mod draw;
+mod export;
 mod gltf;
 //mod group;
 //mod mat;
