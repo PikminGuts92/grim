@@ -46,7 +46,9 @@ impl SubApp for Milo2GltfApp {
         let bone_count = calc_total_bone_count(&bones);
         println!("Found {} bones\n", bone_count);
 
-        print_bones(&bones, 0);
+        //print_bones(&bones, 0);
+
+        export_object_dir_to_gltf(&obj_dir, &dir_path);
 
         Ok(())
     }

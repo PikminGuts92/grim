@@ -2017,6 +2017,7 @@ dependencies = [
  "criterion",
  "flate2",
  "gltf",
+ "gltf-json",
  "grim_macros",
  "grim_traits",
  "half 2.1.0",
