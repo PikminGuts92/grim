@@ -8,3 +8,6 @@ edition.workspace = true
 clap = { workspace = true }
 grim = { workspace = true, features = [ "model" ] }
 thiserror = { workspace = true }
+
+[features]
+experimental = []

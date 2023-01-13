@@ -5,8 +5,8 @@ use std::collections::{HashMap, HashSet};
 //type TransObject = dyn Trans + MiloObject;
 
 pub struct BoneNode<'a> {
-    object: &'a dyn Trans,
-    children: Vec<BoneNode<'a>>
+    pub object: &'a dyn Trans,
+    pub children: Vec<BoneNode<'a>>
 }
 
 fn get_child_nodes<'a>(parent_name: &str, bone_map: &HashMap<&str, &'a dyn Trans>, child_map: &HashMap<&str, Vec<&dyn Trans>>) -> Vec<BoneNode<'a>> {

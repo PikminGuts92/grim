@@ -10,6 +10,7 @@ mod tex_path;
 
 use std::{error::Error, fs::copy, path::Path};
 
+pub use self::export::*; // TODO: Remove later
 use crate::SystemInfo;
 use crate::scene::*;
 pub(crate) use self::gltf::*;
