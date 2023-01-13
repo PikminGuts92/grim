@@ -1,5 +1,6 @@
 use crate::scene::*;
 //use grim_traits::scene::*;
+use itertools::*;
 use nalgebra as na;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -18,6 +19,7 @@ fn get_child_nodes<'a>(parent_name: &str, bone_map: &HashMap<&str, &'a dyn Trans
 
     children
         .iter()
+        .sorted_by(|a, b| a.get_name().cmp(b.get_name())) // Sort by name
         .map(|c| BoneNode {
             object: *bone_map.get(c.get_name().as_str()).unwrap(),
             children: get_child_nodes(c.get_name().as_str(), bone_map, child_map)
@@ -34,15 +36,8 @@ pub fn find_bones<'a>(obj_dir: &'a ObjectDir) -> Vec<BoneNode<'a>> {
         .get_entries()
         .iter()
         .filter_map(|o| match o {
-            // TODO: Support GH1 bones
-            /*Object::Mesh(m) if m.faces.is_empty()
-                => Some((
-                    m as &dyn Trans,
-                    m.bones
-                        .iter()
-                        .map(|b| (b.name.as_str(), &b.trans))
-                        .collect::<Vec<_>>()
-                )),*/
+            Object::Mesh(m) if m.faces.is_empty() // GH1 bones
+                => Some(m as &dyn Trans),
             Object::Trans(t) => Some(t as &dyn Trans),
             _ => None
         })
@@ -87,7 +82,12 @@ fn map_bones_to_nodes(dir_name: &str, bones: &Vec<BoneNode>) -> Vec<gltf_json::N
         children: None,
         extensions: None,
         extras: None,
-        matrix: None,
+        matrix: Some([
+            -1.0,  0.0,  0.0, 0.0,
+            0.0,  0.0,  1.0, 0.0,
+            0.0,  1.0,  0.0, 0.0,
+            0.0,  0.0,  0.0, 1.0,
+        ]),
         mesh: None,
         name: Some(dir_name.to_string()),
         rotation: None,
@@ -123,23 +123,42 @@ fn populate_child_nodes(nodes: &mut Vec<gltf_json::Node>, bones: &Vec<BoneNode>)
 
         let mat = na::Matrix4::new(
             // Column-major order...
-            m.m11, m.m12, m.m13, m.m14,
+            m.m11, m.m21, m.m31, m.m41,
+            m.m12, m.m22, m.m32, m.m42,
+
+            m.m13, m.m23, m.m33, m.m43,
+            m.m14, m.m24, m.m34, m.m44,
+
+            /*m.m11, m.m12, m.m13, m.m14,
             m.m21, m.m22, m.m23, m.m24,
             m.m31, m.m32, m.m33, m.m34,
-            m.m41, m.m42, m.m43, m.m44
+            m.m41, m.m42, m.m43, m.m44*/
         );
 
-        /*let conv_mat = na::Matrix4::new(
+        //let scale_mat = na::Matrix4::new_scaling(1.0);
+
+        /*let trans_mat = na::Matrix4::new(
             -1.0,  0.0,  0.0, 0.0,
             0.0,  0.0,  1.0, 0.0,
             0.0,  1.0,  0.0, 0.0,
             0.0,  0.0,  0.0, 1.0,
         );
 
+        let trans_mat = na::Matrix4::new(
+            trans_mat[0], trans_mat[4], trans_mat[8], trans_mat[12],
+            trans_mat[1], trans_mat[5], trans_mat[9], trans_mat[13],
+            trans_mat[2], trans_mat[6], trans_mat[10], trans_mat[14],
+            trans_mat[3], trans_mat[7], trans_mat[11], trans_mat[15],
+        );
+
         // TODO: Apply translation...
-        let mat = mat * conv_mat;*/
+        let mat = mat * trans_mat;*/
+
+        //let mat = mat * scale_mat;
 
         //na::Matrix::from
+
+        //let mut gltf_mat 
 
         let node = gltf_json::Node {
             camera: None,
@@ -150,29 +169,15 @@ fn populate_child_nodes(nodes: &mut Vec<gltf_json::Node>, bones: &Vec<BoneNode>)
             },
             extensions: None,
             extras: None,
-            matrix: Some([
-                // TODO: Figure out better way to re-map
-                // Column-major order...
-                mat[0],
-                mat[1],
-                mat[2],
-                mat[3],
-
-                mat[4],
-                mat[5],
-                mat[6],
-                mat[7],
-
-                mat[8],
-                mat[9],
-                mat[10],
-                mat[11],
-
-                mat[12],
-                mat[13],
-                mat[14],
-                mat[15],
-            ]),
+            matrix: if mat.is_identity(f32::EPSILON) {
+                // Don't add identities
+                None
+            } else {
+                mat
+                    .as_slice()
+                    .try_into()
+                    .ok()
+            },
             mesh: None,
             name: Some(bone.object.get_name().to_string()),
             rotation: None,
@@ -204,11 +209,14 @@ pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path) {
     let joints = nodes
         .iter()
         .enumerate()
-        .skip(1)
         .map(|(i, _)| json::Index::new(i as u32))
         .collect::<Vec<_>>();
 
     let root = json::Root {
+        asset: json::Asset {
+            generator: Some(format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))),
+            ..Default::default()
+        },
         nodes: map_bones_to_nodes(dir_name, &bones),
         scene: Some(json::Index::new(0)),
         scenes: vec![
