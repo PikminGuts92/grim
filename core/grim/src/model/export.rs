@@ -1,10 +1,13 @@
+use crate::io::*;
 use crate::scene::*;
 //use grim_traits::scene::*;
 use crate::{Platform, SystemInfo};
 use itertools::*;
 use nalgebra as na;
 use std::collections::{HashMap, HashSet};
+use std::error::Error;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 //type TransObject = dyn Trans + MiloObject;
 
@@ -296,4 +299,72 @@ pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path, sys_in
     json::serialize::to_writer_pretty(writer, &root).expect("Serialization error");
 
     // Write gltf buffer
+}
+
+#[derive(Default)]
+pub struct GltfExportSettings {
+    pub custom_basename: Option<String>,
+    pub embed_textures: bool,
+    pub write_as_binary: bool
+}
+
+#[derive(Default)]
+pub struct GltfExporter {
+    // TODO: Replace with new milo environment?
+    object_dirs: Vec<(Rc<ObjectDir>, PathBuf, SystemInfo)>,
+    settings: GltfExportSettings
+}
+
+impl GltfExporter {
+    pub fn new() -> GltfExporter {
+        GltfExporter::default()
+    }
+
+    pub fn with_settings(settings: GltfExportSettings) -> GltfExporter {
+        GltfExporter {
+            settings,
+            ..Default::default()
+        }
+    }
+
+    pub fn add_milo_from_path<T: Into<PathBuf>>(&mut self, path: T) -> Result<(), Box<dyn Error>> {
+        // TODO: Return custom error type
+        let milo_path: PathBuf = path.into();
+
+        // Open milo
+        let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(&milo_path)?);
+        let milo = MiloArchive::from_stream(&mut stream)?;
+
+        // Guess system info and unpack dir + entries
+        let system_info = SystemInfo::guess_system_info(&milo, &milo_path);
+        let mut obj_dir = milo.unpack_directory(&system_info)?;
+        obj_dir.unpack_entries(&system_info)?;
+
+        // Add to list
+        self.object_dirs.push((Rc::new(obj_dir), milo_path, system_info));
+        Ok(())
+    }
+
+    pub fn process(&mut self) -> Result<(), Box<dyn Error>> {
+        Ok(())
+    }
+
+
+    pub fn save_to_fs<T: AsRef<Path>>(&self, output_dir: T) -> Result<(), Box<dyn Error>> {
+        let output_dir = output_dir.as_ref();
+
+        super::create_dir_if_not_exists(output_dir)?;
+
+        // TODO: Replace
+        let (obj_dir, sys_info) = self
+            .object_dirs
+            .iter()
+            .map(|(o, _, info)| (o.as_ref(), info))
+            .next()
+            .unwrap();
+
+        export_object_dir_to_gltf(obj_dir, output_dir, sys_info);
+
+        Ok(())
+    }
 }

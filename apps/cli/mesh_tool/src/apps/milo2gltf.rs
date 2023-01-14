@@ -17,6 +17,10 @@ pub struct Milo2GltfApp {
     pub output_path: String,
     #[arg(short = 'n' , long, help = "Gltf base file name")]
     pub name: Option<String>,
+    #[arg(short = 'e' , long, help = "Embed textures as base64")]
+    pub embed_textures: bool,
+    #[arg(short = 'b' , long, help = "Save as .glb")]
+    pub use_glb: bool
 }
 
 impl SubApp for Milo2GltfApp {
@@ -33,7 +37,18 @@ impl SubApp for Milo2GltfApp {
             println!("Opening {}", file_name);
         }
 
-        let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(milo_path)?);
+        let mut exporter = GltfExporter::with_settings(GltfExportSettings {
+            custom_basename: self.name.to_owned(),
+            embed_textures: self.embed_textures,
+            write_as_binary: self.use_glb,
+            ..Default::default()
+        });
+        exporter.add_milo_from_path(milo_path)?;
+
+        exporter.process()?;
+        exporter.save_to_fs(&dir_path)
+
+        /*let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(milo_path)?);
         let milo = MiloArchive::from_stream(&mut stream)?;
 
         // Guess system info
@@ -50,23 +65,23 @@ impl SubApp for Milo2GltfApp {
 
         export_object_dir_to_gltf(&obj_dir, &dir_path, &system_info);
 
-        Ok(())
+        Ok(())*/
     }
 }
 
-fn print_bones(bones: &Vec<BoneNode>, depth: usize) {
+fn _print_bones(bones: &Vec<BoneNode>, depth: usize) {
     for bone in bones {
         println!("{}{}", "  ".repeat(depth), bone.object.get_name());
 
         if !bone.children.is_empty() {
-            print_bones(&bone.children, depth + 1);
+            _print_bones(&bone.children, depth + 1);
         }
     }
 }
 
-fn calc_total_bone_count(bones: &Vec<BoneNode>) -> usize {
+fn _calc_total_bone_count(bones: &Vec<BoneNode>) -> usize {
     bones
         .iter()
-        .map(|b| calc_total_bone_count(&b.children))
+        .map(|b| _calc_total_bone_count(&b.children))
         .sum::<usize>() + bones.len()
 }
