@@ -48,7 +48,7 @@ impl SubApp for Milo2GltfApp {
 
         //print_bones(&bones, 0);
 
-        export_object_dir_to_gltf(&obj_dir, &dir_path);
+        export_object_dir_to_gltf(&obj_dir, &dir_path, &system_info);
 
         Ok(())
     }
