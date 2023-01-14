@@ -1,5 +1,6 @@
 use crate::scene::*;
 //use grim_traits::scene::*;
+use crate::{Platform, SystemInfo};
 use itertools::*;
 use nalgebra as na;
 use std::collections::{HashMap, HashSet};
@@ -194,7 +195,19 @@ fn populate_child_nodes(nodes: &mut Vec<gltf_json::Node>, bones: &Vec<BoneNode>)
     indicies
 }
 
-pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path) {
+fn get_textures<'a>(obj_dir: &'a ObjectDir) -> Vec<&Tex> {
+    obj_dir
+        .get_entries()
+        .iter()
+        .filter_map(|e| match e {
+            // TODO: Support external textures
+            Object::Tex(tex) if tex.bitmap.is_some() => Some(tex),
+            _ => None
+        })
+        .collect()
+}
+
+pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path, sys_info: &SystemInfo) {
     use gltf_json as json;
 
     super::create_dir_if_not_exists(output_path).unwrap();
@@ -202,6 +215,43 @@ pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path) {
     let dir_name = match obj_dir {
         ObjectDir::ObjectDir(base) => base.name.as_str(),
     };
+
+    let textures = get_textures(&obj_dir);
+
+    let images = textures
+        .into_iter()
+        .map(|t| json::Image {
+            buffer_view: None,
+            mime_type: Some(json::image::MimeType(String::from("image/png"))),
+            name: Some(t.get_name().to_owned()),
+            uri: {
+                use base64::{Engine as _, engine::{self, general_purpose}, alphabet};
+
+                // Decode image
+                let rgba = t.bitmap
+                    .as_ref()
+                    .unwrap()
+                    .unpack_rgba(sys_info)
+                    .unwrap();
+
+                let (width, height) = t.bitmap
+                    .as_ref()
+                    .map(|b| (b.width as u32, b.height as u32))
+                    .unwrap();
+
+                // Convert to png
+                let png_data = crate::texture::write_rgba_to_vec(width, height, &rgba).unwrap();
+
+                // Encode to base64
+                let mut str_data = String::from("data:image/png;base64,");
+                general_purpose::STANDARD.encode_string(&png_data, &mut str_data);
+
+                Some(str_data)
+            },
+            extensions: None,
+            extras: None
+        })
+        .collect();
 
     let bones = find_bones(&obj_dir);
     let nodes = map_bones_to_nodes(dir_name, &bones);
@@ -217,6 +267,7 @@ pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path) {
             generator: Some(format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))),
             ..Default::default()
         },
+        images,
         nodes: map_bones_to_nodes(dir_name, &bones),
         scene: Some(json::Index::new(0)),
         scenes: vec![
