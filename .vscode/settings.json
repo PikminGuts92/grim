@@ -1,6 +1,7 @@
 {
     "rust-analyzer.cargo.features": [
         //"bevy/dynamic"
+        "experimental",
         "midi"
     ],
     "rust-analyzer.inlayHints.chainingHints.enable": false,
