@@ -339,7 +339,8 @@ pub struct GltfExporter {
     textures: HashMap<String, MappedObject<Tex>>,
 
     // TODO: Move to nested struct?
-    gltf: json::Root
+    gltf: json::Root,
+    image_indices: HashMap<String, usize>,
 }
 
 impl GltfExporter {
@@ -532,6 +533,84 @@ impl GltfExporter {
         node_index
     }
 
+    fn process_textures(&self, gltf: &mut json::Root) -> HashMap<String, usize> {
+        let mut image_indices = HashMap::new();
+
+        gltf.samplers = vec![
+            json::texture::Sampler {
+                mag_filter: Some(json::validation::Checked::Valid(json::texture::MagFilter::Linear)),
+                min_filter: Some(json::validation::Checked::Valid(json::texture::MinFilter::Nearest)),
+                wrap_s: json::validation::Checked::Valid(json::texture::WrappingMode::Repeat),
+                wrap_t: json::validation::Checked::Valid(json::texture::WrappingMode::Repeat),
+                ..Default::default()
+            }
+        ];
+
+        (gltf.images, gltf.textures) = self.textures
+            .values()
+            .sorted_by(|a, b| a.object.get_name().cmp(b.object.get_name()))
+            .enumerate()
+            .map(|(i, mt)| {
+                let t = &mt.object;
+                let sys_info = &mt.parent.info;
+
+                // Remove .tex extension
+                // TODO: Use more robust method
+                let image_name = t.get_name().replace(".tex", ".png");
+
+                image_indices.insert(t.get_name().to_owned(), i);
+
+                let image = json::Image {
+                    buffer_view: None,
+                    mime_type: Some(json::image::MimeType(String::from("image/png"))),
+                    name: Some(image_name),
+                    uri: {
+                        use base64::{Engine as _, engine::{self, general_purpose}, alphabet};
+
+                        // Decode image
+                        let rgba = t.bitmap
+                            .as_ref()
+                            .unwrap()
+                            .unpack_rgba(sys_info)
+                            .unwrap();
+
+                        let (width, height) = t.bitmap
+                            .as_ref()
+                            .map(|b| (b.width as u32, b.height as u32))
+                            .unwrap();
+
+                        // Convert to png
+                        let png_data = crate::texture::write_rgba_to_vec(width, height, &rgba).unwrap();
+
+                        // Encode to base64
+                        let mut str_data = String::from("data:image/png;base64,");
+                        general_purpose::STANDARD.encode_string(&png_data, &mut str_data);
+
+                        Some(str_data)
+                    },
+                    extensions: None,
+                    extras: None
+                };
+
+                let texture = json::Texture {
+                    name: Some(t.get_name().to_owned()),
+                    sampler: Some(json::Index::new(0u32)),
+                    source: json::Index::new(i as u32), // Image index
+                    extensions: None,
+                    extras: None
+                };
+
+                (image, texture)
+            })
+            .fold((Vec::new(), Vec::new()), |(mut imgs, mut texs), (img, tex)| {
+                imgs.push(img);
+                texs.push(tex);
+                (imgs, texs)
+            });
+
+        image_indices
+    }
+
     pub fn process(&mut self) -> Result<(), Box<dyn Error>> {
         let mut gltf = json::Root {
             asset: json::Asset {
@@ -545,6 +624,9 @@ impl GltfExporter {
 
         let children = self.find_node_children();
         let root_nodes = self.get_root_nodes(&children);
+
+
+        let image_indices = self.process_textures(&mut gltf);
 
         let scene_nodes = root_nodes
             .into_iter()
