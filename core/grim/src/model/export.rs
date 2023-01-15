@@ -928,7 +928,7 @@ impl GltfExporter {
                 acc
                     .entry(parent)
                     .and_modify(|e: &mut Vec<&'a str>| e.push(name))
-                    .or_insert(vec![name]);
+                    .or_insert_with(|| vec![name]);
 
                 acc
             });
@@ -964,24 +964,45 @@ fn align_to_multiple_of_four(n: usize) -> usize {
     (n + 3) & !3
 }
 
-struct AccessorBuilder<'a> {
-    working_data: HashMap<(&'a str, usize), (Option<String>, Vec<u8>)>,
+struct AccessorBuilder {
+    // Key = stride, Value = (idx, data)
+    working_data: HashMap<usize, (usize, Vec<u8>)>,
     accessors: Vec<json::Accessor>,
 }
 
-impl<'a> AccessorBuilder<'a> {
-    fn new() -> AccessorBuilder<'a> {
+impl AccessorBuilder {
+    fn new() -> AccessorBuilder {
         AccessorBuilder {
             working_data: Default::default(),
             accessors: Vec::new()
         }
     }
 
-    fn add_buffer_view(&mut self, element_type: json::accessor::Type) {
-
+    fn calc_stride<const N: usize, T: ComponentValue>(&self) -> usize {
+        N * T::size()
     }
 
-    fn add_array<const N: usize, S: Into<String>, T: ComponentValue, U: IntoIterator<Item = [T; N]>>(&mut self, name: S, data: U) -> usize {
+    fn update_buffer_view<const N: usize, T: ComponentValue>(&mut self, mut data: Vec<u8>) -> (usize, usize) {
+        let stride = self.calc_stride::<N, T>();
+        let data_size = data.len();
+        let next_idx = self.working_data.len();
+
+        // Upsert buffer data
+        let (idx, buff) = self.working_data
+            .entry(stride)
+            .and_modify(|(_, b)| b.append(&mut data))
+            .or_insert_with(|| (next_idx, data));
+
+        // Return index of updated buffer view + insert offset
+        (*idx, buff.len() - data_size)
+    }
+
+    pub fn add_scalar<S: Into<String>, T: ComponentValue, U: IntoIterator<Item = T>>(&mut self, name: S, data: U) -> Option<usize> {
+        // Map to iter of single-item arrays (definitely hacky)
+        self.add_array(name, data.into_iter().map(|d| [d]))
+    }
+
+    pub fn add_array<const N: usize, S: Into<String>, T: ComponentValue, U: IntoIterator<Item = V>, V: Into<[T; N]>>(&mut self, name: S, data: U) -> Option<usize> {
         let comp_type = T::get_component_type();
 
         let acc_type = match N {
@@ -994,12 +1015,15 @@ impl<'a> AccessorBuilder<'a> {
             _ => unimplemented!()
         };
 
+        // Write to stream and find min/max values
+        let mut data_stream = Vec::new();
         let (count, min, max) = data
             .into_iter()
             .fold((0usize, [T::max(); N], [T::min(); N]), |(count, mut min, mut max), item| {
                 let mut i = 0;
-                for v in item {
+                for v in item.into() {
                     // Encode + append each value to master buffer
+                    data_stream.append(&mut v.encode());
 
                     // Calc min + max values
                     min[i] = min[i].get_min(v);
@@ -1011,8 +1035,13 @@ impl<'a> AccessorBuilder<'a> {
                 (count + 1, min, max)
             });
 
-        // If count is 0, don't bother adding
-        // Maybe throw exception?
+        if count == 0 {
+            // If count is 0, don't bother adding
+            return None;
+        }
+
+        // Update buffer views
+        let (buff_idx, buff_off) = self.update_buffer_view::<N, T>(data_stream);
 
         let acc_index = self.accessors.len();
 
@@ -1024,9 +1053,8 @@ impl<'a> AccessorBuilder<'a> {
 
         // Create accessor
         let accessor = json::Accessor {
-            // TODO: Add buffer view idx + byte offset values
-            buffer_view: Some(json::Index::new(0)),
-            byte_offset: 0,
+            buffer_view: Some(json::Index::new(buff_idx as u32)),
+            byte_offset: buff_off as u32,
             count: count as u32,
             component_type: json::validation::Checked::Valid(json::accessor::GenericComponentType(comp_type)),
             extensions: None,
@@ -1043,7 +1071,66 @@ impl<'a> AccessorBuilder<'a> {
         };
 
         self.accessors.push(accessor);
-        acc_index
+        Some(acc_index)
+    }
+
+    fn generate_buffer_views(&mut self) -> (Vec<json::buffer::View>, Vec<u8>) {
+        // Get view info and sort by assigned index
+        let view_data = self.working_data
+            .drain()
+            .map(|(k, (idx, data))| (idx, k, data)) // (idx, stride, data)
+            .sorted_by(|(a, ..), (b, ..)| a.cmp(b));
+
+        let mut views = Vec::new();
+        let mut all_data = Vec::new();
+
+        for (_idx, stride, mut data) in view_data {
+            // Pad buffer view if required
+            let padded_size = align_to_multiple_of_four(data.len());
+            if padded_size > data.len() {
+                let diff_size = padded_size - data.len();
+                data.append(&mut vec![0u8; diff_size]);
+            }
+
+            let data_size = data.len();
+            let data_offset = all_data.len();
+
+            // Move data from view to full buffer
+            all_data.append(&mut data);
+
+            views.push(json::buffer::View {
+                name: None,
+                byte_length: data_size as u32,
+                byte_offset: Some(data_offset as u32),
+                byte_stride: Some(stride as u32),
+                buffer: json::Index::new(0),
+                target: None,
+                extensions: None,
+                extras: None
+            });
+        }
+
+        (views, all_data)
+    }
+
+    fn generate<T: Into<String>>(mut self, name: T) -> (Vec<json::Accessor>, Vec<json::buffer::View>, json::Buffer, Vec<u8>) {
+        // Generate buffer views + final buffer blob
+        let (views, buffer_data) = self.generate_buffer_views();
+
+        // Create buffer json
+        let buffer = json::Buffer {
+            name: None,
+            byte_length: buffer_data.len() as u32,
+            uri: Some(name.into()),
+            extensions: None,
+            extras: None
+        };
+
+        // Return everything
+        (self.accessors,
+            views,
+            buffer,
+            buffer_data)
     }
 
     fn get_min_max_values<const N: usize, T: Serialize + Copy>(acc_type: &json::accessor::Type, min: [T; N], max: [T; N]) -> Option<(json::Value, json::Value)> {
@@ -1072,8 +1159,12 @@ trait ComponentValue : Copy + Serialize {
     fn get_min(self, other: Self) -> Self;
     fn get_max(self, other: Self) -> Self;
 
-    fn get_component_type() -> json::accessor::ComponentType;
     fn encode(self) -> Vec<u8>;
+    fn get_component_type() -> json::accessor::ComponentType;
+
+    fn size() -> usize {
+        std::mem::size_of::<Self>()
+    }
 }
 
 impl ComponentValue for u16 {
@@ -1140,7 +1231,8 @@ mod tests {
         //acc_builder.add_array_f32([[0.0f32, 0.1f32, 0.2f32]]);
 
         acc_builder.add_array("", [[0.0f32, 0.1f32, 0.2f32]]);
+        //acc_builder.add("", [0.0f32, 0.1f32, 0.2f32]);
 
-        assert!(false);
+        //assert!(false);
     }
 }
