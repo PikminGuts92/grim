@@ -446,6 +446,7 @@ impl GltfExporter {
     fn process_node<'a>(&'a self, gltf: &mut json::Root, name: &'a str, child_map: &HashMap<&'a str, Vec<&'a str>>, depth: usize) -> usize {
         let node_index = gltf.nodes.len();
 
+        // Get + compute transform matrix
         let mat = match (self.get_transform(name), depth) {
             (Some(trans), 0) => {
                 let m = trans.get_world_xfm();
@@ -611,6 +612,68 @@ impl GltfExporter {
         image_indices
     }
 
+    fn find_skins(&self, gltf: &mut json::Root) {
+        let root_indices = gltf
+            .scenes[0]
+            .nodes
+            .iter()
+            .map(|n| n.value())
+            .collect::<Vec<_>>();
+
+        let mut skins = Vec::new();
+
+        for idx in root_indices {
+            let mut joints = Vec::new();
+            self.find_joints(gltf, idx, &mut joints);
+
+            if !joints.is_empty() {
+                // TODO: Figure out how to handle when nested
+                let root_joint = idx;
+
+                skins.push(json::Skin {
+                    extensions: None,
+                    extras: None,
+                    inverse_bind_matrices: None,
+                    joints: joints
+                        .into_iter()
+                        .sorted()
+                        .map(|j| json::Index::new(j as u32))
+                        .collect(),
+                    name: None,
+                    skeleton: Some(json::Index::new(root_joint as u32))
+                })
+            }
+        }
+
+        gltf.skins = skins;
+
+        // TODO: Maybe return mapped list?
+    }
+
+    fn find_joints(&self, gltf: &json::Root, idx: usize, joints: &mut Vec<usize>) {
+        let (node_name, children) = gltf
+            .nodes
+            .get(idx)
+            .map(|n| (n.name.as_ref().unwrap(), &n.children))
+            .unwrap();
+
+        // Is a joint if Trans or Mesh w/ no faces
+        let is_joint = self.transforms.contains_key(node_name.as_str())
+            || self.meshes.get(node_name.as_str()).map(|m| !m.object.faces.is_empty()).unwrap_or_default();
+
+        if is_joint {
+            // Add index to joint list
+            joints.push(idx);
+        }
+
+        if let Some(children) = children {
+            // Traverse children
+            for child in children {
+                self.find_joints(gltf, child.value(), joints);
+            }
+        }
+    }
+
     pub fn process(&mut self) -> Result<(), Box<dyn Error>> {
         let mut gltf = json::Root {
             asset: json::Asset {
@@ -624,7 +687,6 @@ impl GltfExporter {
 
         let children = self.find_node_children();
         let root_nodes = self.get_root_nodes(&children);
-
 
         let image_indices = self.process_textures(&mut gltf);
 
@@ -645,6 +707,8 @@ impl GltfExporter {
                     .collect(),
             }
         ];
+
+        self.find_skins(&mut gltf);
 
         self.gltf = gltf;
 
