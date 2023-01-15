@@ -19,6 +19,7 @@ midly = { version = "0.5.2", optional = true }
 nalgebra = { version = "0.31.4", optional = true }
 rayon = "1.5.3"
 regex = { version = "1.7.0", default-features = false, features = [ "std" ] }
+serde = { optional = true, workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
@@ -27,7 +28,7 @@ rstest = "0.15.0"
 
 [features]
 midi = [ "midly" ]
-model = [ "gltf", "gltf-json", "nalgebra" ]
+model = [ "gltf", "gltf-json", "nalgebra", "serde" ]
 
 [[bench]]
 name = "texture_benchmark"

@@ -5,6 +5,7 @@ use crate::{Platform, SystemInfo};
 use itertools::*;
 use gltf_json as json;
 use nalgebra as na;
+use serde::ser::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::path::{Path, PathBuf};
@@ -728,9 +729,23 @@ impl GltfExporter {
     }
 
     fn process_accessor_data(&self, gltf: &mut json::Root) {
+        //let mut acc_indices = HashMap::new();
+
+        /*gltf.accessors = self.meshes
+            .values()
+            .map(|m| &m.object)
+            .filter(|m| !m.faces.is_empty())
+            .fold((0, 0, 0, 0), |(vn, uv, wt, fc), m| (
+                vn + (m.vertices.len() * 12 * 2), // Verts + norms
+                uv + (m.vertices.len() * 8),      // UVs
+                wt + (m.vertices.len() * 16 * 2), // Weights + tangents
+                fc + (m.faces.len() * 6)          // Faces
+            ));*/
+
         let (bv_verts_norms, bv_uvs, bv_weights_tans, mut bv_faces) = self.meshes
             .values()
             .map(|m| &m.object)
+            .filter(|m| !m.faces.is_empty())
             .fold((0, 0, 0, 0), |(vn, uv, wt, fc), m| (
                 vn + (m.vertices.len() * 12 * 2), // Verts + norms
                 uv + (m.vertices.len() * 8),      // UVs
@@ -947,4 +962,185 @@ impl GltfExporter {
 
 fn align_to_multiple_of_four(n: usize) -> usize {
     (n + 3) & !3
+}
+
+struct AccessorBuilder<'a> {
+    working_data: HashMap<(&'a str, usize), (Option<String>, Vec<u8>)>,
+    accessors: Vec<json::Accessor>,
+}
+
+impl<'a> AccessorBuilder<'a> {
+    fn new() -> AccessorBuilder<'a> {
+        AccessorBuilder {
+            working_data: Default::default(),
+            accessors: Vec::new()
+        }
+    }
+
+    fn add_buffer_view(&mut self, element_type: json::accessor::Type) {
+
+    }
+
+    fn add_array<const N: usize, S: Into<String>, T: ComponentValue, U: IntoIterator<Item = [T; N]>>(&mut self, name: S, data: U) -> usize {
+        let comp_type = T::get_component_type();
+
+        let acc_type = match N {
+            1 => json::accessor::Type::Scalar,
+            2 => json::accessor::Type::Vec2,
+            3 => json::accessor::Type::Vec3,
+            4 => json::accessor::Type::Vec4,
+            9 => json::accessor::Type::Mat3,
+            16 => json::accessor::Type::Mat4,
+            _ => unimplemented!()
+        };
+
+        let (count, min, max) = data
+            .into_iter()
+            .fold((0usize, [T::max(); N], [T::min(); N]), |(count, mut min, mut max), item| {
+                let mut i = 0;
+                for v in item {
+                    // Encode + append each value to master buffer
+
+                    // Calc min + max values
+                    min[i] = min[i].get_min(v);
+                    max[i] = max[i].get_max(v);
+
+                    i += 1;
+                }
+
+                (count + 1, min, max)
+            });
+
+        // If count is 0, don't bother adding
+        // Maybe throw exception?
+
+        let acc_index = self.accessors.len();
+
+        let (min_value, max_value) = Self::get_min_max_values(
+            &acc_type,
+            min,
+            max
+        ).unwrap();
+
+        // Create accessor
+        let accessor = json::Accessor {
+            // TODO: Add buffer view idx + byte offset values
+            buffer_view: Some(json::Index::new(0)),
+            byte_offset: 0,
+            count: count as u32,
+            component_type: json::validation::Checked::Valid(json::accessor::GenericComponentType(comp_type)),
+            extensions: None,
+            extras: None,
+            type_: json::validation::Checked::Valid(acc_type),
+            min: Some(min_value),
+            max: Some(max_value),
+            name: match name.into() {
+                s if !s.is_empty() => Some(s),
+                _ => None
+            },
+            normalized: false,
+            sparse: None
+        };
+
+        self.accessors.push(accessor);
+        acc_index
+    }
+
+    fn get_min_max_values<const N: usize, T: Serialize + Copy>(acc_type: &json::accessor::Type, min: [T; N], max: [T; N]) -> Option<(json::Value, json::Value)> {
+        let result = match acc_type {
+            json::accessor::Type::Scalar => (
+                json::serialize::to_value(min[0]),
+                json::serialize::to_value(max[0]),
+            ),
+            _ => (
+                json::serialize::to_value(min.to_vec()),
+                json::serialize::to_value(max.to_vec()),
+            ),
+        };
+
+        match result {
+            (Ok(min), Ok(max)) => Some((min, max)),
+            _ => None
+        }
+    }
+}
+
+trait ComponentValue : Copy + Serialize {
+    fn min() -> Self;
+    fn max() -> Self;
+
+    fn get_min(self, other: Self) -> Self;
+    fn get_max(self, other: Self) -> Self;
+
+    fn get_component_type() -> json::accessor::ComponentType;
+    fn encode(self) -> Vec<u8>;
+}
+
+impl ComponentValue for u16 {
+    fn min() -> Self {
+        u16::MIN
+    }
+
+    fn max() -> Self {
+        u16::MAX
+    }
+
+    fn get_min(self, other: Self) -> Self {
+        std::cmp::min(self, other)
+    }
+
+    fn get_max(self, other: Self) -> Self {
+        std::cmp::max(self, other)
+    }
+
+    fn encode(self) -> Vec<u8> {
+        self.to_be_bytes().to_vec()
+    }
+
+    fn get_component_type() -> json::accessor::ComponentType {
+        json::accessor::ComponentType::U16
+    }
+}
+
+impl ComponentValue for f32 {
+    fn min() -> Self {
+        f32::MIN
+    }
+
+    fn max() -> Self {
+        f32::MAX
+    }
+
+    fn get_min(self, other: Self) -> Self {
+        f32::min(self, other)
+    }
+
+    fn get_max(self, other: Self) -> Self {
+        f32::max(self, other)
+    }
+
+    fn encode(self) -> Vec<u8> {
+        self.to_be_bytes().to_vec()
+    }
+
+    fn get_component_type() -> json::accessor::ComponentType {
+        json::accessor::ComponentType::F32
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::*;
+    use super::*;
+
+    #[rstest]
+    fn accessor_builder_test() {
+        let mut acc_builder = AccessorBuilder::new();
+
+        //acc_builder.add_array_f32([[0.0f32, 0.1f32, 0.2f32]]);
+
+        acc_builder.add_array("", [[0.0f32, 0.1f32, 0.2f32]]);
+
+        assert!(false);
+    }
 }
