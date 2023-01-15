@@ -334,6 +334,7 @@ pub struct GltfExporter {
     dirs_rc: Vec<Rc<ObjectDirData>>,
     settings: GltfExportSettings,
     groups: HashMap<String, MappedObject<GroupObject>>,
+    materials: HashMap<String, MappedObject<MatObject>>,
     meshes: HashMap<String, MappedObject<MeshObject>>,
     transforms: HashMap<String, MappedObject<TransObject>>,
     textures: HashMap<String, MappedObject<Tex>>,
@@ -383,6 +384,7 @@ impl GltfExporter {
 
     fn map_objects(&mut self) {
         self.groups.clear();
+        self.materials.clear();
         self.meshes.clear();
         self.transforms.clear();
         self.textures.clear();
@@ -401,6 +403,12 @@ impl GltfExporter {
                         self.groups.insert(
                             name,
                             MappedObject::new(group, parent.clone())
+                        );
+                    },
+                    Object::Mat(mat) => {
+                        self.materials.insert(
+                            name,
+                            MappedObject::new(mat, parent.clone())
                         );
                     },
                     Object::Mesh(mesh) => {
@@ -612,6 +620,45 @@ impl GltfExporter {
         image_indices
     }
 
+    fn process_materials(&self, gltf: &mut json::Root, tex_map: &HashMap<String, usize>) -> HashMap<String, usize> {
+        let mut mat_indices = HashMap::new();
+
+        gltf.materials = self.materials
+            .values()
+            .sorted_by(|a, b| a.object.get_name().cmp(b.object.get_name()))
+            .enumerate()
+            .map(|(i, mm)| {
+                let mat = &mm.object;
+                let diff_tex = tex_map.get(&mat.diffuse_tex);
+                let _norm_tex = tex_map.get(&mat.normal_map);
+                let _spec_tex = tex_map.get(&mat.specular_map);
+
+                mat_indices.insert(mat.get_name().to_owned(), i);
+
+                json::Material {
+                    name: Some(mat.get_name().to_owned()),
+                    pbr_metallic_roughness: json::material::PbrMetallicRoughness {
+                        base_color_texture: diff_tex
+                            .map(|d| json::texture::Info {
+                                index: json::Index::new(*d as u32),
+                                tex_coord: 0,
+                                extensions: None,
+                                extras: None
+                            }),
+                        //base_color_factor:
+                        ..Default::default()
+                    },
+                    emissive_factor: json::material::EmissiveFactor([0.0f32; 3]),
+                    alpha_mode: json::validation::Checked::Valid(json::material::AlphaMode::Mask),
+                    double_sided: true,
+                    ..Default::default()
+                }
+            })
+            .collect();
+
+        mat_indices
+    }
+
     fn find_skins(&self, gltf: &mut json::Root) -> HashMap<String, usize> {
         let root_indices = gltf
             .scenes[0]
@@ -694,6 +741,7 @@ impl GltfExporter {
         let root_nodes = self.get_root_nodes(&children);
 
         let image_indices = self.process_textures(&mut gltf);
+        let mat_indicies = self.process_materials(&mut gltf, &image_indices);
 
         let scene_nodes = root_nodes
             .into_iter()
