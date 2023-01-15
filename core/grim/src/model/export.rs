@@ -3,6 +3,7 @@ use crate::scene::*;
 //use grim_traits::scene::*;
 use crate::{Platform, SystemInfo};
 use itertools::*;
+use gltf_json as json;
 use nalgebra as na;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
@@ -211,8 +212,6 @@ fn get_textures<'a>(obj_dir: &'a ObjectDir) -> Vec<&Tex> {
 }
 
 pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path, sys_info: &SystemInfo) {
-    use gltf_json as json;
-
     super::create_dir_if_not_exists(output_path).unwrap();
 
     let dir_name = match obj_dir {
@@ -308,11 +307,39 @@ pub struct GltfExportSettings {
     pub write_as_binary: bool
 }
 
+pub struct ObjectDirData {
+    dir: ObjectDir,
+    entries: Vec<Object>,
+    path: PathBuf,
+    info: SystemInfo
+}
+
+struct MappedObject<T: MiloObject> {
+    parent: Rc<ObjectDirData>,
+    object: T
+}
+
+impl<T: MiloObject> MappedObject<T> {
+    fn new(object: T, parent: Rc<ObjectDirData>) -> MappedObject<T> {
+        MappedObject {
+            object,
+            parent
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct GltfExporter {
-    // TODO: Replace with new milo environment?
-    object_dirs: Vec<(Rc<ObjectDir>, PathBuf, SystemInfo)>,
-    settings: GltfExportSettings
+    object_dirs: Vec<ObjectDirData>, // TODO: Replace with new milo environment?
+    dirs_rc: Vec<Rc<ObjectDirData>>,
+    settings: GltfExportSettings,
+    groups: HashMap<String, MappedObject<GroupObject>>,
+    meshes: HashMap<String, MappedObject<MeshObject>>,
+    transforms: HashMap<String, MappedObject<TransObject>>,
+    textures: HashMap<String, MappedObject<Tex>>,
+
+    // TODO: Move to nested struct?
+    gltf: json::Root
 }
 
 impl GltfExporter {
@@ -340,15 +367,232 @@ impl GltfExporter {
         let mut obj_dir = milo.unpack_directory(&system_info)?;
         obj_dir.unpack_entries(&system_info)?;
 
+        let entries = obj_dir.take_entries();
+
         // Add to list
-        self.object_dirs.push((Rc::new(obj_dir), milo_path, system_info));
+        self.object_dirs.push(ObjectDirData {
+            dir: obj_dir,
+            entries: entries,
+            path: milo_path,
+            info: system_info
+        });
+
         Ok(())
+    }
+
+    fn map_objects(&mut self) {
+        self.groups.clear();
+        self.meshes.clear();
+        self.transforms.clear();
+        self.textures.clear();
+
+        self.dirs_rc.clear();
+
+        for mut dir_entry in self.object_dirs.drain(..) {
+            let entries = dir_entry.entries.drain(..).collect::<Vec<_>>();
+            let parent = Rc::new(dir_entry);
+
+            for entry in entries {
+                let name = entry.get_name().to_owned();
+
+                match entry {
+                    Object::Group(group) => {
+                        self.groups.insert(
+                            name,
+                            MappedObject::new(group, parent.clone())
+                        );
+                    },
+                    Object::Mesh(mesh) => {
+                        self.meshes.insert(
+                            name,
+                            MappedObject::new(mesh, parent.clone())
+                        );
+                    },
+                    Object::Tex(tex) => {
+                        self.textures.insert(
+                            name,
+                            MappedObject::new(tex, parent.clone())
+                        );
+                    },
+                    Object::Trans(trans) => {
+                        self.transforms.insert(
+                            name,
+                            MappedObject::new(trans, parent.clone())
+                        );
+                    },
+                    _ => {}
+                }
+            }
+
+            self.dirs_rc.push(parent);
+        }
+    }
+
+    fn get_transform<'a>(&'a self, name: &str) -> Option<&'a dyn Trans> {
+        self.transforms
+            .get(name)
+            .map(|t| &t.object as &dyn Trans)
+            .or(self.groups.get(name).map(|g| &g.object as &dyn Trans))
+            .or(self.meshes.get(name).map(|m| &m.object as &dyn Trans))
+    }
+
+    fn get_mesh<'a>(&'a self, name: &str) -> Option<&MeshObject> {
+        self.meshes
+            .get(name)
+            .map(|m| &m.object)
+    }
+
+    fn process_node<'a>(&'a self, gltf: &mut json::Root, name: &'a str, child_map: &HashMap<&'a str, Vec<&'a str>>, depth: usize) -> usize {
+        let node_index = gltf.nodes.len();
+
+        let mat = match (self.get_transform(name), depth) {
+            (Some(trans), 0) => {
+                let m = trans.get_world_xfm();
+
+                let mat = na::Matrix4::new(
+                    // Column-major order...
+                    m.m11, m.m21, m.m31, m.m41,
+                    m.m12, m.m22, m.m32, m.m42,
+                    m.m13, m.m23, m.m33, m.m43,
+                    m.m14, m.m24, m.m34, m.m44
+                );
+
+                // Apply translation
+                let trans_mat = na::Matrix4::new(
+                    -1.0,  0.0,  0.0, 0.0,
+                     0.0,  0.0,  1.0, 0.0,
+                     0.0,  1.0,  0.0, 0.0,
+                     0.0,  0.0,  0.0, 1.0,
+                );
+
+                mat * trans_mat
+            },
+            (Some(trans), _) => {
+                let m = trans.get_local_xfm();
+
+                na::Matrix4::new(
+                    // Column-major order...
+                    m.m11, m.m21, m.m31, m.m41,
+                    m.m12, m.m22, m.m32, m.m42,
+                    m.m13, m.m23, m.m33, m.m43,
+                    m.m14, m.m24, m.m34, m.m44
+                )
+            },
+            (None, 0) => {
+                na::Matrix4::new(
+                    -1.0,  0.0,  0.0, 0.0,
+                     0.0,  0.0,  1.0, 0.0,
+                     0.0,  1.0,  0.0, 0.0,
+                     0.0,  0.0,  0.0, 1.0,
+                )
+            },
+            _ => na::Matrix4::identity()
+        };
+
+        gltf.nodes.push(gltf_json::Node {
+            camera: None,
+            children: None,
+            extensions: None,
+            extras: None,
+            matrix: if mat.is_identity(f32::EPSILON) {
+                // Don't add identities
+                None
+            } else {
+                mat
+                    .as_slice()
+                    .try_into()
+                    .ok()
+            },
+            mesh: None,
+            name: Some(name.to_owned()),
+            rotation: None,
+            scale: None,
+            translation: None,
+            skin: None,
+            weights: None,
+        });
+
+        if let Some(children) = child_map.get(name) {
+            let mut child_indices = Vec::new();
+
+            for child_name in children {
+                /*if !self.transforms.contains_key(*child_name) {
+                    continue;
+                }*/
+
+                let idx = self.process_node(gltf, child_name, child_map, depth + 1);
+                child_indices.push(gltf_json::Index::new(idx as u32));
+            }
+
+            if !child_indices.is_empty() {
+                gltf.nodes[node_index].children = Some(child_indices);
+            }
+        }
+
+        node_index
     }
 
     pub fn process(&mut self) -> Result<(), Box<dyn Error>> {
+        let mut gltf = json::Root {
+            asset: json::Asset {
+                generator: Some(format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        self.map_objects();
+
+        let children = self.find_node_children();
+        let root_nodes = self.get_root_nodes(&children);
+
+        let scene_nodes = root_nodes
+            .into_iter()
+            .map(|n| self.process_node(&mut gltf, n, &children, 0))
+            .collect::<Vec<_>>();
+
+        gltf.scene = Some(json::Index::new(0));
+        gltf.scenes = vec![
+            json::Scene {
+                extensions: None,
+                extras: None,
+                name: None,
+                nodes: scene_nodes
+                    .into_iter()
+                    .map(|i| json::Index::new(i as u32))
+                    .collect(),
+            }
+        ];
+
+        self.gltf = gltf;
+
+        /*self.gltf = json::Root {
+            images,
+            nodes: map_bones_to_nodes(dir_name, &bones),
+            scene: Some(json::Index::new(0)),
+            scenes: vec![
+                json::Scene {
+                    extensions: None,
+                    extras: None,
+                    name: None,
+                    nodes: vec![json::Index::new(0)],
+                }
+            ],
+            skins: vec![
+                json::Skin {
+                    extensions: None,
+                    extras: None,
+                    inverse_bind_matrices: None,
+                    joints: joints,
+                    name: None,
+                    skeleton: Some(json::Index::new(0))
+                }
+            ],
+            ..Default::default()
+        };*/
+
         Ok(())
     }
-
 
     pub fn save_to_fs<T: AsRef<Path>>(&self, output_dir: T) -> Result<(), Box<dyn Error>> {
         let output_dir = output_dir.as_ref();
@@ -356,15 +600,68 @@ impl GltfExporter {
         super::create_dir_if_not_exists(output_dir)?;
 
         // TODO: Replace
-        let (obj_dir, sys_info) = self
+        /*let (obj_dir, sys_info) = self
             .object_dirs
             .iter()
             .map(|(o, _, info)| (o.as_ref(), info))
             .next()
             .unwrap();
 
-        export_object_dir_to_gltf(obj_dir, output_dir, sys_info);
+        export_object_dir_to_gltf(obj_dir, output_dir, sys_info);*/
+
+        // Write gltf json
+        let writer = std::fs::File::create(output_dir.join(format!("test.gltf"))).expect("I/O error");
+        json::serialize::to_writer_pretty(writer, &self.gltf).expect("Serialization error");
 
         Ok(())
+    }
+
+    fn find_node_children<'a>(&'a self) -> HashMap<&'a str, Vec<&'a str>> {
+        let mut node_map = self.transforms
+            .values()
+            .map(|t| &t.object as &dyn Trans)
+            .chain(self.groups.values().map(|g| &g.object as &dyn Trans))
+            .chain(self.meshes.values().map(|m| &m.object as &dyn Trans))
+            .fold(HashMap::new(), |mut acc, b| {
+                if b.get_parent().eq(b.get_name()) || b.get_parent().is_empty() {
+                    // If bone references self, ignore
+                    return acc;
+                }
+
+                let parent = b.get_parent().as_str();
+                let name = b.get_name().as_str();
+
+                acc
+                    .entry(parent)
+                    .and_modify(|e: &mut Vec<&'a str>| e.push(name))
+                    .or_insert(vec![name]);
+
+                acc
+            });
+
+        // Sort children
+        node_map.values_mut().for_each(|ch| ch.sort());
+        node_map
+    }
+
+    fn get_root_nodes<'a>(&'a self, node_map: &HashMap<&'a str, Vec<&'a str>>) -> Vec<&'a str> {
+        let children = node_map
+            .values()
+            .flatten()
+            .map(|s| *s)
+            .collect::<HashSet<_>>();
+
+        // Anything not in child map is considered root
+        self.dirs_rc
+            .iter()
+            .map(|d| match &d.as_ref().dir {
+                ObjectDir::ObjectDir(dir) => dir.name.as_str()
+            })
+            .chain(self.transforms.values().map(|t| t.object.get_name().as_str()))
+            .chain(self.groups.values().map(|g| g.object.get_name().as_str()))
+            .chain(self.meshes.values().map(|m| m.object.get_name().as_str()))
+            .filter(|s| !s.is_empty() && !children.contains(s))
+            .sorted()
+            .collect()
     }
 }
