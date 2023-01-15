@@ -612,7 +612,7 @@ impl GltfExporter {
         image_indices
     }
 
-    fn find_skins(&self, gltf: &mut json::Root) {
+    fn find_skins(&self, gltf: &mut json::Root) -> HashMap<String, usize> {
         let root_indices = gltf
             .scenes[0]
             .nodes
@@ -621,6 +621,7 @@ impl GltfExporter {
             .collect::<Vec<_>>();
 
         let mut skins = Vec::new();
+        let mut bone_indicies = HashMap::new();
 
         for idx in root_indices {
             let mut joints = Vec::new();
@@ -629,6 +630,11 @@ impl GltfExporter {
             if !joints.is_empty() {
                 // TODO: Figure out how to handle when nested
                 let root_joint = idx;
+
+                for j in joints.iter() {
+                    let node_name = gltf.nodes[*j].name.as_ref().unwrap();
+                    bone_indicies.insert(node_name.to_owned(), *j);
+                }
 
                 skins.push(json::Skin {
                     extensions: None,
@@ -641,13 +647,12 @@ impl GltfExporter {
                         .collect(),
                     name: None,
                     skeleton: Some(json::Index::new(root_joint as u32))
-                })
+                });
             }
         }
 
         gltf.skins = skins;
-
-        // TODO: Maybe return mapped list?
+        bone_indicies
     }
 
     fn find_joints(&self, gltf: &json::Root, idx: usize, joints: &mut Vec<usize>) {
@@ -708,7 +713,7 @@ impl GltfExporter {
             }
         ];
 
-        self.find_skins(&mut gltf);
+        let joint_indicies = self.find_skins(&mut gltf);
 
         self.gltf = gltf;
 
