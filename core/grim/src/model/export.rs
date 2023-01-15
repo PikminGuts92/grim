@@ -592,6 +592,7 @@ impl GltfExporter {
                         let png_data = crate::texture::write_rgba_to_vec(width, height, &rgba).unwrap();
 
                         // Encode to base64
+                        // TODO: Support writing to external files
                         let mut str_data = String::from("data:image/png;base64,");
                         general_purpose::STANDARD.encode_string(&png_data, &mut str_data);
 
@@ -726,6 +727,83 @@ impl GltfExporter {
         }
     }
 
+    fn process_accessor_data(&self, gltf: &mut json::Root) {
+        let (bv_verts_norms, bv_uvs, bv_weights_tans, mut bv_faces) = self.meshes
+            .values()
+            .map(|m| &m.object)
+            .fold((0, 0, 0, 0), |(vn, uv, wt, fc), m| (
+                vn + (m.vertices.len() * 12 * 2), // Verts + norms
+                uv + (m.vertices.len() * 8),      // UVs
+                wt + (m.vertices.len() * 16 * 2), // Weights + tangents
+                fc + (m.faces.len() * 6)          // Faces
+            ));
+
+        // Make multiple of 4
+        bv_faces = align_to_multiple_of_four(bv_faces);
+        let total_size = bv_verts_norms + bv_uvs + bv_weights_tans + bv_faces;
+
+        gltf.buffers = vec![{
+            use base64::{Engine as _, engine::{self, general_purpose}, alphabet};
+
+            // TODO: Encode actual data...
+            let bin_data = vec![0u8; total_size];
+
+            let mut str_data = String::from("data:application/octet-stream;base64,");
+            general_purpose::STANDARD.encode_string(&bin_data, &mut str_data);
+            
+            json::Buffer {
+                name: None,
+                byte_length: total_size as u32,
+                uri: Some(str_data),
+                extensions: None,
+                extras: None
+            }
+        }];
+
+        gltf.buffer_views = vec![
+            json::buffer::View {
+                name:  Some(String::from("verts_norms")),
+                byte_length: bv_verts_norms as u32,
+                byte_offset: Some(0),
+                byte_stride: Some(12),
+                buffer: json::Index::new(0),
+                target: None,
+                extensions: None,
+                extras: None
+            },
+            json::buffer::View {
+                name:  Some(String::from("uvs")),
+                byte_length: bv_uvs as u32,
+                byte_offset: Some(bv_verts_norms as u32),
+                byte_stride: Some(8),
+                buffer: json::Index::new(0),
+                target: None,
+                extensions: None,
+                extras: None
+            },
+            json::buffer::View {
+                name:  Some(String::from("weights_tans")),
+                byte_length: bv_weights_tans as u32,
+                byte_offset: Some((bv_verts_norms + bv_uvs) as u32),
+                byte_stride: Some(16),
+                buffer: json::Index::new(0),
+                target: None,
+                extensions: None,
+                extras: None
+            },
+            json::buffer::View {
+                name:  Some(String::from("faces")),
+                byte_length: bv_faces as u32,
+                byte_offset: Some((bv_verts_norms + bv_uvs + bv_weights_tans) as u32),
+                byte_stride: None,
+                buffer: json::Index::new(0),
+                target: None,
+                extensions: None,
+                extras: None
+            }
+        ];
+    }
+
     pub fn process(&mut self) -> Result<(), Box<dyn Error>> {
         let mut gltf = json::Root {
             asset: json::Asset {
@@ -762,6 +840,8 @@ impl GltfExporter {
         ];
 
         let joint_indicies = self.find_skins(&mut gltf);
+
+        self.process_accessor_data(&mut gltf);
 
         self.gltf = gltf;
 
@@ -863,4 +943,8 @@ impl GltfExporter {
             .sorted()
             .collect()
     }
+}
+
+fn align_to_multiple_of_four(n: usize) -> usize {
+    (n + 3) & !3
 }
