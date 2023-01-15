@@ -711,7 +711,7 @@ impl GltfExporter {
 
         // Is a joint if Trans or Mesh w/ no faces
         let is_joint = self.transforms.contains_key(node_name.as_str())
-            || self.meshes.get(node_name.as_str()).map(|m| !m.object.faces.is_empty()).unwrap_or_default();
+            || self.meshes.get(node_name.as_str()).map(|m| m.object.faces.is_empty()).unwrap_or_default();
 
         if is_joint {
             // Add index to joint list
