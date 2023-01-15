@@ -119,7 +119,7 @@ fn map_bones_to_nodes(dir_name: &str, bones: &Vec<BoneNode>) -> Vec<gltf_json::N
 }
 
 fn populate_child_nodes(nodes: &mut Vec<gltf_json::Node>, bones: &Vec<BoneNode>) -> Vec<gltf_json::Index<gltf_json::Node>> {
-    let mut indicies = Vec::new();
+    let mut indices = Vec::new();
 
     for bone in bones {
         let child_indices = populate_child_nodes(nodes, &bone.children);
@@ -194,10 +194,10 @@ fn populate_child_nodes(nodes: &mut Vec<gltf_json::Node>, bones: &Vec<BoneNode>)
         };
 
         nodes.push(node);
-        indicies.push(gltf_json::Index::new((nodes.len() - 1) as u32));
+        indices.push(gltf_json::Index::new((nodes.len() - 1) as u32));
     }
 
-    indicies
+    indices
 }
 
 fn get_textures<'a>(obj_dir: &'a ObjectDir) -> Vec<&Tex> {
@@ -327,6 +327,10 @@ impl<T: MiloObject> MappedObject<T> {
             parent
         }
     }
+}
+
+fn is_mesh_joint(m: &MappedObject<MeshObject>) -> bool {
+    m.parent.info.version <= 10 && m.object.faces.is_empty()
 }
 
 #[derive(Default)]
@@ -661,7 +665,7 @@ impl GltfExporter {
         mat_indices
     }
 
-    fn find_skins(&self, gltf: &mut json::Root) -> HashMap<String, usize> {
+    fn find_skins(&self, gltf: &mut json::Root) -> HashMap<String, (usize, usize)> {
         let root_indices = gltf
             .scenes[0]
             .nodes
@@ -670,7 +674,7 @@ impl GltfExporter {
             .collect::<Vec<_>>();
 
         let mut skins = Vec::new();
-        let mut bone_indicies = HashMap::new();
+        let mut bone_indices = HashMap::new();
 
         for idx in root_indices {
             let mut joints = Vec::new();
@@ -682,7 +686,7 @@ impl GltfExporter {
 
                 for j in joints.iter() {
                     let node_name = gltf.nodes[*j].name.as_ref().unwrap();
-                    bone_indicies.insert(node_name.to_owned(), *j);
+                    bone_indices.insert(node_name.to_owned(), (skins.len(), *j)); // (Skin idx, node idx)
                 }
 
                 skins.push(json::Skin {
@@ -701,7 +705,7 @@ impl GltfExporter {
         }
 
         gltf.skins = skins;
-        bone_indicies
+        bone_indices
     }
 
     fn find_joints(&self, gltf: &json::Root, idx: usize, joints: &mut Vec<usize>) {
@@ -713,7 +717,7 @@ impl GltfExporter {
 
         // Is a joint if Trans or Mesh w/ no faces
         let is_joint = self.transforms.contains_key(node_name.as_str())
-            || self.meshes.get(node_name.as_str()).map(|m| m.object.faces.is_empty()).unwrap_or_default();
+            || self.meshes.get(node_name.as_str()).map(is_mesh_joint).unwrap_or_default();
 
         if is_joint {
             // Add index to joint list
@@ -819,6 +823,148 @@ impl GltfExporter {
         ];
     }
 
+    fn final_process_nodes(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder) {
+        for i in 0..gltf.nodes.len() {
+            // Get node name
+            let Some(node_name) = gltf.nodes[i].name.as_ref().map(|n| n.to_owned()) else {
+                continue;
+            };
+
+            if let Some(mesh) = self.get_mesh(&node_name) {
+                
+            }
+        }
+    }
+
+    fn process_meshes(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder, mat_map: &HashMap<String, usize>, joint_map: &HashMap<String, usize>) -> HashMap<String, usize> {
+        let milo_meshes = self
+            .meshes
+            .values()
+            .filter(|m| !is_mesh_joint(m))
+            .map(|m| &m.object)
+            .sorted_by(|a, b| a.get_name().cmp(b.get_name()))
+            .collect::<Vec<_>>();
+
+        let mut meshes = Vec::new();
+        let mut mesh_map = HashMap::new();
+
+        for mesh in milo_meshes {
+            let pos_idx = acc_builder.add_array(
+                format!("{}_pos", mesh.get_name()),
+                mesh.get_vertices().iter().map(|v| [v.pos.x, v.pos.y, v.pos.z])
+            );
+
+            let norm_idx = acc_builder.add_array(
+                format!("{}_norm", mesh.get_name()),
+                mesh.get_vertices().iter().map(|v| [v.normals.x, v.normals.y, v.normals.z])
+            );
+
+            let uv_idx = acc_builder.add_array(
+                format!("{}_uv", mesh.get_name()),
+                mesh.get_vertices().iter().map(|v| [v.uv.u, v.uv.v])
+            );
+
+            let weight_idx = acc_builder.add_array(
+                format!("{}_weight", mesh.get_name()),
+                mesh.get_vertices().iter().map(|v| v.weights)
+            );
+
+            let tan_idx = acc_builder.add_array(
+                format!("{}_tan", mesh.get_name()),
+                mesh.get_vertices().iter().map(|v| [v.tangent.x, v.tangent.y, v.tangent.z, v.tangent.w])
+            );
+
+            let face_idx = acc_builder.add_array(
+                format!("{}_face", mesh.get_name()),
+                mesh.get_faces().iter().map(|f| f.to_owned())
+            );
+
+            let mesh_idx = meshes.len();
+
+            meshes.push(json::Mesh {
+                name: Some(mesh.get_name().to_owned()),
+                primitives: vec![
+                    json::mesh::Primitive {
+                        attributes: {
+                            let mut map = HashMap::new();
+
+                            // Add positions
+                            if let Some(acc_idx) = pos_idx {
+                                map.insert(
+                                    json::validation::Checked::Valid(json::mesh::Semantic::Positions),
+                                    json::Index::new(acc_idx as u32)
+                                );
+                            }
+
+                            // Add normals
+                            if let Some(acc_idx) = norm_idx {
+                                map.insert(
+                                    json::validation::Checked::Valid(json::mesh::Semantic::Normals),
+                                    json::Index::new(acc_idx as u32)
+                                );
+                            }
+
+                            // Add uvs
+                            if let Some(acc_idx) = uv_idx {
+                                map.insert(
+                                    json::validation::Checked::Valid(json::mesh::Semantic::TexCoords(0)),
+                                    json::Index::new(acc_idx as u32)
+                                );
+                            }
+
+                            // Add weights
+                            if let Some(acc_idx) = weight_idx {
+                                map.insert(
+                                    json::validation::Checked::Valid(json::mesh::Semantic::Weights(0)),
+                                    json::Index::new(acc_idx as u32)
+                                );
+                            }
+
+                            // Add Tangents
+                            if let Some(acc_idx) = tan_idx {
+                                map.insert(
+                                    json::validation::Checked::Valid(json::mesh::Semantic::Tangents),
+                                    json::Index::new(acc_idx as u32)
+                                );
+                            }
+
+                            map
+                        },
+                        indices: face_idx
+                            .map(|idx| json::Index::new(idx as u32)),
+                        material: mat_map
+                            .get(mesh.get_name())
+                            .map(|idx| json::Index::new(*idx as u32)),
+                        mode: json::validation::Checked::Valid(gltf::mesh::Mode::Triangles),
+                        targets: None,
+                        extras: None,
+                        extensions: None
+                    },
+                ],
+                weights: None,
+                extras: None,
+                extensions: None
+            });
+
+            // Update map
+            mesh_map.insert(mesh.get_name().to_owned(), mesh_idx);
+        }
+
+        /*for i in 0..gltf.nodes.len() {
+            // Get node name
+            let Some(node_name) = gltf.nodes[i].name.as_ref().map(|n| n.to_owned()) else {
+                continue;
+            };
+
+            if let Some(mesh) = self.get_mesh(&node_name) {
+                
+            }
+        }*/
+
+        // Return mesh indices
+        mesh_map
+    }
+
     pub fn process(&mut self) -> Result<(), Box<dyn Error>> {
         let mut gltf = json::Root {
             asset: json::Asset {
@@ -834,7 +980,7 @@ impl GltfExporter {
         let root_nodes = self.get_root_nodes(&children);
 
         let image_indices = self.process_textures(&mut gltf);
-        let mat_indicies = self.process_materials(&mut gltf, &image_indices);
+        let mat_indices = self.process_materials(&mut gltf, &image_indices);
 
         let scene_nodes = root_nodes
             .into_iter()
@@ -854,7 +1000,9 @@ impl GltfExporter {
             }
         ];
 
-        let joint_indicies = self.find_skins(&mut gltf);
+        let joint_indices = self.find_skins(&mut gltf);
+
+        let mut acc_builder = AccessorBuilder::new();
 
         self.process_accessor_data(&mut gltf);
 
@@ -1121,7 +1269,10 @@ impl AccessorBuilder {
         let buffer = json::Buffer {
             name: None,
             byte_length: buffer_data.len() as u32,
-            uri: Some(name.into()),
+            uri: match name.into() {
+                s if !s.is_empty() => Some(s),
+                _ => None
+            },
             extensions: None,
             extras: None
         };
