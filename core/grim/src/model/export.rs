@@ -836,7 +836,7 @@ impl GltfExporter {
         }
     }
 
-    fn process_meshes(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder, mat_map: &HashMap<String, usize>, joint_map: &HashMap<String, usize>) -> HashMap<String, usize> {
+    fn process_meshes(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder, mat_map: &HashMap<String, usize>, joint_map: &HashMap<String, (usize, usize)>) -> HashMap<String, usize> {
         let milo_meshes = self
             .meshes
             .values()
@@ -1003,8 +1003,14 @@ impl GltfExporter {
         let joint_indices = self.find_skins(&mut gltf);
 
         let mut acc_builder = AccessorBuilder::new();
+        self.process_meshes(&mut gltf, &mut acc_builder, &mat_indices, &joint_indices);
 
-        self.process_accessor_data(&mut gltf);
+        let (accessors, views, buffer, data) = acc_builder.generate("test.bin");
+        gltf.accessors = accessors;
+        gltf.buffers = vec![buffer];
+        gltf.buffer_views = views;
+
+        //self.process_accessor_data(&mut gltf);
 
         self.gltf = gltf;
 
@@ -1250,7 +1256,10 @@ impl AccessorBuilder {
                 name: None,
                 byte_length: data_size as u32,
                 byte_offset: Some(data_offset as u32),
-                byte_stride: Some(stride as u32),
+                byte_stride: match stride % 4 {
+                    0 => Some(stride as u32),
+                    _ => None // Don't encode if not multiple
+                },
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
