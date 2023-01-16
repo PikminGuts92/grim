@@ -1053,7 +1053,7 @@ impl GltfExporter {
 
         // Update skins for each mesh node updated
         for (node_idx, skin_idx) in meshes_to_update {
-            gltf.nodes[node_idx].skin = Some(json::Index::new(skin_idx as u32));
+            //gltf.nodes[node_idx].skin = Some(json::Index::new(skin_idx as u32));
         }
 
         // Assign meshes and return mesh indices

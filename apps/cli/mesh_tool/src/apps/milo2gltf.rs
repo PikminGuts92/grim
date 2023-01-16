@@ -13,7 +13,9 @@ use grim::io::*;
 pub struct Milo2GltfApp {
     #[arg(help = "Path to input milo scene", required = true)]
     pub milo_path: String,
-    #[arg(help = "Path to output directory", required = true)]
+    #[arg(help = "Additional milos")]
+    pub extra_milo_paths: Vec<String>,
+    #[arg(short = 'o', long, help = "Path to output directory", required = true)]
     pub output_path: String,
     #[arg(short = 'n' , long, help = "Gltf base file name")]
     pub name: Option<String>,
@@ -44,6 +46,9 @@ impl SubApp for Milo2GltfApp {
             ..Default::default()
         });
         exporter.add_milo_from_path(milo_path)?;
+        for extra_path in self.extra_milo_paths.iter() {
+            exporter.add_milo_from_path(extra_path)?;
+        }
 
         exporter.process()?;
         exporter.save_to_fs(&dir_path)
