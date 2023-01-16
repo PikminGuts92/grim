@@ -823,20 +823,7 @@ impl GltfExporter {
         ];
     }
 
-    fn final_process_nodes(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder) {
-        for i in 0..gltf.nodes.len() {
-            // Get node name
-            let Some(node_name) = gltf.nodes[i].name.as_ref().map(|n| n.to_owned()) else {
-                continue;
-            };
-
-            if let Some(mesh) = self.get_mesh(&node_name) {
-                
-            }
-        }
-    }
-
-    fn process_meshes(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder, mat_map: &HashMap<String, usize>, joint_map: &HashMap<String, (usize, usize)>) -> HashMap<String, usize> {
+    fn process_meshes(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder, mat_map: &HashMap<String, usize>) -> HashMap<String, usize> {
         let milo_meshes = self
             .meshes
             .values()
@@ -874,9 +861,10 @@ impl GltfExporter {
                 mesh.get_vertices().iter().map(|v| [v.tangent.x, v.tangent.y, v.tangent.z, v.tangent.w])
             );
 
-            let face_idx = acc_builder.add_array(
+            // Need to be scalar for some reason
+            let face_idx = acc_builder.add_scalar(
                 format!("{}_face", mesh.get_name()),
-                mesh.get_faces().iter().map(|f| f.to_owned())
+                mesh.get_faces().iter().map(|f| f.to_owned()).flatten()
             );
 
             let mesh_idx = meshes.len();
@@ -920,7 +908,7 @@ impl GltfExporter {
                                 );
                             }
 
-                            // Add Tangents
+                            // Add tangents
                             if let Some(acc_idx) = tan_idx {
                                 map.insert(
                                     json::validation::Checked::Valid(json::mesh::Semantic::Tangents),
@@ -950,19 +938,49 @@ impl GltfExporter {
             mesh_map.insert(mesh.get_name().to_owned(), mesh_idx);
         }
 
-        /*for i in 0..gltf.nodes.len() {
+        // Assign meshes and return mesh indices
+        gltf.meshes = meshes;
+        mesh_map
+    }
+
+    fn final_process_nodes(&self, gltf: &mut json::Root, mesh_map: &HashMap<String, usize>, joint_map: &HashMap<String, (usize, usize)>) {
+        for i in 0..gltf.nodes.len() {
             // Get node name
             let Some(node_name) = gltf.nodes[i].name.as_ref().map(|n| n.to_owned()) else {
                 continue;
             };
 
-            if let Some(mesh) = self.get_mesh(&node_name) {
-                
+            if let Some(mesh_idx) = mesh_map.get(&node_name) {
+                // Update mesh index for node
+                gltf.nodes[i].mesh = Some(json::Index::new(*mesh_idx as u32));
+            } else {
+                // Can't add skin without mesh
+                continue;
             }
-        }*/
 
-        // Return mesh indices
-        mesh_map
+            if let Some((skin_idx, _)) = joint_map.get(&node_name) {
+                // Update skin index for node
+                gltf.nodes[i].skin = Some(json::Index::new(*skin_idx as u32));
+            }
+        }
+    }
+
+    fn build_binary(&self, gltf: &mut json::Root, acc_builder: AccessorBuilder) {
+        let (accessors, views, mut buffer, data) = acc_builder.generate("test.bin");
+
+        // TODO: Write to external file
+        buffer.uri = {
+            use base64::{Engine as _, engine::{self, general_purpose}, alphabet};
+
+            let mut str_data = String::from("data:application/octet-stream;base64,");
+            general_purpose::STANDARD.encode_string(&data, &mut str_data);
+
+            Some(str_data)
+        };
+
+        gltf.accessors = accessors;
+        gltf.buffers = vec![buffer];
+        gltf.buffer_views = views;
     }
 
     pub fn process(&mut self) -> Result<(), Box<dyn Error>> {
@@ -1003,13 +1021,12 @@ impl GltfExporter {
         let joint_indices = self.find_skins(&mut gltf);
 
         let mut acc_builder = AccessorBuilder::new();
-        self.process_meshes(&mut gltf, &mut acc_builder, &mat_indices, &joint_indices);
+        let mesh_indices = self.process_meshes(&mut gltf, &mut acc_builder, &mat_indices);
 
-        let (accessors, views, buffer, data) = acc_builder.generate("test.bin");
-        gltf.accessors = accessors;
-        gltf.buffers = vec![buffer];
-        gltf.buffer_views = views;
+        self.final_process_nodes(&mut gltf, &mesh_indices, &joint_indices);
 
+        // Write binary data
+        self.build_binary(&mut gltf, acc_builder);
         //self.process_accessor_data(&mut gltf);
 
         self.gltf = gltf;
@@ -1293,11 +1310,11 @@ impl AccessorBuilder {
             buffer_data)
     }
 
-    fn get_min_max_values<const N: usize, T: Serialize + Copy>(acc_type: &json::accessor::Type, min: [T; N], max: [T; N]) -> Option<(json::Value, json::Value)> {
+    fn get_min_max_values<const N: usize, T: ComponentValue>(acc_type: &json::accessor::Type, min: [T; N], max: [T; N]) -> Option<(json::Value, json::Value)> {
         let result = match acc_type {
             json::accessor::Type::Scalar => (
-                json::serialize::to_value(min[0]),
-                json::serialize::to_value(max[0]),
+                json::serialize::to_value([min.iter().fold(T::max(), |acc, m| acc.get_min(*m))]),
+                json::serialize::to_value([max.iter().fold(T::min(), |acc, m| acc.get_max(*m))]),
             ),
             _ => (
                 json::serialize::to_value(min.to_vec()),
@@ -1345,7 +1362,7 @@ impl ComponentValue for u16 {
     }
 
     fn encode(self) -> Vec<u8> {
-        self.to_be_bytes().to_vec()
+        self.to_le_bytes().to_vec()
     }
 
     fn get_component_type() -> json::accessor::ComponentType {
@@ -1371,7 +1388,7 @@ impl ComponentValue for f32 {
     }
 
     fn encode(self) -> Vec<u8> {
-        self.to_be_bytes().to_vec()
+        self.to_le_bytes().to_vec()
     }
 
     fn get_component_type() -> json::accessor::ComponentType {
