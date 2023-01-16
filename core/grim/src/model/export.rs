@@ -823,7 +823,7 @@ impl GltfExporter {
         ];
     }
 
-    fn process_meshes(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder, mat_map: &HashMap<String, usize>) -> HashMap<String, usize> {
+    fn process_meshes(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder, mat_map: &HashMap<String, usize>, joint_map: &HashMap<String, (usize, usize)>) -> HashMap<String, usize> {
         let milo_meshes = self
             .meshes
             .values()
@@ -831,6 +831,42 @@ impl GltfExporter {
             .map(|m| &m.object)
             .sorted_by(|a, b| a.get_name().cmp(b.get_name()))
             .collect::<Vec<_>>();
+
+        // Get skins
+        // Compute relative skin indices
+        let local_joint_map = gltf
+            .skins
+            .iter()
+            .map(|s| s.joints
+                .iter()
+                .enumerate()
+                .map(|(ji, jnode)| (
+                    // Get local skin index of joint
+                    gltf.nodes[jnode.value()].name.as_ref().unwrap(),
+                    ji
+                ))
+                .collect::<Vec<_>>())
+            .enumerate()
+            .fold(HashMap::new(), |mut acc, (si, mut joints)| {
+                joints
+                    .drain(..)
+                    .for_each(|(name, ji)| {
+                        acc.insert(name, (si, ji));
+                    });
+
+                acc
+            });
+
+        // Map mesh name to node index
+        let mesh_node_map = gltf
+            .nodes
+            .iter()
+            .enumerate()
+            .filter_map(|(i, node)| node.name.as_ref().map(|n| (n.to_owned(), i)))
+            .collect::<HashMap<_, _>>();
+
+        // Track skinned meshes
+        let mut meshes_to_update = Vec::new();
 
         let mut meshes = Vec::new();
         let mut mesh_map = HashMap::new();
@@ -851,10 +887,54 @@ impl GltfExporter {
                 mesh.get_vertices().iter().map(|v| [v.uv.u, v.uv.v])
             );
 
-            let weight_idx = acc_builder.add_array(
-                format!("{}_weight", mesh.get_name()),
-                mesh.get_vertices().iter().map(|v| v.weights)
-            );
+            let mut weight_idx = None;
+            let mut bone_idx = None;
+
+            // Get joint info
+            // Convert local bone offset to skin joint offset
+            let joint_translate_map = mesh
+                .bones
+                .iter()
+                .enumerate()
+                .flat_map(|(i, b)| local_joint_map
+                    .get(&b.name)
+                    .map(|j| (i, *j)))
+                .collect::<HashMap<_, _>>();
+
+            // Only add if bones found
+            if !joint_translate_map.is_empty() {
+                // Add bone weights
+                weight_idx = acc_builder.add_array(
+                    format!("{}_weight", mesh.get_name()),
+                    mesh.get_vertices().iter().map(|v| v.weights)
+                );
+
+                // Convert mesh bones to vert bones
+                let bones = [
+                    joint_translate_map.get(&0).map(|(_, b)| *b as u16).unwrap_or_default(),
+                    joint_translate_map.get(&1).map(|(_, b)| *b as u16).unwrap_or_default(),
+                    joint_translate_map.get(&2).map(|(_, b)| *b as u16).unwrap_or_default(),
+                    joint_translate_map.get(&3).map(|(_, b)| *b as u16).unwrap_or_default(),
+                ];
+                bone_idx = acc_builder.add_array(
+                    format!("{}_bone", mesh.get_name()),
+                    mesh.get_vertices().iter().map(|_| bones)
+                );
+
+                // Get first skin (all bones should use the same skin...)
+                // Still need to check in case bone isn't found
+                let skin_idx = (0..4)
+                    .filter_map(|i| joint_translate_map.get(&i).map(|(s, _)| *s))
+                    .next();
+
+                if let Some(skin_idx) = skin_idx {
+                    let node_idx = mesh_node_map.get(mesh.get_name());
+
+                    if let Some(node_idx) = node_idx {
+                        meshes_to_update.push((*node_idx, skin_idx));
+                    }
+                }
+            }
 
             // Ignore tangents for now
             let tan_idx: Option<usize> = None;
@@ -910,6 +990,14 @@ impl GltfExporter {
                                 );
                             }
 
+                            // Add bones
+                            if let Some(acc_idx) = bone_idx {
+                                map.insert(
+                                    json::validation::Checked::Valid(json::mesh::Semantic::Joints(0)),
+                                    json::Index::new(acc_idx as u32)
+                                );
+                            }
+
                             // Add tangents
                             if let Some(acc_idx) = tan_idx {
                                 map.insert(
@@ -940,12 +1028,18 @@ impl GltfExporter {
             mesh_map.insert(mesh.get_name().to_owned(), mesh_idx);
         }
 
+        // Update skins for each mesh node updated
+        for (node_idx, skin_idx) in meshes_to_update {
+            gltf.nodes[node_idx].skin = Some(json::Index::new(skin_idx as u32));
+        }
+
         // Assign meshes and return mesh indices
         gltf.meshes = meshes;
         mesh_map
     }
 
     fn final_process_nodes(&self, gltf: &mut json::Root, mesh_map: &HashMap<String, usize>, joint_map: &HashMap<String, (usize, usize)>) {
+        // Useless code... does nothing
         for i in 0..gltf.nodes.len() {
             // Get node name
             let Some(node_name) = gltf.nodes[i].name.as_ref().map(|n| n.to_owned()) else {
@@ -965,6 +1059,26 @@ impl GltfExporter {
                 gltf.nodes[i].skin = Some(json::Index::new(*skin_idx as u32));
             }
         }
+
+        /*let milo_meshes = self
+            .meshes
+            .values()
+            .filter(|m| !is_mesh_joint(m))
+            .map(|m| m.object.get_name())
+            .collect::<HashSet<_>>();
+
+        let skin_nodes = gltf
+            .skins
+            .iter()
+            .map(|s| s.skeleton.unwrap().value());*/
+    }
+
+    /*fn update_meshes_with_skins(&self, gltf: &mut json::Root, node: usize, skin: usize, meshes: &) {
+
+    }*/
+
+    fn map_mesh_nodes(&self, gltf: &mut json::Root) -> HashMap<String, usize> {
+        todo!()
     }
 
     fn build_binary(&self, gltf: &mut json::Root, acc_builder: AccessorBuilder) {
@@ -1023,7 +1137,7 @@ impl GltfExporter {
         let joint_indices = self.find_skins(&mut gltf);
 
         let mut acc_builder = AccessorBuilder::new();
-        let mesh_indices = self.process_meshes(&mut gltf, &mut acc_builder, &mat_indices);
+        let mesh_indices = self.process_meshes(&mut gltf, &mut acc_builder, &mat_indices, &joint_indices);
 
         self.final_process_nodes(&mut gltf, &mesh_indices, &joint_indices);
 
