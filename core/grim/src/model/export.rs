@@ -903,12 +903,6 @@ impl GltfExporter {
 
             // Only add if bones found
             if !joint_translate_map.is_empty() {
-                // Add bone weights
-                weight_idx = acc_builder.add_array(
-                    format!("{}_weight", mesh.get_name()),
-                    mesh.get_vertices().iter().map(|v| v.weights)
-                );
-
                 // Convert mesh bones to vert bones
                 let bones = [
                     joint_translate_map.get(&0).map(|(_, b)| *b as u16).unwrap_or_default(),
@@ -916,16 +910,45 @@ impl GltfExporter {
                     joint_translate_map.get(&2).map(|(_, b)| *b as u16).unwrap_or_default(),
                     joint_translate_map.get(&3).map(|(_, b)| *b as u16).unwrap_or_default(),
                 ];
+
+                // Create combined bones + weights
+                let (conv_weights, conv_bones) = mesh.get_vertices()
+                    .iter()
+                    .map(|v| {
+                        let w = v.weights;
+                        let mut b = bones.to_owned();
+
+                        // If weight is 0.0, set bone index to 0
+                        for (b, w) in b.iter_mut().zip_eq(w) {
+                            if w.eq(&0.0) {
+                                *b = 0;
+                            }
+                        }
+
+                        (w, b)
+                    })
+                    .fold((Vec::new(), Vec::new()), |(mut ws, mut bs), (w, b)| {
+                        ws.push(w);
+                        bs.push(b);
+
+                        (ws, bs)
+                    });
+
+                // Add bone weights
+                weight_idx = acc_builder.add_array(
+                    format!("{}_weight", mesh.get_name()),
+                    conv_weights
+                );
+
+                // Add bone indices
                 bone_idx = acc_builder.add_array(
                     format!("{}_bone", mesh.get_name()),
-                    mesh.get_vertices().iter().map(|_| bones)
+                    conv_bones
                 );
 
                 // Get first skin (all bones should use the same skin...)
                 // Still need to check in case bone isn't found
-                let skin_idx = (0..4)
-                    .filter_map(|i| joint_translate_map.get(&i).map(|(s, _)| *s))
-                    .next();
+                let skin_idx = (0..4).find_map(|i| joint_translate_map.get(&i).map(|(s, _)| *s));
 
                 if let Some(skin_idx) = skin_idx {
                     let node_idx = mesh_node_map.get(mesh.get_name());
