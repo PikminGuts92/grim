@@ -856,10 +856,12 @@ impl GltfExporter {
                 mesh.get_vertices().iter().map(|v| v.weights)
             );
 
-            let tan_idx = acc_builder.add_array(
+            // Ignore tangents for now
+            let tan_idx: Option<usize> = None;
+            /*let tan_idx = acc_builder.add_array(
                 format!("{}_tan", mesh.get_name()),
                 mesh.get_vertices().iter().map(|v| [v.tangent.x, v.tangent.y, v.tangent.z, v.tangent.w])
-            );
+            );*/
 
             // Need to be scalar for some reason
             let face_idx = acc_builder.add_scalar(
