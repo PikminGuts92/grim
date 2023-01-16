@@ -923,7 +923,7 @@ impl GltfExporter {
                         indices: face_idx
                             .map(|idx| json::Index::new(idx as u32)),
                         material: mat_map
-                            .get(mesh.get_name())
+                            .get(&mesh.mat)
                             .map(|idx| json::Index::new(*idx as u32)),
                         mode: json::validation::Checked::Valid(gltf::mesh::Mode::Triangles),
                         targets: None,
