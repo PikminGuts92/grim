@@ -666,7 +666,7 @@ impl GltfExporter {
         mat_indices
     }
 
-    fn find_skins(&self, gltf: &mut json::Root) -> HashMap<String, (usize, usize)> {
+    fn find_skins(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder) -> HashMap<String, (usize, usize)> {
         let root_indices = gltf
             .scenes[0]
             .nodes
@@ -677,27 +677,39 @@ impl GltfExporter {
         let mut skins = Vec::new();
         let mut bone_indices = HashMap::new();
 
-        for idx in root_indices {
+        for (i, idx) in root_indices.into_iter().enumerate() {
             let mut joints = Vec::new();
-            self.find_joints(gltf, idx, &mut joints);
+            self.find_joints(gltf, idx, &mut joints, na::Matrix4::identity());
 
             if !joints.is_empty() {
                 // TODO: Figure out how to handle when nested
                 let root_joint = idx;
 
-                for j in joints.iter() {
+                // Sort by index
+                joints.sort_by(|(a, _), (b, _)| a.cmp(b));
+
+                for (j, _) in joints.iter() {
                     let node_name = gltf.nodes[*j].name.as_ref().unwrap();
                     bone_indices.insert(node_name.to_owned(), (skins.len(), *j)); // (Skin idx, node idx)
                 }
 
+                // Add ibm list to accessors
+                let ibm_idx = acc_builder.add_array(
+                    format!("skin_{i}"),
+                    joints
+                        .iter()
+                        .map(|(_, m)| m.as_slice().try_into().unwrap_or_default())
+                        .collect::<Vec<[f32; 16]>>()
+                );
+
                 skins.push(json::Skin {
                     extensions: None,
                     extras: None,
-                    inverse_bind_matrices: None,
+                    inverse_bind_matrices: ibm_idx
+                        .map(|i| json::Index::new(i as u32)),
                     joints: joints
                         .into_iter()
-                        .sorted()
-                        .map(|j| json::Index::new(j as u32))
+                        .map(|(j, _)| json::Index::new(j as u32))
                         .collect(),
                     name: None,
                     skeleton: Some(json::Index::new(root_joint as u32))
@@ -709,11 +721,17 @@ impl GltfExporter {
         bone_indices
     }
 
-    fn find_joints(&self, gltf: &json::Root, idx: usize, joints: &mut Vec<usize>) {
-        let (node_name, children) = gltf
+    fn find_joints(&self, gltf: &json::Root, idx: usize, joints: &mut Vec<(usize, na::Matrix4<f32>)>, parent_mat: na::Matrix4<f32>) {
+        let (node_name, children, mat) = gltf
             .nodes
             .get(idx)
-            .map(|n| (n.name.as_ref().unwrap(), &n.children))
+            .map(|n| (
+                n.name.as_ref().unwrap(),
+                &n.children,
+                n.matrix
+                    .map(|m| na::Matrix4::from_column_slice(&m))
+                    .unwrap_or_default()
+            ))
             .unwrap();
 
         // Is a joint if Trans or Mesh w/ no faces
@@ -721,14 +739,17 @@ impl GltfExporter {
             || self.meshes.get(node_name.as_str()).map(is_mesh_joint).unwrap_or_default();
 
         if is_joint {
+            // Calculate inverse bind matrix (shouldn't fail but idk)
+            let ibm = (parent_mat * mat).try_inverse().unwrap_or_default();
+
             // Add index to joint list
-            joints.push(idx);
+            joints.push((idx, ibm));
         }
 
         if let Some(children) = children {
             // Traverse children
             for child in children {
-                self.find_joints(gltf, child.value(), joints);
+                self.find_joints(gltf, child.value(), joints, mat);
             }
         }
     }
@@ -1158,9 +1179,9 @@ impl GltfExporter {
             }
         ];
 
-        let joint_indices = self.find_skins(&mut gltf);
-
         let mut acc_builder = AccessorBuilder::new();
+        let joint_indices = self.find_skins(&mut gltf, &mut acc_builder);
+
         let mesh_indices = self.process_meshes(&mut gltf, &mut acc_builder, &mat_indices, &joint_indices);
 
         self.final_process_nodes(&mut gltf, &mesh_indices, &joint_indices);
