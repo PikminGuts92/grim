@@ -728,7 +728,7 @@ impl GltfExporter {
             .map(|n| (
                 n.name.as_ref().unwrap(),
                 &n.children,
-                n.matrix
+                parent_mat * n.matrix
                     .map(|m| na::Matrix4::from_column_slice(&m))
                     .unwrap_or_default()
             ))
@@ -740,7 +740,7 @@ impl GltfExporter {
 
         if is_joint {
             // Calculate inverse bind matrix (shouldn't fail but idk)
-            let mut ibm = (parent_mat * mat).try_inverse().unwrap_or_default();
+            let mut ibm = mat.try_inverse().unwrap_or_default();
             ibm[15] = 1.0; // Force for precision
 
             // Add index to joint list
@@ -1076,7 +1076,7 @@ impl GltfExporter {
 
         // Update skins for each mesh node updated
         for (node_idx, skin_idx) in meshes_to_update {
-            //gltf.nodes[node_idx].skin = Some(json::Index::new(skin_idx as u32));
+            gltf.nodes[node_idx].skin = Some(json::Index::new(skin_idx as u32));
         }
 
         // Assign meshes and return mesh indices
