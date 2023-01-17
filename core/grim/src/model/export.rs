@@ -1462,8 +1462,9 @@ impl AccessorBuilder {
                 name: None,
                 byte_length: data_size as u32,
                 byte_offset: Some(data_offset as u32),
-                byte_stride: match stride % 4 {
-                    0 => Some(stride as u32),
+                byte_stride: match stride {
+                    64 => None, // Hacky way to disable writing stride for inverse bind transforms
+                    s if s % 4 == 0 => Some(stride as u32),
                     _ => None // Don't encode if not multiple
                 },
                 buffer: json::Index::new(0),
