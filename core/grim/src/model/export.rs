@@ -563,6 +563,7 @@ impl GltfExporter {
         (gltf.images, gltf.textures) = self.textures
             .values()
             .sorted_by(|a, b| a.object.get_name().cmp(b.object.get_name()))
+            .filter(|t| t.object.bpp != 24) // TODO: Support 24bpp textures...
             .enumerate()
             .map(|(i, mt)| {
                 let t = &mt.object;
@@ -1221,6 +1222,33 @@ impl GltfExporter {
     }
 
     fn find_node_children<'a>(&'a self) -> HashMap<&'a str, Vec<&'a str>> {
+        // Use gh1-style child hierarchy first
+        /*let (legacy_node_map, legacy_children) = self.transforms
+            .values()
+            .map(|t| &t.object as &dyn Trans)
+            .chain(self.groups.values().map(|g| &g.object as &dyn Trans))
+            .chain(self.meshes.values().map(|m| &m.object as &dyn Trans))
+            .filter(|t| !t.get_trans_objects().is_empty())
+            .fold((HashMap::new(), HashSet::new()), |(mut map, mut ch_set), t| {
+                let parent = t.get_name().as_str();
+                let children = t.get_trans_objects()
+                    .iter()
+                    .map(|c| c.as_str())
+                    .collect::<Vec<_>>();
+
+                for child in children.iter() {
+                    ch_set.insert(*child);
+                }
+
+                if t.get_name() != t.get_parent() {
+                    //println!("WARN: Object \"{}\", doesn't match object \"{}\"", t.get_name(), t.get_parent());
+                    println!("{} : {}", t.get_name(), t.get_parent());
+                }
+
+                map.insert(parent, children);
+                (map, ch_set)
+            });*/
+
         let mut node_map = self.transforms
             .values()
             .map(|t| &t.object as &dyn Trans)
