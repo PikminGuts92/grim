@@ -16,6 +16,13 @@ use crate::scene::*;
 pub(crate) use self::gltf::*;
 pub use self::tex_path::*;
 
+pub(crate) const MILOSPACE_TO_GLSPACE: nalgebra::Matrix4<f32> = nalgebra::Matrix4::new(
+    -1.0,  0.0,  0.0, 0.0,
+    0.0,  0.0,  1.0, 0.0,
+    0.0,  1.0,  0.0, 0.0,
+    0.0,  0.0,  0.0, 1.0,
+);
+
 pub struct AssetManagager {
     info: SystemInfo,
     groups: Vec<GroupObject>,

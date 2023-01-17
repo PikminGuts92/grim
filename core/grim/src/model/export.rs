@@ -472,15 +472,7 @@ impl GltfExporter {
                     m.m14, m.m24, m.m34, m.m44
                 );
 
-                // Apply translation
-                let trans_mat = na::Matrix4::new(
-                    -1.0,  0.0,  0.0, 0.0,
-                     0.0,  0.0,  1.0, 0.0,
-                     0.0,  1.0,  0.0, 0.0,
-                     0.0,  0.0,  0.0, 1.0,
-                );
-
-                mat * trans_mat
+                mat
             },
             (Some(trans), _) => {
                 let m = trans.get_local_xfm();
@@ -895,9 +887,20 @@ impl GltfExporter {
         let mut mesh_map = HashMap::new();
 
         for mesh in milo_meshes {
+            let translated_pos = mesh
+                .get_vertices()
+                .iter()
+                .map(|v| {
+                    let (x, y, z) = (v.pos.x, v.pos.y, v.pos.z);
+
+                    // Update position for different coordinate system
+                    let t = super::MILOSPACE_TO_GLSPACE.transform_vector(&na::Vector3::new(x, y, z));
+                    [t[0], t[1], t[2]]
+                });
+
             let pos_idx = acc_builder.add_array(
                 format!("{}_pos", mesh.get_name()),
-                mesh.get_vertices().iter().map(|v| [v.pos.x, v.pos.y, v.pos.z])
+                translated_pos
             );
 
             let norm_idx = acc_builder.add_array(
