@@ -740,7 +740,8 @@ impl GltfExporter {
 
         if is_joint {
             // Calculate inverse bind matrix (shouldn't fail but idk)
-            let ibm = (parent_mat * mat).try_inverse().unwrap_or_default();
+            let mut ibm = (parent_mat * mat).try_inverse().unwrap_or_default();
+            ibm[15] = 1.0; // Force for precision
 
             // Add index to joint list
             joints.push((idx, ibm));
