@@ -1513,6 +1513,11 @@ impl GltfExporter {
                 }
             }
 
+            if samplers.is_empty() || channels.is_empty() {
+                // Don't add if no anims found
+                continue;
+            }
+
             animations.push(json::Animation {
                 name: Some(group.get_name().to_owned()),
                 channels,
