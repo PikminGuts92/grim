@@ -2,6 +2,7 @@ use crate::io::*;
 use crate::scene::*;
 //use grim_traits::scene::*;
 use crate::{Platform, SystemInfo};
+use grim_traits::scene::Group;
 use itertools::*;
 use gltf_json as json;
 use nalgebra as na;
@@ -342,6 +343,7 @@ pub struct GltfExporter {
     materials: HashMap<String, MappedObject<MatObject>>,
     meshes: HashMap<String, MappedObject<MeshObject>>,
     transforms: HashMap<String, MappedObject<TransObject>>,
+    trans_anims: HashMap<String, MappedObject<TransAnim>>,
     textures: HashMap<String, MappedObject<Tex>>,
 
     // TODO: Move to nested struct?
@@ -432,6 +434,12 @@ impl GltfExporter {
                         self.transforms.insert(
                             name,
                             MappedObject::new(trans, parent.clone())
+                        );
+                    },
+                    Object::TransAnim(trans_anim) => {
+                        self.trans_anims.insert(
+                            name,
+                            MappedObject::new(trans_anim, parent.clone())
                         );
                     },
                     _ => {}
@@ -1214,6 +1222,8 @@ impl GltfExporter {
 
         let mesh_indices = self.process_meshes(&mut gltf, &mut acc_builder, &mat_indices, &joint_indices);
 
+        self.process_animations(&mut gltf, &mut acc_builder);
+
         self.final_process_nodes(&mut gltf, &mesh_indices, &joint_indices);
 
         // Write binary data
@@ -1346,6 +1356,173 @@ impl GltfExporter {
             .filter(|s| !s.is_empty() && !children.contains(s))
             .sorted()
             .collect()
+    }
+
+    fn process_animations(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder) {
+        // Map indices of all named nodes
+        let node_map = gltf
+            .nodes
+            .iter()
+            .enumerate()
+            .filter_map(|(i, n)| n.name.as_ref().and_then(|s| Some((s.to_owned(), i))))
+            .collect::<HashMap<_, _>>();
+
+        // Get anims in groups
+        let groups = self
+            .groups
+            .values()
+            .map(|g| (
+                &g.object,
+                g.object
+                    .get_objects()
+                    .iter()
+                    .filter_map(|o| self.trans_anims.get(o).map(|t| &t.object))
+                    .collect::<Vec<_>>()
+            ))
+            .collect::<Vec<_>>();
+
+        let mut animations = Vec::new();
+
+        for (group, mut anims) in groups {
+            // Sort anims by name
+            anims.sort_by(|a, b| a.get_name().cmp(b.get_name()));
+
+            // Group anims by target
+            let grouped_anims = anims
+                .iter()
+                .filter(|a| !a.trans_object.is_empty()
+                    && (!a.rot_keys.is_empty() || !a.trans_keys.is_empty() || !a.scale_keys.is_empty())
+                    && node_map.contains_key(&a.trans_object) // Remove anims with unavailable nodes
+                )
+                .map(|a| (&a.trans_object, a))
+                .fold(HashMap::new(), |mut acc, (target, anim)| {
+                    acc
+                        .entry(target)
+                        .and_modify(|e : &mut Vec<_>| e.push(*anim))
+                        .or_insert(vec![*anim]);
+                    
+                    acc
+                });
+
+            let mut channels = Vec::new();
+            let mut samplers = Vec::new();
+
+            for target_name in grouped_anims.keys().sorted() {
+                // Missing nodes already filtered out above
+                let node_idx = node_map.get(*target_name).map(|i| *i).unwrap();
+
+                for anim in grouped_anims.get(target_name).unwrap().iter() {
+                    // Add rotations
+                    if !anim.rot_keys.is_empty() {
+                        let input_idx = acc_builder.add_scalar(
+                            format!("{}_rotation_input", anim.get_name()),
+                            anim.rot_keys.iter().map(|k| k.pos)
+                        ).unwrap();
+
+                        let output_idx = acc_builder.add_array(
+                            format!("{}_rotation_output", anim.get_name()),
+                            anim.rot_keys.iter().map(|k| [k.value.x, k.value.y, k.value.z, k.value.w])
+                        ).unwrap();
+
+                        channels.push(json::animation::Channel {
+                            sampler: json::Index::new(samplers.len() as u32),
+                            target: json::animation::Target {
+                                node: json::Index::new(node_idx as u32),
+                                path: json::validation::Checked::Valid(json::animation::Property::Rotation),
+                                extensions: None,
+                                extras: None
+                            },
+                            extensions: None,
+                                extras: None
+                        });
+
+                        samplers.push(json::animation::Sampler {
+                            input: json::Index::new(input_idx as u32),
+                            output: json::Index::new(output_idx as u32),
+                            interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
+                            extensions: None,
+                            extras: None
+                        });
+                    }
+
+                    // Add translations
+                    if !anim.trans_keys.is_empty() {
+                        let input_idx = acc_builder.add_scalar(
+                            format!("{}_translation_input", anim.get_name()),
+                            anim.trans_keys.iter().map(|k| k.pos)
+                        ).unwrap();
+
+                        let output_idx = acc_builder.add_array(
+                            format!("{}_translation_output", anim.get_name()),
+                            anim.trans_keys.iter().map(|k| [k.value.x, k.value.y, k.value.z])
+                        ).unwrap();
+
+                        channels.push(json::animation::Channel {
+                            sampler: json::Index::new(samplers.len() as u32),
+                            target: json::animation::Target {
+                                node: json::Index::new(node_idx as u32),
+                                path: json::validation::Checked::Valid(json::animation::Property::Translation),
+                                extensions: None,
+                                extras: None
+                            },
+                            extensions: None,
+                                extras: None
+                        });
+
+                        samplers.push(json::animation::Sampler {
+                            input: json::Index::new(input_idx as u32),
+                            output: json::Index::new(output_idx as u32),
+                            interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
+                            extensions: None,
+                            extras: None
+                        });
+                    }
+
+                    // Add scales
+                    if !anim.scale_keys.is_empty() {
+                        let input_idx = acc_builder.add_scalar(
+                            format!("{}_scale_input", anim.get_name()),
+                            anim.scale_keys.iter().map(|k| k.pos)
+                        ).unwrap();
+
+                        let output_idx = acc_builder.add_array(
+                            format!("{}_scale_output", anim.get_name()),
+                            anim.scale_keys.iter().map(|k| [k.value.x, k.value.y, k.value.z])
+                        ).unwrap();
+
+                        channels.push(json::animation::Channel {
+                            sampler: json::Index::new(samplers.len() as u32),
+                            target: json::animation::Target {
+                                node: json::Index::new(node_idx as u32),
+                                path: json::validation::Checked::Valid(json::animation::Property::Scale),
+                                extensions: None,
+                                extras: None
+                            },
+                            extensions: None,
+                                extras: None
+                        });
+
+                        samplers.push(json::animation::Sampler {
+                            input: json::Index::new(input_idx as u32),
+                            output: json::Index::new(output_idx as u32),
+                            interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
+                            extensions: None,
+                            extras: None
+                        });
+                    }
+                }
+            }
+
+            animations.push(json::Animation {
+                name: Some(group.get_name().to_owned()),
+                channels,
+                samplers,
+                extensions: None,
+                extras: None
+            });
+        }
+
+        gltf.animations = animations;
     }
 }
 
