@@ -472,7 +472,7 @@ impl GltfExporter {
                     m.m14, m.m24, m.m34, m.m44
                 );
 
-                mat
+                mat * super::MILOSPACE_TO_GLSPACE
             },
             (Some(trans), _) => {
                 let m = trans.get_local_xfm();
@@ -485,14 +485,7 @@ impl GltfExporter {
                     m.m14, m.m24, m.m34, m.m44
                 )
             },
-            (None, 0) => {
-                na::Matrix4::new(
-                    -1.0,  0.0,  0.0, 0.0,
-                     0.0,  0.0,  1.0, 0.0,
-                     0.0,  1.0,  0.0, 0.0,
-                     0.0,  0.0,  0.0, 1.0,
-                )
-            },
+            (None, 0) => super::MILOSPACE_TO_GLSPACE,
             _ => na::Matrix4::identity()
         };
 
@@ -732,7 +725,8 @@ impl GltfExporter {
 
         if is_joint {
             // Calculate inverse bind matrix (shouldn't fail but idk)
-            let mut ibm = mat.try_inverse().unwrap_or_default();
+            // Also convert to gl space
+            let mut ibm = mat.try_inverse().unwrap_or_default() * super::MILOSPACE_TO_GLSPACE;
             ibm[15] = 1.0; // Force for precision
 
             // Add index to joint list
@@ -887,25 +881,57 @@ impl GltfExporter {
         let mut mesh_map = HashMap::new();
 
         for mesh in milo_meshes {
+            /*let bone_offsets = mesh
+                .bones
+                .iter()
+                //.filter(|b| false)
+                .map(|b| {
+                    let m = &b.trans;
+
+                    na::Matrix4::new(
+                        // Column-major order...
+                        m.m11, m.m21, m.m31, m.m41,
+                        m.m12, m.m22, m.m32, m.m42,
+    
+                        m.m13, m.m23, m.m33, m.m43,
+                        m.m14, m.m24, m.m34, m.m44
+                    )
+                })
+                .collect::<Vec<_>>();
+
             let translated_pos = mesh
                 .get_vertices()
                 .iter()
+                //.map(|v| [v.pos.x, v.pos.y, v.pos.z])
                 .map(|v| {
-                    let (x, y, z) = (v.pos.x, v.pos.y, v.pos.z);
+                    let pos = na::Vector3::new(v.pos.x, v.pos.y, v.pos.z);
 
-                    // Update position for different coordinate system
-                    let t = super::MILOSPACE_TO_GLSPACE.transform_vector(&na::Vector3::new(x, y, z));
+                    // Calculate weighted offsets from bones
+                    let off = v.bones
+                        .iter()
+                        .zip(&v.weights)
+                        .filter_map(|(b, w)| bone_offsets
+                            .get(*b as usize)
+                            .map(|bo| bo.transform_vector(&na::Vector3::from_element(0.0)).scale(*w)))
+                        .sum::<na::Vector3<f32>>();
+
+                    // Add offset to pos
+                    let t = pos + off;
                     [t[0], t[1], t[2]]
-                });
+                });*/
 
             let pos_idx = acc_builder.add_array(
                 format!("{}_pos", mesh.get_name()),
-                translated_pos
+                mesh.get_vertices().iter().map(|v| [v.pos.x, v.pos.y, v.pos.z])
             );
 
             let norm_idx = acc_builder.add_array(
                 format!("{}_norm", mesh.get_name()),
-                mesh.get_vertices().iter().map(|v| [v.normals.x, v.normals.y, v.normals.z])
+                mesh.get_vertices().iter().map(|v| {
+                    // PS2 norms aren't normalized?
+                    let v = na::Vector3::new(v.pos.x, v.pos.y, v.pos.y).normalize();
+                    [v[0], v[1], v[2]]
+                })
             );
 
             let uv_idx = acc_builder.add_array(
