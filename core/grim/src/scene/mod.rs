@@ -16,6 +16,7 @@ mod poll;
 mod prop_anim;
 mod tex;
 mod trans;
+mod trans_anim;
 
 pub use anim::*;
 pub use cam::*;
@@ -36,3 +37,4 @@ pub use poll::*;
 pub use prop_anim::*;
 pub use tex::*;
 pub use trans::*;
+pub use trans_anim::*;

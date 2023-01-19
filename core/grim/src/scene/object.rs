@@ -14,6 +14,7 @@ pub enum Object {
     PropAnim(PropAnim),
     Tex(Tex),
     Trans(TransObject),
+    TransAnim(TransAnim),
     Packed(PackedObject),
 }
 
@@ -38,6 +39,7 @@ impl Object {
             Object::PropAnim(prop) => &prop.name,
             Object::Tex(tex) => &tex.name,
             Object::Trans(trans) => &trans.name,
+            Object::TransAnim(trans_anim) => &trans_anim.name,
             Object::Packed(packed) => &packed.name,
         }
     }
@@ -55,6 +57,7 @@ impl Object {
             Object::PropAnim(_) => "PropAnim",
             Object::Tex(_) => "Tex",
             Object::Trans(_) => "Trans",
+            Object::TransAnim(_) => "TransAnim",
             Object::Packed(packed) => &packed.object_type,
         }
     }
@@ -128,6 +131,7 @@ impl Object {
                         }
                     },
                     "Trans" => unpack_object(packed, info).map(|o| Object::Trans(o)),
+                    "TransAnim" => unpack_object(packed, info).map(|o| Object::TransAnim(o)),
                     _ => None
                 }
             },
