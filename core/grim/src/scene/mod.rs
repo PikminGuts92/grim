@@ -1,6 +1,8 @@
 mod anim;
 mod cam;
 mod char_bones_samples;
+mod char_clip;
+mod char_clip_samples;
 mod cube_tex;
 mod draw;
 mod group;
@@ -20,8 +22,10 @@ mod trans_anim;
 
 pub use anim::*;
 pub use cam::*;
-pub use cube_tex::*;
+pub use char_clip::*;
 pub use char_bones_samples::*;
+pub use char_clip_samples::*;
+pub use cube_tex::*;
 pub use draw::*;
 pub use group::*;
 pub use grim_traits::scene::*;

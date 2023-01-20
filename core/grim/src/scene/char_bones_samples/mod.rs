@@ -1,17 +1,49 @@
+mod io;
+
+use crate::scene::{Quat, Vector3};
+use grim_macros::*;
+use grim_traits::scene::*;
+pub use io::*;
+
 #[derive(Debug, Default)]
-pub struct CharBones {
+pub struct CharBone {
+    pub symbol: String, // Bone name + transform property ext
+    pub weight: f32,
+}
+
+#[derive(Debug, Default)]
+pub struct CharBoneSample {
+    pub symbol: String, // Bone name
+    pub pos: Option<(f32, Vec<Vector3>)>,
+    pub quat: Option<(f32, Vec<Quat>)>,
+    pub rotz: Option<(f32, Vec<f32>)>,
+}
+
+#[derive(Debug)]
+pub enum EncodedSamples {
+    Compressed(Vec<CharBone>, Vec<Box<[u8]>>), // Raw sample collection of bone transforms
+    Uncompressed(Vec<CharBoneSample>) // Collections of samples grouped by bone transforms
+}
+
+impl Default for EncodedSamples {
+    fn default() -> Self {
+        EncodedSamples::Uncompressed(Vec::new())
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct CharBonesSamples { // Sample set
+    pub bones: Vec<CharBone>,
     pub compression: u32, // TODO: Convert to enum?
     pub counts: [u32; 7],
     pub computed_sizes: [u32; 7],
     pub computed_flags: u32,
+
+    pub samples: EncodedSamples,
+    pub frames: Vec<f32>
 }
 
-#[derive(Debug, Default)]
-pub struct CharBonesSamples {
-    pub char_bones: CharBones,
-}
-
-impl CharBones {
+impl CharBonesSamples {
     pub fn get_type_of<T: AsRef<str>>(name: T) -> u32 {
         let name = name.as_ref();
 
@@ -87,7 +119,7 @@ mod tests {
     #[case("bone.roty", 4)]
     #[case("bone.rotz", 5)]
     fn char_bones_get_type_of(#[case] input_name: &str, #[case] expected: u32) {
-        assert_eq!(expected, CharBones::get_type_of(input_name));
+        assert_eq!(expected, CharBonesSamples::get_type_of(input_name));
     }
 
     #[rstest]
@@ -113,7 +145,7 @@ mod tests {
     #[case(2, 5, 2)]
     #[case(2, 6, 2)]
     fn char_bones_get_type_size(#[case] input_compression: u32, #[case] input_idx: u32, #[case] expected: u32) {
-        let char_bone = CharBones {
+        let char_bone = CharBonesSamples {
             compression: input_compression,
             ..Default::default()
         };
@@ -128,7 +160,7 @@ mod tests {
     //#[case(2, [0, 27, 27, 37, 37, 37, 37], [0, 216, 216, 352, 352, 352, 352], 352)]
     #[case(2, [0, 36, 36, 53, 53, 53, 53], [0, 216, 216, 352, 352, 352, 352], 352)]
     fn char_bones_recompute_sizes(#[case] input_compression: u32, #[case] input_counts: [u32; 7], #[case] expected_computed_sizes: [u32; 7], #[case] expected_computed_flags: u32) {
-        let mut char_bone = CharBones {
+        let mut char_bone = CharBonesSamples {
             compression: input_compression,
             counts: input_counts,
             ..Default::default()
