@@ -40,6 +40,37 @@ impl ObjectReadWrite for CharClipSamples {
             self.some_bool = reader.read_boolean()?;
         }
 
+        if version < 13 {
+            // Read headers first
+            let (full_bones, full_sample_count) = load_char_bones_samples_header(&mut self.full, &mut reader, None)?;
+            let (one_bones, one_sample_count) = load_char_bones_samples_header(&mut self.one, &mut reader, None)?;
+
+            if version > 7 {
+                // Read duplicate serialized data Probably milo bug
+                // TODO: Write specific function that just skips data instead of read
+                let mut cbs = CharBonesSamples::default();
+                load_char_bones_samples_header(&mut cbs, &mut reader, None)?;
+            }
+
+            // Then read data
+            load_char_bones_samples_data(&mut self.full, &mut reader, None, full_bones, full_sample_count)?;
+            load_char_bones_samples_data(&mut self.one, &mut reader, None, one_bones, one_sample_count)?;
+        } else {
+            load_char_bones_samples(&mut self.full, &mut reader, info)?;
+            load_char_bones_samples(&mut self.one, &mut reader, info)?;
+        }
+
+        if version > 14 {
+            // Load bones
+            let bone_count = reader.read_uint32()?;
+
+            // TODO: Do something with extra bones values
+            for _ in 0..bone_count {
+                let _weight = reader.read_float32()?;
+                let _name = reader.read_prefixed_string()?;
+            }
+        }
+
         Ok(())
     }
 

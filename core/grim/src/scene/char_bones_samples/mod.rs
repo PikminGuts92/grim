@@ -35,7 +35,7 @@ impl Default for EncodedSamples {
 pub struct CharBonesSamples { // Sample set
     pub bones: Vec<CharBone>,
     pub compression: u32, // TODO: Convert to enum?
-    pub counts: [u32; 7],
+    pub counts: [u32; 7], // Offsets
     pub computed_sizes: [u32; 7],
     pub computed_flags: u32,
 
