@@ -66,8 +66,8 @@ impl ObjectReadWrite for CharClipSamples {
 
             // TODO: Do something with extra bones values
             for _ in 0..bone_count {
-                let _weight = reader.read_float32()?;
                 let _name = reader.read_prefixed_string()?;
+                let _weight = reader.read_float32()?;
             }
         }
 

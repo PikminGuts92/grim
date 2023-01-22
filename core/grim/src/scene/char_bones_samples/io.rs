@@ -20,7 +20,7 @@ fn is_version_supported(version: u32) -> bool {
     }
 }
 
-pub(crate) fn load_char_bones_samples(char_bones_samples: &mut CharBonesSamples, reader: &mut Box<BinaryStream>, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+pub(crate) fn load_char_bones_samples(char_bones_samples: &mut CharBonesSamples, reader: &mut Box<BinaryStream>, _info: &SystemInfo) -> Result<(), Box<dyn Error>> {
     let version = reader.read_uint32()?;
 
     // If not valid, return unsupported error
@@ -36,7 +36,7 @@ pub(crate) fn load_char_bones_samples(char_bones_samples: &mut CharBonesSamples,
     Ok(())
 }
 
-pub(crate) fn load_char_bones_samples_header(char_bones_samples: &mut CharBonesSamples, reader: &mut Box<BinaryStream>, version: Option<u32>) -> Result<(Vec<(f32, String)>, u32), Box<dyn Error>> {
+pub(crate) fn load_char_bones_samples_header(char_bones_samples: &mut CharBonesSamples, reader: &mut Box<BinaryStream>, version: Option<u32>) -> Result<(Vec<(String, f32)>, u32), Box<dyn Error>> {
     let count_size = match version {
         Some(v) if v > 15 => 7,
         //_ => 10
@@ -47,10 +47,10 @@ pub(crate) fn load_char_bones_samples_header(char_bones_samples: &mut CharBonesS
     let mut bones = Vec::new();
 
     for _ in 0..bone_count {
-        let weight = reader.read_float32()?;
         let name = reader.read_prefixed_string()?;
+        let weight = reader.read_float32()?;
 
-        bones.push((weight, name));
+        bones.push((name, weight));
     }
 
     for i in 0..count_size {
@@ -80,7 +80,7 @@ pub(crate) fn load_char_bones_samples_header(char_bones_samples: &mut CharBonesS
     Ok((bones, sample_count))
 }
 
-pub(crate) fn load_char_bones_samples_data(char_bones_samples: &mut CharBonesSamples, reader: &mut Box<BinaryStream>, _version: Option<u32>, bones: Vec<(f32, String)>, sample_count: u32) -> Result<(), Box<dyn Error>> {
+pub(crate) fn load_char_bones_samples_data(char_bones_samples: &mut CharBonesSamples, reader: &mut Box<BinaryStream>, _version: Option<u32>, bones: Vec<(String, f32)>, sample_count: u32) -> Result<(), Box<dyn Error>> {
     /*if let Some(v) && v == 4 {
 
     }*/
@@ -96,7 +96,7 @@ pub(crate) fn load_char_bones_samples_data(char_bones_samples: &mut CharBonesSam
 
     let sample_size: u32 = bones
         .iter()
-        .filter_map(|(_, b)| match CharBonesSamples::get_type_of(b) {
+        .filter_map(|(s, _)| match CharBonesSamples::get_type_of(s) {
             i @ 0..=6 => Some(char_bones_samples.get_type_size(i)),
             _ => None
         })
@@ -110,7 +110,7 @@ pub(crate) fn load_char_bones_samples_data(char_bones_samples: &mut CharBonesSam
     }
 
     char_bones_samples.samples = EncodedSamples::Compressed(
-        bones.into_iter().map(|(w, b)| CharBone { symbol: b, weight: w }).collect(),
+        bones.into_iter().map(|(s, w)| CharBone { symbol: s, weight: w }).collect(),
         samples
     );
 

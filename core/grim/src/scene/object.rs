@@ -5,6 +5,7 @@ use crate::scene::*;
 pub enum Object {
     Anim(AnimObject),
     Cam(CamObject),
+    CharClipSamples(CharClipSamples),
     CubeTex(CubeTexObject),
     Draw(DrawObject),
     Group(GroupObject),
@@ -30,6 +31,7 @@ impl Object {
         match self {
             Object::Anim(anim) => &anim.name,
             Object::Cam(cam) => &cam.name,
+            Object::CharClipSamples(ccs) => &ccs.name,
             Object::CubeTex(cube) => &cube.name,
             Object::Draw(draw) => &draw.name,
             Object::Group(grp) => &grp.name,
@@ -48,6 +50,7 @@ impl Object {
         match self {
             Object::Anim(_) => "Anim",
             Object::Cam(_) => "Cam",
+            Object::CharClipSamples(_) => "CharClipSamples",
             Object::CubeTex(_) => "CubeTex",
             Object::Draw(_) => "Draw",
             Object::Group(_) => "Group",
@@ -111,6 +114,7 @@ impl Object {
                 match packed.object_type.as_str() {
                     "Anim" => unpack_object(packed, info).map(|o| Object::Anim(o)),
                     "Cam" => unpack_object(packed, info).map(|o| Object::Cam(o)),
+                    "CharClipSamples" => unpack_object(packed, info).map(|o| Object::CharClipSamples(o)),
                     "CubeTex" => unpack_object(packed, info).map(|o| Object::CubeTex(o)),
                     "Draw" => unpack_object(packed, info).map(|o| Object::Draw(o)),
                     "Group" => unpack_object(packed, info).map(|o| Object::Group(o)),
