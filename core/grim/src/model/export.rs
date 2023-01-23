@@ -1563,12 +1563,21 @@ impl GltfExporter {
             let mut channels = Vec::new();
             let mut samplers = Vec::new();
 
+            // TODO: Delete after testing
+            let filtered_bone_names = HashSet::from([
+                //"bone_neck.mesh"
+                "bone_spine1.mesh",
+                "bone_spine2.mesh",
+                "bone_spine3.mesh",
+            ]);
+
             // TODO: Decode at earlier step...
             let bone_samples = [&char_clip.full, &char_clip.one]
                 .iter()
                 .flat_map(|cbs| cbs.decode_samples(info)
                     .into_iter()
                     .map(|s| (s, if !cbs.frames.is_empty() { &cbs.frames } else { &default_frames })))
+                //.filter(|(b, _)| filtered_bone_names.contains(b.symbol.as_str()))
                 .collect::<Vec<_>>();
 
             for (mut bone, frames) in bone_samples {
@@ -1576,6 +1585,99 @@ impl GltfExporter {
                 let Some(node_idx) = node_map.get(bone_name).map(|i| *i) else {
                     continue;
                 };
+
+                // Get existing matrix for node
+                let node_matrix = gltf
+                    .nodes[node_idx]
+                    .matrix
+                    .map(|m| na::Matrix4::from_column_slice(&m))
+                    .unwrap_or(na::Matrix4::identity() /*super::MILOSPACE_TO_GLSPACE*/);
+
+                // Decompose matrix to T*R*S
+                let (translate, rotation, scale) = decompose_trs(node_matrix);
+
+                // Update node
+                if let Some(node) = gltf.nodes.get_mut(node_idx) {
+                    node.matrix = None;
+                    node.translation = Some([translate[0], translate[1], translate[2]]);
+                    node.rotation = Some(json::scene::UnitQuaternion([rotation[0], rotation[1], rotation[2], rotation[3]]));
+                    node.scale = Some([scale[0], scale[1], scale[2]])
+                }
+
+                // Compute samples as matrices
+                //let translate_samples = bone.pos.take().map(|(pw, p)| p.into_iter().map(|v| na::Matrix4::new_translation(&na::Vector3::new(v.x, v.y, v.z))));
+                //let translate_samples = bone.quat.take().map(|(qw, q)| q.into_iter().map(|v| na::Quaternion::new(v.x, v.y, v.z, v.w)));
+                //let mat = na::Matrix4::new_translation(&na::Vector3::new(1.0, 1.0, 1.0));
+
+                /*let mut samples = Vec::new();
+
+                // Process translations (.pos)
+                if let Some((w, positions)) = bone.pos.take() {
+                    for (i, v) in positions.into_iter().enumerate() {
+                        let mat = match samples.get_mut(i) {
+                            Some(m) => m,
+                            _ => {
+                                samples.push(node_matrix);
+                                samples.last_mut().unwrap()
+                            }
+                        };
+
+                        mat.append_translation_mut(&na::Vector3::new(v.x * w, v.y * w, v.z * w));
+                    }
+                }
+
+                // Process rotations (.quat)
+
+                // Process rotations (.rotz)
+
+                // Add matrix samples
+                let input_idx = acc_builder.add_scalar(
+                    format!("{}_{}_matrix_input", clip_name, bone_name),
+                    //frames.iter().map(|f| *f)
+                    samples.iter().enumerate().map(|(i, _)| i as f32)
+                ).unwrap();
+
+                let output_idx = acc_builder.add_array(
+                    format!("{}_{}_matrix_output", clip_name, bone_name),
+                    samples.into_iter().map(|m| [
+                        m[0],
+                        m[1],
+                        m[2],
+                        m[3],
+                        m[4],
+                        m[5],
+                        m[6],
+                        m[7],
+                        m[8],
+                        m[9],
+                        m[10],
+                        m[11],
+                        m[12],
+                        m[13],
+                        m[14],
+                        m[15],
+                    ])
+                ).unwrap();
+
+                channels.push(json::animation::Channel {
+                    sampler: json::Index::new(samplers.len() as u32),
+                    target: json::animation::Target {
+                        node: json::Index::new(node_idx as u32),
+                        path: json::validation::Checked::Valid(json::animation::Property::Translation),
+                        extensions: None,
+                        extras: None
+                    },
+                    extensions: None,
+                        extras: None
+                });
+
+                samplers.push(json::animation::Sampler {
+                    input: json::Index::new(input_idx as u32),
+                    output: json::Index::new(output_idx as u32),
+                    interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
+                    extensions: None,
+                    extras: None
+                });*/
 
                 // Add translations (.pos)
                 if let Some((w, samples)) = bone.pos.take() {
@@ -1587,9 +1689,49 @@ impl GltfExporter {
 
                     let output_idx = acc_builder.add_array(
                         format!("{}_{}_translation_output", clip_name, bone_name),
-                        samples.into_iter().map(|s| [s.x * w, s.y * w, s.z * w])
+                        samples.into_iter().map(|s| {
+                            let mut v = na::Vector3::new(s.x * w, s.y * w, s.z * w);
+                            v += translate;
+
+                            [v.x, v.y, v.z]
+                        })
                     ).unwrap();
+
+                    channels.push(json::animation::Channel {
+                        sampler: json::Index::new(samplers.len() as u32),
+                        target: json::animation::Target {
+                            node: json::Index::new(node_idx as u32),
+                            path: json::validation::Checked::Valid(json::animation::Property::Translation),
+                            extensions: None,
+                            extras: None
+                        },
+                        extensions: None,
+                            extras: None
+                    });
     
+                    samplers.push(json::animation::Sampler {
+                        input: json::Index::new(input_idx as u32),
+                        output: json::Index::new(output_idx as u32),
+                        interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
+                        extensions: None,
+                        extras: None
+                    });
+                } else {
+                    // Add empty pos sample
+                    let input_idx = acc_builder.add_scalar(
+                        format!("{}_{}_translation_input", clip_name, bone_name),
+                        //frames.iter().map(|f| *f)
+                        vec![0.0]
+                    ).unwrap();
+
+                    let output_idx = acc_builder.add_array(
+                        format!("{}_{}_translation_output", clip_name, bone_name),
+                        {
+                            let v = translate;
+                            vec![[v.x, v.y, v.z]]
+                        }
+                    ).unwrap();
+
                     channels.push(json::animation::Channel {
                         sampler: json::Index::new(samplers.len() as u32),
                         target: json::animation::Target {
@@ -1611,68 +1753,111 @@ impl GltfExporter {
                     });
                 }
 
-                // Add rotations (.quat)
-                // TODO: Combine with .rotz?
-                /*if let Some((w, samples)) = bone.quat.take() {
-                    let input_idx = acc_builder.add_scalar(
-                        format!("{}_{}_rotation_input", clip_name, bone_name),
-                        //frames.iter().map(|f| *f)
-                        samples.iter().enumerate().map(|(i, _)| i as f32)
-                    ).unwrap();
-
-                    let output_idx = acc_builder.add_array(
-                        format!("{}_{}_rotation_output", clip_name, bone_name),
-                        samples.into_iter().map(|s| {
-                            [s.x * w, s.y * w, s.z * w, s.w * w]
+                /*let mut rotation_samples = [
+                    bone.quat
+                        .take()
+                        .map(|(w, samples)| samples.into_iter().map(|s| {
+                            na::UnitQuaternion::from_quaternion(
+                                na::Quaternion::new(
+                                    s.x * w,
+                                    s.y * w,
+                                    s.z * w,
+                                    s.w * w,
+                            ))
                         })
-                    ).unwrap();
-    
-                    channels.push(json::animation::Channel {
-                        sampler: json::Index::new(samplers.len() as u32),
-                        target: json::animation::Target {
-                            node: json::Index::new(node_idx as u32),
-                            path: json::validation::Checked::Valid(json::animation::Property::Rotation),
-                            extensions: None,
-                            extras: None
-                        },
-                        extensions: None,
-                            extras: None
-                    });
-    
-                    samplers.push(json::animation::Sampler {
-                        input: json::Index::new(input_idx as u32),
-                        output: json::Index::new(output_idx as u32),
-                        interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
-                        extensions: None,
-                        extras: None
-                    });
-                }*/
+                        .by_ref()
+                        .collect::<Vec<_>>()
+                    ).unwrap_or_default(),
+                    bone.rotz
+                        .take()
+                        .map(|(w, samples)| samples.into_iter().map(|s| {
+                            na::UnitQuaternion::from_axis_angle(
+                                &na::Vector3::z_axis(),
+                                std::f32::consts::PI * (s * w)
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                    )
+                    .unwrap_or_default()
+                ];*/
+
+                /*let rotation_sample_count = match (bone.quat.as_ref().map(|(_, s)| s.len()), bone.rotz.as_ref().map(|(_, s)| s.len())) {
+                    (Some(a), Some(b)) => a.max(b),
+                    (Some(a), _) => a,
+                    (_, Some(b)) => b,
+                    _ => bone.pos.as_ref().map(|(_, s)| s.len()).unwrap_or_default()
+                };*/
+
+                let rotation_sample_count = [
+                    bone.quat.as_ref().map(|(_, s)| s.len()),
+                    bone.rotz.as_ref().map(|(_, s)| s.len()),
+                    bone.pos.as_ref().map(|(_, s)| s.len())
+                ]
+                .into_iter()
+                .filter_map(|f| f)
+                .max()
+                .unwrap_or_default();
+
+                // Combined rotations
+                let mut rotation_samples = (0..rotation_sample_count)
+                    .map(|_| rotation)
+                    /*.map(|_| {
+                        let q = rotation.as_vector();
+                        na::Quaternion::new(q[3], q[0], q[1], q[2])
+                    })*/
+                    .collect::<Vec<_>>();
+
+                // Add rotations (.quat)
+                if let Some((w, samples)) = bone.quat.take() {
+                    for (i, s) in samples.into_iter().enumerate() {
+                        let rot =  &mut rotation_samples[i];
+
+                        let q = na::Quaternion::new(
+                            s.w * w,
+                            s.x * w,
+                            s.y * w,
+                            s.z * w,
+                        );
+
+                        //let q = na::UnitQuaternion::from
+
+                        //*rot = *rot * q;
+
+                        //*rot = rot.rotation_to(&na::UnitQuaternion::from_quaternion(q));
+                        *rot = *rot * na::UnitQuaternion::from_quaternion(q);
+                        //*rot = na::UnitQuaternion::from_quaternion(rot.normalize());
+                    }
+                }
 
                 // Add rotations (.rotz)
                 if let Some((w, samples)) = bone.rotz.take() {
-                    let samples = samples
-                        .into_iter()
-                        .map(|z| {
-                            let q = na::UnitQuaternion::from_axis_angle(
-                                &na::Vector3::z_axis(),
-                                std::f32::consts::PI * (z * w)
-                            );
+                    for (i, z) in samples.into_iter().enumerate() {
+                        let rot =  &mut rotation_samples[i];
 
-                            Quat { x: q[0], y: q[1], z: q[2], w: q[2] }
-                        })
-                        .collect::<Vec<_>>();
+                        let q = na::UnitQuaternion::from_axis_angle(
+                            &na::Vector3::z_axis(),
+                            std::f32::consts::PI * (z * w)
+                        );
 
+                        //let qq = na::Quaternion::new(q[3], q[0], q[1], q[2]);
+
+                        *rot = *rot * q;
+                    }
+                }
+
+                // Add all rotations
+                if rotation_samples.len() > 0 {
                     let input_idx = acc_builder.add_scalar(
                         format!("{}_{}_rotation_input", clip_name, bone_name),
                         //frames.iter().map(|f| *f)
-                        samples.iter().enumerate().map(|(i, _)| i as f32)
+                        rotation_samples.iter().enumerate().map(|(i, _)| i as f32)
                     ).unwrap();
 
                     let output_idx = acc_builder.add_array(
                         format!("{}_{}_rotation_output", clip_name, bone_name),
-                        samples.into_iter().map(|s| [s.x, s.y, s.z, s.w])
+                        rotation_samples.into_iter().map(|s| [s[0], s[1], s[2], s[3]])
                     ).unwrap();
-    
+
                     channels.push(json::animation::Channel {
                         sampler: json::Index::new(samplers.len() as u32),
                         target: json::animation::Target {
@@ -1684,7 +1869,7 @@ impl GltfExporter {
                         extensions: None,
                             extras: None
                     });
-    
+
                     samplers.push(json::animation::Sampler {
                         input: json::Index::new(input_idx as u32),
                         output: json::Index::new(output_idx as u32),
@@ -1717,6 +1902,52 @@ impl GltfExporter {
 
 fn align_to_multiple_of_four(n: usize) -> usize {
     (n + 3) & !3
+}
+
+fn decompose_trs(mat: na::Matrix4<f32>) -> (na::Vector3<f32>, na::UnitQuaternion<f32>, na::Vector3<f32>) {
+    // Decompose matrix to T*R*S
+    let translate = mat.column(3).xyz();
+    //let cc = node_matrix.fixed_view::<3, 3>(0, 0);
+    //let rot = na::UnitQuaternion::from_matrix(&cc.into());
+    let rotation = na::UnitQuaternion::from_matrix(&mat.fixed_view::<3, 3>(0, 0).into());
+    //let scale = mat.column(0).xyz().component_mul(&mat.column(1).xyz()).component_mul(&mat.column(2).xyz());
+    let scale = na::Vector3::new(
+        mat.column(0).magnitude(),
+        mat.column(1).magnitude(),
+        mat.column(2).magnitude(),
+    );
+
+    (translate, rotation, scale)
+}
+
+fn decompose_trs_with_milo_coords(mut mat: na::Matrix4<f32>) -> (na::Vector3<f32>, na::UnitQuaternion<f32>, na::Vector3<f32>) {
+    mat = mat * super::MILOSPACE_TO_GLSPACE;
+
+    // Decompose matrix to T*R*S
+    let translate = mat.column(3).xyz();
+    //let cc = node_matrix.fixed_view::<3, 3>(0, 0);
+    //let rot = na::UnitQuaternion::from_matrix(&cc.into());
+    let rotation = na::UnitQuaternion::from_matrix(&mat.fixed_view::<3, 3>(0, 0).into());
+    //let scale = node_matrix.column(0).xyz().component_mul(&node_matrix.column(1).xyz()).component_mul(&node_matrix.column(2).xyz());
+    let scale = na::Vector3::new(
+        mat.column(0).magnitude(),
+        mat.column(1).magnitude(),
+        mat.column(2).magnitude(),
+    );
+
+    let q = {
+        let q = rotation.to_rotation_matrix();
+        let q4 = na::Matrix4x3::identity() * (q * na::Matrix3x4::identity());
+
+        let m = q4 * super::MILOSPACE_TO_GLSPACE;
+        na::UnitQuaternion::from_matrix(&m.fixed_view::<3, 3>(0, 0).into())
+    };
+
+    (
+        super::MILOSPACE_TO_GLSPACE.transform_vector(&translate),
+        q,
+        super::MILOSPACE_TO_GLSPACE.transform_vector(&scale)
+    )
 }
 
 struct AccessorBuilder {
