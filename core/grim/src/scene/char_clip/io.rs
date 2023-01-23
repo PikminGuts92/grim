@@ -2,6 +2,7 @@ use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::scene::*;
 use crate::SystemInfo;
 use grim_traits::scene::*;
+use log::warn;
 use thiserror::Error as ThisError;
 use std::error::Error;
 
@@ -15,6 +16,7 @@ pub enum CharClipReadError {
 
 fn is_version_supported(version: u32) -> bool {
     match version {
+         5 => true, // GH2/GH2 360
         12 => true, // TBRB/GDRB
          _ => false
     }
@@ -49,7 +51,8 @@ pub(crate) fn load_char_clip<T: CharClip>(char_clip: &mut T, reader: &mut Box<Bi
     }
 
     if version == 5 {
-        todo!()
+        let unknown = reader.read_boolean()?;
+        warn!("Skipping unknown bool with value {unknown} at offset 0x{:X} for CharClip with version {version}", reader.pos());
     } else if version > 5 {
         char_clip.set_relative(reader.read_prefixed_string()?);
     }
@@ -105,24 +108,34 @@ pub(crate) fn load_char_clip<T: CharClip>(char_clip: &mut T, reader: &mut Box<Bi
     }
 
     if version < 7 {
-        todo!()
-    } else {
-        // Read events
-        let event_count = reader.read_uint32()?;
-        let mut events = Vec::new();
+        // Deprecated fields
+        let enter_event = reader.read_prefixed_string()?;
+        let exit_event = reader.read_prefixed_string()?;
 
-        for _ in 0..event_count {
-            let frame = reader.read_float32()?;
-            let script = reader.read_prefixed_string()?;
-
-            events.push(FrameEvent {
-                frame,
-                script
-            });
+        if !enter_event.is_empty() {
+            warn!("Found value \"{enter_event}\" for enter_event at offset 0x{:X} for CharClip with version {version}", reader.pos());
         }
 
-        char_clip.set_events(events);
+        if !exit_event.is_empty() {
+            warn!("Found value \"{exit_event}\" for exit_event at offset 0x{:X} for CharClip with version {version}", reader.pos());
+        }
     }
+
+    // Read events
+    let event_count = reader.read_uint32()?;
+    let mut events = Vec::new();
+
+    for _ in 0..event_count {
+        let frame = reader.read_float32()?;
+        let script = reader.read_prefixed_string()?;
+
+        events.push(FrameEvent {
+            frame,
+            script
+        });
+    }
+
+    char_clip.set_events(events);
 
     Ok(())
 }
