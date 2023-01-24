@@ -15,6 +15,7 @@ pub enum CharClipSamplesReadError {
 
 fn is_version_supported(version: u32) -> bool {
     match version {
+        10 | 11 => true, // GH2/GH2 360
         16 => true, // TBRB/GDRB
          _ => false
     }
@@ -41,20 +42,22 @@ impl ObjectReadWrite for CharClipSamples {
         }
 
         if version < 13 {
+            // Header + data split between two parts. Use char slip samples version
+
             // Read headers first
-            let (full_bones, full_sample_count) = load_char_bones_samples_header(&mut self.full, &mut reader, None)?;
-            let (one_bones, one_sample_count) = load_char_bones_samples_header(&mut self.one, &mut reader, None)?;
+            let (full_bones, full_sample_count) = load_char_bones_samples_header(&mut self.full, &mut reader, version)?;
+            let (one_bones, one_sample_count) = load_char_bones_samples_header(&mut self.one, &mut reader, version)?;
 
             if version > 7 {
                 // Read duplicate serialized data Probably milo bug
                 // TODO: Write specific function that just skips data instead of read
                 let mut cbs = CharBonesSamples::default();
-                load_char_bones_samples_header(&mut cbs, &mut reader, None)?;
+                load_char_bones_samples_header(&mut cbs, &mut reader, version)?;
             }
 
             // Then read data
-            load_char_bones_samples_data(&mut self.full, &mut reader, None, full_bones, full_sample_count)?;
-            load_char_bones_samples_data(&mut self.one, &mut reader, None, one_bones, one_sample_count)?;
+            load_char_bones_samples_data(&mut self.full, &mut reader, version, full_bones, full_sample_count)?;
+            load_char_bones_samples_data(&mut self.one, &mut reader, version, one_bones, one_sample_count)?;
         } else {
             load_char_bones_samples(&mut self.full, &mut reader, info)?;
             load_char_bones_samples(&mut self.one, &mut reader, info)?;

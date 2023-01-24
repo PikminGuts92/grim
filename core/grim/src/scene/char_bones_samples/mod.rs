@@ -86,6 +86,23 @@ impl CharBonesSamples {
         return 8;
     }
 
+    pub fn get_type_size2(&self, idx: u32) -> usize {
+        // Note: Not sure if scale ever gets compressed
+        const SIZES: [[usize; 6]; 4] = [
+        //    p  s   q  x  y  z
+            [12, 4, 16, 4, 4, 4], // 0 Uncompressed
+            [12, 4,  8, 2, 2, 2], // 1 Compress rots
+            [ 6, 4,  8, 2, 2, 2], // 2 Compress vects
+            [ 6, 4,  4, 2, 2, 2], // 3 Compress quats
+        ];
+
+        SIZES
+            .get(self.compression as usize)
+            .and_then(|r| r.get(idx as usize))
+            .map(|s| *s)
+            .unwrap_or_default()
+    }
+
     pub fn recompute_sizes(&mut self) {
         self.computed_sizes[0] = 0;
 
@@ -149,7 +166,7 @@ impl CharBonesSamples {
                 match Self::get_type_of(bone.symbol.as_str()) {
                     t @ 0 => {
                         // pos
-                        let pos = match self.get_type_size(t) {
+                        let pos = match self.get_type_size2(t) {
                             s @ 12 => {
                                 // Read data
                                 let x = read_f32([sample[i    ], sample[i + 1], sample[i + 2], sample[i + 3]]);
@@ -182,7 +199,7 @@ impl CharBonesSamples {
                     },
                     t @ 2 => {
                         // quat
-                        let quat = match self.get_type_size(t) {
+                        let quat = match self.get_type_size2(t) {
                             s @ 16 => {
                                 // Read data
                                 let x = read_f32([sample[i    ], sample[i + 1], sample[i + 2], sample[i + 3]]);
@@ -217,7 +234,7 @@ impl CharBonesSamples {
                     },
                     t @ 5 => {
                         // rotz
-                        let rotz = match self.get_type_size(t) {
+                        let rotz = match self.get_type_size2(t) {
                             s @ 4 => {
                                 // Read data
                                 let x = read_f32([sample[i    ], sample[i + 1], sample[i + 2], sample[i + 3]]);
