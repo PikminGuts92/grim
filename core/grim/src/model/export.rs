@@ -1917,6 +1917,15 @@ fn decompose_trs(mat: na::Matrix4<f32>) -> (na::Vector3<f32>, na::UnitQuaternion
         mat.column(2).magnitude(),
     );
 
+    /*let smx = mat.column(0).magnitude();
+    let smy = mat.column(1).magnitude();
+    let smz = mat.column(2).magnitude();
+
+    let scale = na::Vector3::new(smx, smy, smz);
+
+    let rot_base = na::UnitQuaternion::from_matrix(&mat.fixed_view::<3, 3>(0, 0).into());*/
+
+
     (translate, rotation, scale)
 }
 
@@ -2227,5 +2236,35 @@ mod tests {
         //acc_builder.add("", [0.0f32, 0.1f32, 0.2f32]);
 
         //assert!(false);
+    }
+
+    #[rstest]
+    fn decompose_trs_identity_test() {
+        let mat = na::Matrix4::identity();
+
+        let (trans, rotate, scale) = decompose_trs(mat);
+
+        assert_eq!(na::Vector3::new(0.0, 0.0, 0.0), trans);
+        assert_eq!(na::UnitQuaternion::identity(), rotate);
+        assert_eq!(na::Vector3::new(1.0, 1.0, 1.0), scale);
+    }
+
+    #[rstest]
+    #[case([0.0, 0.0, 0.0])]
+    #[case([1.0, 2.0, 3.0])]
+    #[case([-1.0, 2.0, -10.0])]
+    fn decompose_trs_with_translation_test(#[case] input_trans: [f32; 3]) {
+        let mat = na::Matrix4::new(
+            1.0, 0.0, 0.0, input_trans[0],
+            0.0, 1.0, 0.0, input_trans[1],
+            0.0, 0.0, 1.0, input_trans[2],
+            0.0, 0.0, 0.0,            1.0,
+        );
+
+        let (trans, rotate, scale) = decompose_trs(mat);
+
+        assert_eq!(na::Vector3::from(input_trans), trans);
+        assert_eq!(na::UnitQuaternion::identity(), rotate);
+        assert_eq!(na::Vector3::new(1.0, 1.0, 1.0), scale);
     }
 }
