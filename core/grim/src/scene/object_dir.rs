@@ -90,6 +90,12 @@ impl<'a> ObjectDir {
         }
     }
 
+    pub(crate) fn take_entries(&mut self) -> Vec<Object> {
+        self.get_entries_mut()
+            .drain(..)
+            .collect::<Vec<_>>()
+    }
+
     pub fn unpack_entries(&'a mut self, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
         #[allow(irrefutable_let_patterns)]
         if let ObjectDir::ObjectDir(obj_dir) = self {

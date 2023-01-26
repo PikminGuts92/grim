@@ -5,6 +5,7 @@ use crate::scene::*;
 pub enum Object {
     Anim(AnimObject),
     Cam(CamObject),
+    CharClipSamples(CharClipSamples),
     CubeTex(CubeTexObject),
     Draw(DrawObject),
     Group(GroupObject),
@@ -14,6 +15,7 @@ pub enum Object {
     PropAnim(PropAnim),
     Tex(Tex),
     Trans(TransObject),
+    TransAnim(TransAnim),
     Packed(PackedObject),
 }
 
@@ -29,6 +31,7 @@ impl Object {
         match self {
             Object::Anim(anim) => &anim.name,
             Object::Cam(cam) => &cam.name,
+            Object::CharClipSamples(ccs) => &ccs.name,
             Object::CubeTex(cube) => &cube.name,
             Object::Draw(draw) => &draw.name,
             Object::Group(grp) => &grp.name,
@@ -38,6 +41,7 @@ impl Object {
             Object::PropAnim(prop) => &prop.name,
             Object::Tex(tex) => &tex.name,
             Object::Trans(trans) => &trans.name,
+            Object::TransAnim(trans_anim) => &trans_anim.name,
             Object::Packed(packed) => &packed.name,
         }
     }
@@ -46,6 +50,7 @@ impl Object {
         match self {
             Object::Anim(_) => "Anim",
             Object::Cam(_) => "Cam",
+            Object::CharClipSamples(_) => "CharClipSamples",
             Object::CubeTex(_) => "CubeTex",
             Object::Draw(_) => "Draw",
             Object::Group(_) => "Group",
@@ -55,6 +60,7 @@ impl Object {
             Object::PropAnim(_) => "PropAnim",
             Object::Tex(_) => "Tex",
             Object::Trans(_) => "Trans",
+            Object::TransAnim(_) => "TransAnim",
             Object::Packed(packed) => &packed.object_type,
         }
     }
@@ -108,6 +114,7 @@ impl Object {
                 match packed.object_type.as_str() {
                     "Anim" => unpack_object(packed, info).map(|o| Object::Anim(o)),
                     "Cam" => unpack_object(packed, info).map(|o| Object::Cam(o)),
+                    "CharClipSamples" => unpack_object(packed, info).map(|o| Object::CharClipSamples(o)),
                     "CubeTex" => unpack_object(packed, info).map(|o| Object::CubeTex(o)),
                     "Draw" => unpack_object(packed, info).map(|o| Object::Draw(o)),
                     "Group" => unpack_object(packed, info).map(|o| Object::Group(o)),
@@ -128,6 +135,7 @@ impl Object {
                         }
                     },
                     "Trans" => unpack_object(packed, info).map(|o| Object::Trans(o)),
+                    "TransAnim" => unpack_object(packed, info).map(|o| Object::TransAnim(o)),
                     _ => None
                 }
             },

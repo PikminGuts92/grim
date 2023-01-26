@@ -3,6 +3,8 @@
         //"bevy/dynamic"
         "midi",
         "model",
+        "experimental",
+        "midi",
         "python"
     ],
     "rust-analyzer.inlayHints.chainingHints.enable": false,
