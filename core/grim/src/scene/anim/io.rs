@@ -25,7 +25,7 @@ impl ObjectReadWrite for AnimObject {
     }
 }
 
-pub(crate) fn load_anim<T: Anim>(anim: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo, read_meta: bool)  -> Result<(), Box<dyn Error>> {
+pub(crate) fn load_anim<T: Anim>(anim: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo, read_meta: bool) -> Result<(), Box<dyn Error>> {
     let version = reader.read_uint32()?;
     if !is_version_supported(version) {
         // TODO: Switch to custom error
