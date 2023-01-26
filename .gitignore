@@ -1,3 +1,4 @@
+.Cargo.lock
 .env
 .vscode
 /target
