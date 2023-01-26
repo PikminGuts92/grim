@@ -1,17 +1,51 @@
+mod io;
+
+use std::collections::HashMap;
+
+use crate::{scene::{Quat, Vector3}, SystemInfo, io::IOEndian};
+use grim_macros::*;
+use grim_traits::scene::*;
+pub use io::*;
+
 #[derive(Debug, Default)]
-pub struct CharBones {
+pub struct CharBone {
+    pub symbol: String, // Bone name + transform property ext
+    pub weight: f32,
+}
+
+#[derive(Debug, Default)]
+pub struct CharBoneSample {
+    pub symbol: String, // Bone name
+    pub pos: Option<(f32, Vec<Vector3>)>,
+    pub quat: Option<(f32, Vec<Quat>)>,
+    pub rotz: Option<(f32, Vec<f32>)>,
+}
+
+#[derive(Debug)]
+pub enum EncodedSamples {
+    Compressed(Vec<CharBone>, Vec<Box<[u8]>>), // Raw sample collection of bone transforms
+    Uncompressed(Vec<CharBoneSample>) // Collections of samples grouped by bone transforms
+}
+
+impl Default for EncodedSamples {
+    fn default() -> Self {
+        EncodedSamples::Uncompressed(Vec::new())
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct CharBonesSamples { // Sample set
+    pub bones: Vec<CharBone>,
     pub compression: u32, // TODO: Convert to enum?
-    pub counts: [u32; 7],
+    pub counts: [u32; 7], // Offsets
     pub computed_sizes: [u32; 7],
     pub computed_flags: u32,
+
+    pub samples: EncodedSamples,
+    pub frames: Vec<f32>
 }
 
-#[derive(Debug, Default)]
-pub struct CharBonesSamples {
-    pub char_bones: CharBones,
-}
-
-impl CharBones {
+impl CharBonesSamples {
     pub fn get_type_of<T: AsRef<str>>(name: T) -> u32 {
         let name = name.as_ref();
 
@@ -52,6 +86,23 @@ impl CharBones {
         return 8;
     }
 
+    pub fn get_type_size2(&self, idx: u32) -> usize {
+        // Note: Not sure if scale ever gets compressed
+        const SIZES: [[usize; 6]; 4] = [
+        //    p  s   q  x  y  z
+            [12, 4, 16, 4, 4, 4], // 0 Uncompressed
+            [12, 4,  8, 2, 2, 2], // 1 Compress rots
+            [ 6, 4,  8, 2, 2, 2], // 2 Compress vects
+            [ 6, 4,  4, 2, 2, 2], // 3 Compress quats
+        ];
+
+        SIZES
+            .get(self.compression as usize)
+            .and_then(|r| r.get(idx as usize))
+            .map(|s| *s)
+            .unwrap_or_default()
+    }
+
     pub fn recompute_sizes(&mut self) {
         self.computed_sizes[0] = 0;
 
@@ -67,6 +118,172 @@ impl CharBones {
         }
 
         self.computed_flags = (self.computed_sizes.last().unwrap() + 0xF) & 0xFFFF_FFF0;
+    }
+
+    pub(crate) fn decode_samples(&self, sys_info: &SystemInfo) -> Vec<CharBoneSample> {
+        let EncodedSamples::Compressed(bones, compressed_samples) = &self.samples else {
+            // Maybe throw error?
+            return Vec::new();
+        };
+
+        let read_f32 = if sys_info.endian.eq(&IOEndian::Big) {
+            |data: [u8; 4]| -> f32 { f32::from_be_bytes(data) }
+        } else {
+            |data: [u8; 4]| -> f32 { f32::from_le_bytes(data) }
+        };
+
+        let read_packed_f32 = if sys_info.endian.eq(&IOEndian::Big) {
+            |data: [u8; 2]| -> f32 {
+                ((u16::from_be_bytes(data) as f32) / 32767.0).max(-1.0)
+            }
+        } else {
+            |data: [u8; 2]| -> f32 {
+                ((u16::from_le_bytes(data) as f32) / 32767.0).max(-1.0)
+            }
+        };
+
+        // Group by bone name
+        let mut bone_map = HashMap::new();
+        for sample in compressed_samples {
+            let mut i = 0usize;
+
+            for bone in bones {
+                // Compute bone name
+                // TODO: Make more efficient
+                let bone_name = bone.symbol.to_owned()
+                    .replace(".pos", ".mesh")
+                    .replace(".quat", ".mesh")
+                    .replace(".rotz", ".mesh");
+
+                // Get or insert bone sample w/ name
+                let bone_sample = bone_map
+                    .entry(bone_name.to_owned())
+                    .or_insert_with(|| CharBoneSample {
+                        symbol: bone_name,
+                        ..Default::default()
+                    });
+
+                match Self::get_type_of(bone.symbol.as_str()) {
+                    t @ 0 => {
+                        // pos
+                        let pos = match self.get_type_size2(t) {
+                            s @ 12 => {
+                                // Read data
+                                let x = read_f32([sample[i    ], sample[i + 1], sample[i + 2], sample[i + 3]]);
+                                let y = read_f32([sample[i + 4], sample[i + 5], sample[i + 6], sample[i + 7]]);
+                                let z = read_f32([sample[i + 8], sample[i + 9], sample[i + 10], sample[i + 11]]);
+
+                                i += s as usize;
+                                Vector3 { x, y, z }
+                            },
+                            s @ 6 => {
+                                // Read packed data
+                                let x = read_packed_f32([sample[i    ], sample[i + 1]]);
+                                let y = read_packed_f32([sample[i + 2], sample[i + 3]]);
+                                let z = read_packed_f32([sample[i + 4], sample[i + 5]]);
+
+                                i += s as usize;
+                                Vector3 { x, y, z }
+                            },
+                            s @ _ => panic!("Unsupported .pos compression of type {}", s)
+                        };
+
+                        // Insert or append pos sample
+                        bone_sample.pos = match bone_sample.pos.take() {
+                            Some((w, mut samples)) => {
+                                samples.push(pos);
+                                Some((w, samples))
+                            },
+                            _ => Some((bone.weight, vec![pos]))
+                        }
+                    },
+                    t @ 2 => {
+                        // quat
+                        let quat = match self.get_type_size2(t) {
+                            s @ 16 => {
+                                // Read data
+                                let x = read_f32([sample[i    ], sample[i + 1], sample[i + 2], sample[i + 3]]);
+                                let y = read_f32([sample[i + 4], sample[i + 5], sample[i + 6], sample[i + 7]]);
+                                let z = read_f32([sample[i + 8], sample[i + 9], sample[i + 10], sample[i + 11]]);
+                                let w = read_f32([sample[i + 12], sample[i + 13], sample[i + 14], sample[i + 15]]);
+
+                                i += s as usize;
+                                Quat { x, y, z, w }
+                            },
+                            s @ 8 => {
+                                // Read packed data
+                                let x = read_packed_f32([sample[i    ], sample[i + 1]]);
+                                let y = read_packed_f32([sample[i + 2], sample[i + 3]]);
+                                let z = read_packed_f32([sample[i + 4], sample[i + 5]]);
+                                let w = read_packed_f32([sample[i + 6], sample[i + 7]]);
+
+                                i += s as usize;
+                                Quat { x, y, z, w }
+                            },
+                            s @ _ => panic!("Unsupported .pos compression of type {}", s)
+                        };
+
+                        // Insert or append quat sample
+                        bone_sample.quat = match bone_sample.quat.take() {
+                            Some((w, mut samples)) => {
+                                samples.push(quat);
+                                Some((w, samples))
+                            },
+                            _ => Some((bone.weight, vec![quat]))
+                        }
+                    },
+                    t @ 5 => {
+                        // rotz
+                        let rotz = match self.get_type_size2(t) {
+                            s @ 4 => {
+                                // Read data
+                                let x = read_f32([sample[i    ], sample[i + 1], sample[i + 2], sample[i + 3]]);
+
+                                i += s as usize;
+                                x
+                            },
+                            s @ 2 => {
+                                // Read packed data
+                                let x = read_packed_f32([sample[i    ], sample[i + 1]]);
+
+                                i += s as usize;
+                                x
+                            },
+                            s @ _ => panic!("Unsupported .pos compression of type {}", s)
+                        };
+
+                        // Insert or append rotz sample
+                        bone_sample.rotz = match bone_sample.rotz.take() {
+                            Some((w, mut samples)) => {
+                                samples.push(rotz);
+                                Some((w, samples))
+                            },
+                            _ => Some((bone.weight, vec![rotz]))
+                        }
+                    },
+                    t @ _ => panic!("Unsupported bone transform of type {t}"),
+                };
+            }
+
+            // Interpret sample data...
+        }
+
+        let mut bone_samples = bone_map.into_values().collect::<Vec<_>>();
+
+        /*println!("Found {} bones", bones.len());
+        for bone in bone_samples.iter() {
+            println!("\t{} ({} pos) ({} quat) ({} rotz)",
+                &bone.symbol,
+                bone.pos.as_ref().map(|(_, p)| p.len()).unwrap_or_default(),
+                bone.quat.as_ref().map(|(_, q)| q.len()).unwrap_or_default(),
+                bone.rotz.as_ref().map(|(_, r)| r.len()).unwrap_or_default()
+            );
+        }*/
+
+        // Sort by name
+        bone_samples.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+
+        bone_samples
     }
 }
 
@@ -87,7 +304,7 @@ mod tests {
     #[case("bone.roty", 4)]
     #[case("bone.rotz", 5)]
     fn char_bones_get_type_of(#[case] input_name: &str, #[case] expected: u32) {
-        assert_eq!(expected, CharBones::get_type_of(input_name));
+        assert_eq!(expected, CharBonesSamples::get_type_of(input_name));
     }
 
     #[rstest]
@@ -113,7 +330,7 @@ mod tests {
     #[case(2, 5, 2)]
     #[case(2, 6, 2)]
     fn char_bones_get_type_size(#[case] input_compression: u32, #[case] input_idx: u32, #[case] expected: u32) {
-        let char_bone = CharBones {
+        let char_bone = CharBonesSamples {
             compression: input_compression,
             ..Default::default()
         };
@@ -128,7 +345,7 @@ mod tests {
     //#[case(2, [0, 27, 27, 37, 37, 37, 37], [0, 216, 216, 352, 352, 352, 352], 352)]
     #[case(2, [0, 36, 36, 53, 53, 53, 53], [0, 216, 216, 352, 352, 352, 352], 352)]
     fn char_bones_recompute_sizes(#[case] input_compression: u32, #[case] input_counts: [u32; 7], #[case] expected_computed_sizes: [u32; 7], #[case] expected_computed_flags: u32) {
-        let mut char_bone = CharBones {
+        let mut char_bone = CharBonesSamples {
             compression: input_compression,
             counts: input_counts,
             ..Default::default()
