@@ -9,6 +9,7 @@ pub struct ObjectInstance {}
 pub enum MiloObject {
     Anim(AnimObject),
     Cam(CamObject),
+    CharClipSamples(CharClipSamples),
     CubeTex(CubeTexObject),
     Draw(DrawObject),
     Group(GroupObject),
@@ -20,6 +21,7 @@ pub enum MiloObject {
     PropAnim(PropAnim),
     Tex(Tex),
     Trans(TransObject),
+    TransAnim(TransAnim),
     Packed(PackedObject),
 }
 
@@ -35,6 +37,7 @@ impl MiloObject {
         match self {
             MiloObject::Anim(anim) => &anim.name,
             MiloObject::Cam(cam) => &cam.name,
+            MiloObject::CharClipSamples(ccs) => &ccs.name,
             MiloObject::CubeTex(cube) => &cube.name,
             MiloObject::Draw(draw) => &draw.name,
             MiloObject::Group(grp) => &grp.name,
@@ -46,6 +49,7 @@ impl MiloObject {
             MiloObject::PropAnim(prop) => &prop.name,
             MiloObject::Tex(tex) => &tex.name,
             MiloObject::Trans(trans) => &trans.name,
+            MiloObject::TransAnim(trans_anim) => &trans_anim.name,
             MiloObject::Packed(packed) => &packed.name,
         }
     }
@@ -54,6 +58,7 @@ impl MiloObject {
         match self {
             MiloObject::Anim(_) => "Anim",
             MiloObject::Cam(_) => "Cam",
+            MiloObject::CharClipSamples(_) => "CharClipSamples",
             MiloObject::CubeTex(_) => "CubeTex",
             MiloObject::Draw(_) => "Draw",
             MiloObject::Group(_) => "Group",
@@ -65,6 +70,7 @@ impl MiloObject {
             MiloObject::PropAnim(_) => "PropAnim",
             MiloObject::Tex(_) => "Tex",
             MiloObject::Trans(_) => "Trans",
+            MiloObject::TransAnim(_) => "TransAnim",
             MiloObject::Packed(packed) => &packed.object_type,
         }
     }
@@ -121,6 +127,7 @@ impl MiloObject {
                 match packed.object_type.as_str() {
                     "Anim" => unpack_object(packed, info).map(|o| MiloObject::Anim(o)),
                     "Cam" => unpack_object(packed, info).map(|o| MiloObject::Cam(o)),
+                    "CharClipSamples" => unpack_object(packed, info).map(|o| MiloObject::CharClipSamples(o)),
                     "CubeTex" => unpack_object(packed, info).map(|o| MiloObject::CubeTex(o)),
                     "Draw" => unpack_object(packed, info).map(|o| MiloObject::Draw(o)),
                     "Group" => unpack_object(packed, info).map(|o| MiloObject::Group(o)),
@@ -135,12 +142,13 @@ impl MiloObject {
                         match Tex::from_stream(&mut stream, info) {
                             Ok(mut tex) => {
                                 tex.name = packed.name.to_owned();
-                                Some(Object::Tex(tex))
+                                Some(MiloObject::Tex(tex))
                             },
                             Err(_) => None,
                         }
                     },
-                    "Trans" => unpack_object(packed, info).map(|o| Object::Trans(o)),
+                    "Trans" => unpack_object(packed, info).map(|o| MiloObject::Trans(o)),
+                    "TransAnim" => unpack_object(packed, info).map(|o| MiloObject::TransAnim(o)),
                     _ => None
                 }
             },

@@ -2,7 +2,8 @@ use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::scene::ObjectReadWrite;
 use crate::texture::{Bitmap, decode_dx_image, decode_tpl_image, encode_dx_image, get_dx_bpp, DXGI_Encoding, TPLEncoding};
 use crate::system::{Platform, SystemInfo};
-use image::{ImageBuffer, RgbaImage};
+use image::buffer::ConvertBuffer;
+use image::{ImageBuffer, RgbaImage, ImageEncoder};
 
 use rayon::prelude::*;
 use std::error::Error;
@@ -370,6 +371,26 @@ pub fn write_rgba_to_file(width: u32, height: u32, rgba: &[u8], path: &Path) -> 
 
     image.save(path)?;
     Ok(())
+}
+
+pub fn write_rgba_to_vec(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    let mut image: RgbaImage = ImageBuffer::new(width, height);
+    let mut rgba_idx;
+    let mut rgba_pix: [u8; 4] = Default::default();
+
+    for (i, p) in image.pixels_mut().enumerate() {
+        rgba_idx = i << 2;
+        rgba_pix.clone_from_slice(&rgba[rgba_idx..(rgba_idx + 4)]);
+
+        *p = image::Rgba(rgba_pix);
+    }
+
+    let mut png_data = Vec::new();
+
+    let encoder = image::codecs::png::PngEncoder::new(&mut png_data);
+    encoder.write_image(&image, width, height, image::ColorType::Rgba8).unwrap();
+
+    Ok(png_data)
 }
 
 #[cfg(test)]
