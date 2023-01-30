@@ -43,6 +43,7 @@ impl SubApp for Milo2GltfApp {
             custom_basename: self.name.to_owned(),
             embed_textures: self.embed_textures,
             write_as_binary: self.use_glb,
+            output_dir: dir_path.to_path_buf(),
             ..Default::default()
         });
         exporter.add_milo_from_path(milo_path)?;
@@ -51,7 +52,7 @@ impl SubApp for Milo2GltfApp {
         }
 
         exporter.process()?;
-        exporter.save_to_fs(&dir_path)
+        exporter.save_to_fs()
 
         /*let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(milo_path)?);
         let milo = MiloArchive::from_stream(&mut stream)?;

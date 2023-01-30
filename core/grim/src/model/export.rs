@@ -9,6 +9,7 @@ use nalgebra as na;
 use serde::ser::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -306,7 +307,8 @@ pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path, sys_in
 pub struct GltfExportSettings {
     pub custom_basename: Option<String>,
     pub embed_textures: bool,
-    pub write_as_binary: bool
+    pub write_as_binary: bool,
+    pub output_dir: PathBuf
 }
 
 pub struct ObjectDirData {
@@ -602,7 +604,7 @@ impl GltfExporter {
                 let image = json::Image {
                     buffer_view: None,
                     mime_type: Some(json::image::MimeType(String::from("image/png"))),
-                    name: Some(image_name),
+                    name: Some(image_name.to_owned()),
                     uri: {
                         use base64::{Engine as _, engine::{self, general_purpose}, alphabet};
 
@@ -621,12 +623,24 @@ impl GltfExporter {
                         // Convert to png
                         let png_data = crate::texture::write_rgba_to_vec(width, height, &rgba).unwrap();
 
-                        // Encode to base64
-                        // TODO: Support writing to external files
-                        let mut str_data = String::from("data:image/png;base64,");
-                        general_purpose::STANDARD.encode_string(&png_data, &mut str_data);
+                        if self.settings.embed_textures {
+                            // Encode to base64
+                            let mut str_data = String::from("data:image/png;base64,");
+                            general_purpose::STANDARD.encode_string(&png_data, &mut str_data);
 
-                        Some(str_data)
+                            Some(str_data)
+                        } else {
+                            // Write as external file
+                            let output_dir = self.settings.output_dir.as_path();
+                            super::create_dir_if_not_exists(output_dir).unwrap();
+
+                            let png_path = output_dir.join(&image_name);
+
+                            let mut writer = std::fs::File::create(&png_path).unwrap();
+                            writer.write_all(&png_data).unwrap();
+
+                            Some(image_name)
+                        }
                     },
                     extensions: None,
                     extras: None
@@ -1287,9 +1301,9 @@ impl GltfExporter {
         Ok(())
     }
 
-    pub fn save_to_fs<T: AsRef<Path>>(&self, output_dir: T) -> Result<(), Box<dyn Error>> {
-        let output_dir = output_dir.as_ref();
-
+    pub fn save_to_fs(&self) -> Result<(), Box<dyn Error>> {
+        // Create output dir
+        let output_dir = self.settings.output_dir.as_path();
         super::create_dir_if_not_exists(output_dir)?;
 
         // TODO: Replace
