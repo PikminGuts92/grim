@@ -387,7 +387,30 @@ impl GltfExporter {
             info: system_info
         });
 
+        // If basename not set, use milo basename
+        if self.settings.custom_basename.is_none() {
+            let basename = self.get_basename().to_owned();
+            self.settings.custom_basename = Some(basename);
+        }
+
         Ok(())
+    }
+
+    fn get_basename(&self) -> &str {
+        if let Some(basename) = self.settings.custom_basename.as_ref() {
+            // Return custom basename if set
+            basename.as_str()
+        } else {
+            // Use basename from first milo file path
+            // Note: Call before mapping objects because this list gets drained... (super hacky)
+            self.object_dirs
+                .iter()
+                .find_map(|dir| dir.path
+                    .as_path()
+                    .file_stem()
+                    .and_then(|fs| fs.to_str()))
+                .unwrap_or("output")
+        }
     }
 
     fn map_objects(&mut self) {
@@ -1280,8 +1303,12 @@ impl GltfExporter {
         export_object_dir_to_gltf(obj_dir, output_dir, sys_info);*/
 
         // Write gltf json
-        let writer = std::fs::File::create(output_dir.join(format!("test.gltf"))).expect("I/O error");
+        let basename = self.get_basename();
+        let gltf_path = output_dir.join(format!("{basename}.gltf"));
+        let writer = std::fs::File::create(&gltf_path).expect("I/O error");
         json::serialize::to_writer_pretty(writer, &self.gltf).expect("Serialization error");
+
+        println!("Wrote output to \"{}\"", super::path_as_string(&gltf_path));
 
         Ok(())
     }
