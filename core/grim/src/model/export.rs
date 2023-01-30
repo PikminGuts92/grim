@@ -1206,17 +1206,27 @@ impl GltfExporter {
     }*/
 
     fn build_binary(&self, gltf: &mut json::Root, acc_builder: AccessorBuilder) {
-        let (accessors, views, mut buffer, data) = acc_builder.generate("test.bin");
+        // Write as external file
+        let output_dir = self.settings.output_dir.as_path();
+        super::create_dir_if_not_exists(output_dir).unwrap();
 
-        // TODO: Write to external file
-        buffer.uri = {
+        let basename = self.get_basename();
+        let filename = format!("{basename}.bin");
+        let bin_path = output_dir.join(&filename);
+
+        let (accessors, views, buffer, data) = acc_builder.generate(&filename);
+
+        let mut writer = std::fs::File::create(&bin_path).unwrap();
+        writer.write_all(&data).unwrap();
+
+        /*buffer.uri = {
             use base64::{Engine as _, engine::{self, general_purpose}, alphabet};
 
             let mut str_data = String::from("data:application/octet-stream;base64,");
             general_purpose::STANDARD.encode_string(&data, &mut str_data);
 
             Some(str_data)
-        };
+        };*/
 
         gltf.accessors = accessors;
         gltf.buffers = vec![buffer];
