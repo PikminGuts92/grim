@@ -38,7 +38,7 @@ pub struct NamedObject {
 
 pub struct MiloDir {
     pub object: Option<NamedObject>,
-    pub objects: Vec<NamedObject>,
+    pub entries: Vec<NamedObject>,
     pub subdirs: Vec<MiloDirId>,
     pub inline_subdirs: Vec<MiloDirId>, // Should be DirFile id?
     pub proxy_file: Option<MiloDirId>,  // ^^^
@@ -184,3 +184,13 @@ impl From<&ObjectBase> for &dyn Object2 {
         todo!()
     }
 }*/
+
+struct DirLoader {
+
+}
+
+impl DirLoader {
+    pub fn open_file<T: AsRef<Path>>(&self, path: T, info: Option<SystemInfo>) {
+
+    }
+}
