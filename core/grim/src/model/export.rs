@@ -639,6 +639,8 @@ impl GltfExporter {
                             let mut writer = std::fs::File::create(&png_path).unwrap();
                             writer.write_all(&png_data).unwrap();
 
+                            println!("Wrote \"{image_name}\"");
+
                             Some(image_name)
                         }
                     },
@@ -1219,6 +1221,8 @@ impl GltfExporter {
         let mut writer = std::fs::File::create(&bin_path).unwrap();
         writer.write_all(&data).unwrap();
 
+        println!("Wrote \"{filename}\"");
+
         /*buffer.uri = {
             use base64::{Engine as _, engine::{self, general_purpose}, alphabet};
 
@@ -1328,11 +1332,12 @@ impl GltfExporter {
 
         // Write gltf json
         let basename = self.get_basename();
-        let gltf_path = output_dir.join(format!("{basename}.gltf"));
+        let gltf_filename = format!("{basename}.gltf");
+        let gltf_path = output_dir.join(&gltf_filename);
         let writer = std::fs::File::create(&gltf_path).expect("I/O error");
         json::serialize::to_writer_pretty(writer, &self.gltf).expect("Serialization error");
 
-        println!("Wrote output to \"{}\"", super::path_as_string(&gltf_path));
+        println!("Wrote \"{gltf_filename}\"");
 
         Ok(())
     }
