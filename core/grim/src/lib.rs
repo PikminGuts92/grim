@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 
 pub mod ark;
+#[cfg(feature = "audio")] pub mod audio;
 pub mod dta;
 pub mod io;
 #[cfg(feature = "midi")] pub mod midi;
