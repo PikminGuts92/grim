@@ -13,6 +13,7 @@ pub enum Object {
     Mesh(MeshObject),
     P9SongPref(P9SongPref),
     PropAnim(PropAnim),
+    SynthSample(SynthSample),
     Tex(Tex),
     Trans(TransObject),
     TransAnim(TransAnim),
@@ -39,6 +40,7 @@ impl Object {
             Object::Mesh(mesh) => &mesh.name,
             Object::P9SongPref(pref) => &pref.name,
             Object::PropAnim(prop) => &prop.name,
+            Object::SynthSample(synth) => &synth.name,
             Object::Tex(tex) => &tex.name,
             Object::Trans(trans) => &trans.name,
             Object::TransAnim(trans_anim) => &trans_anim.name,
@@ -58,6 +60,7 @@ impl Object {
             Object::Mesh(_) => "Mesh",
             Object::P9SongPref(_) => "P9SongPref",
             Object::PropAnim(_) => "PropAnim",
+            Object::SynthSample(_) => "SynthSample",
             Object::Tex(_) => "Tex",
             Object::Trans(_) => "Trans",
             Object::TransAnim(_) => "TransAnim",
@@ -122,6 +125,7 @@ impl Object {
                     "Mesh" => unpack_object(packed, info).map(|o| Object::Mesh(o)),
                     "P9SongPref" => unpack_object(packed, info).map(|o| Object::P9SongPref(o)),
                     "PropAnim" => unpack_object(packed, info).map(|o| Object::PropAnim(o)),
+                    "SynthSample" => unpack_object(packed, info).map(|o| Object::SynthSample(o)),
                     "Tex" => {
                         let mut stream = MemoryStream::from_slice_as_read(packed.data.as_slice());
 
