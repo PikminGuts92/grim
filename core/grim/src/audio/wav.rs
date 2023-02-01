@@ -16,7 +16,7 @@ impl<'a> WavEncoder<'a> {
         }
     }
 
-    fn encode_to_file<T: AsRef<std::path::Path>>(&self, out_path: T) -> std::io::Result<()> {
+    pub fn encode_to_file<T: AsRef<std::path::Path>>(&self, out_path: T) -> std::io::Result<()> {
         let mut out_file = create_new_file(out_path).unwrap();
 
         let header = Header::new(WAV_FORMAT_PCM, self.channels, self.sample_rate, 16);
