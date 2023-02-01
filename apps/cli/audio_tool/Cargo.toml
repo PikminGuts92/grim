@@ -1,0 +1,10 @@
+[package]
+name = "audio_tool"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+clap = { workspace = true }
+grim = { workspace = true, features = [ "audio" ] }
+thiserror = { workspace = true }
