@@ -121,8 +121,18 @@ fn decode_synth_sample_file(file_path: &Path, info: &SystemInfo) -> Result<(Vec<
     let mut synth_sample = SynthSample::default();
     synth_sample.load(&mut stream, info)?;
 
-    //Ok((interleaved_data, channel_count as u16, sample_rate))
-    todo!()
+    // TODO: Return actual error
+    if synth_sample.sample_data.encoding != 3 {
+        panic!("Unsupported SynthSample with encoding {}", synth_sample.sample_data.encoding);
+    }
+
+    // Decode xma
+    let samples = decode_xma_packets(
+        &synth_sample.sample_data.data,
+        synth_sample.sample_data.sample_count
+    )?;
+
+    Ok((samples, 1, synth_sample.sample_data.sample_rate as u32))
 }
 
 fn guess_type_from_magic(file_path: &Path) -> Option<FileType> {
