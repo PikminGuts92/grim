@@ -17,9 +17,9 @@ enum FileType {
 
 #[derive(Parser, Debug)]
 pub struct DecoderApp {
-    #[arg(help = "Path to input audio (.vgs)", required = true)]
+    #[arg(help = "Path to input audio (.vgs, SynthSample (Xbox 360))", required = true)]
     pub input_path: String,
-    #[arg(help = "Path to output audio", required = true)]
+    #[arg(help = "Path to output audio (.wav, .xma (Only for Xbox 360 samples))", required = true)]
     pub output_path: String,
 }
 
@@ -57,10 +57,10 @@ impl SubApp for DecoderApp {
 
         println!("Detected input file type of \"{input_type_name}\"");
 
-        let _output_ext = match output_path.extension().and_then(|e| e.to_str()) {
-            Some(ext) if "wav".eq_ignore_ascii_case(ext) => ext,
-            Some(ext) if "xma".eq_ignore_ascii_case(ext) => ext,
-            Some(ext) => {
+        let _output_ext = match (&input_type, output_path.extension().and_then(|e| e.to_str())) {
+            (FileType::Vgs, Some(ext)) if "wav".eq_ignore_ascii_case(ext) => ext,
+            (FileType::SynthSample(_, _), Some(ext)) if "xma".eq_ignore_ascii_case(ext) => ext,
+            (_, Some(ext)) => {
                 println!("Output audio with extension \".{ext}\" is not supported");
                 return Ok(());
             },
