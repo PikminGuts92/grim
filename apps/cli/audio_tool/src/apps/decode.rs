@@ -6,7 +6,7 @@ use grim::scene::{ObjectReadWrite, SampleData, SynthSample};
 
 use clap::Parser;
 use std::error::Error;
-use std::io::{Read, Seek};
+use std::io::{Read, Seek, Write};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -26,7 +26,7 @@ pub struct DecoderApp {
 impl SubApp for DecoderApp {
     fn process(&mut self) -> Result<(), Box<dyn Error>> {
         let input_path = Path::new(&self.input_path);
-        let ouput_path = Path::new(&self.output_path);
+        let output_path = Path::new(&self.output_path);
 
         let input_type = match input_path.extension().and_then(|e| e.to_str()) {
             Some(ext) if "vgs".eq_ignore_ascii_case(ext) => FileType::Vgs,
@@ -57,8 +57,9 @@ impl SubApp for DecoderApp {
 
         println!("Detected input file type of \"{input_type_name}\"");
 
-        let _output_ext = match ouput_path.extension().and_then(|e| e.to_str()) {
+        let _output_ext = match output_path.extension().and_then(|e| e.to_str()) {
             Some(ext) if "wav".eq_ignore_ascii_case(ext) => ext,
+            Some(ext) if "xma".eq_ignore_ascii_case(ext) => ext,
             Some(ext) => {
                 println!("Output audio with extension \".{ext}\" is not supported");
                 return Ok(());
@@ -69,10 +70,16 @@ impl SubApp for DecoderApp {
             }
         };
 
-        // Decode (returns interleaved audio samples)
-        println!("Decoding...");
-        let (sample_data, channels, sample_rate) = match input_type {
-            FileType::Vgs => decode_vgs_file(input_path)?,
+        match input_type {
+            FileType::Vgs => {
+                // Decode (returns interleaved audio samples)
+                println!("Decoding...");
+                let (sample_data, channels, sample_rate) = decode_vgs_file(input_path)?;
+
+                // Encode to wav
+                let encoder = WavEncoder::new(&sample_data, channels, sample_rate);
+                encoder.encode_to_file(output_path).map_err(|e| Box::new(e) as Box<dyn Error>)?;
+            },
             FileType::SynthSample(version, endian) => {
                 let sys_info = SystemInfo {
                     version,
@@ -80,15 +87,14 @@ impl SubApp for DecoderApp {
                     endian
                 };
 
-                decode_synth_sample_file(input_path, &sys_info)?
+                //decode_synth_sample_file(input_path, &sys_info)?
+                let xma = generate_xma_from_synth_sample(input_path, &sys_info)?;
+                let mut file = grim::io::create_new_file(output_path)?;
+                file.write_all(&xma)?;
             },
         };
 
-        // Encode to wav
-        let encoder = WavEncoder::new(&sample_data, channels, sample_rate);
-        encoder.encode_to_file(ouput_path).map_err(|e| Box::new(e) as Box<dyn Error>)?;
-
-        println!("Wrote output to \"{}\"", ouput_path.to_str().unwrap_or_default());
+        println!("Wrote output to \"{}\"", output_path.to_str().unwrap_or_default());
         Ok(())
     }
 }
@@ -114,7 +120,23 @@ fn decode_vgs_file(file_path: &Path) -> Result<(Vec<i16>, u16, u32), Box<dyn Err
     Ok((interleaved_data, channel_count as u16, sample_rate))
 }
 
-fn decode_synth_sample_file(file_path: &Path, info: &SystemInfo) -> Result<(Vec<i16>, u16, u32), Box<dyn Error>> {
+fn generate_xma_from_synth_sample(file_path: &Path, info: &SystemInfo) -> Result<Vec<u8>, Box<dyn Error>> {
+    let mut stream = FileStream::from_path_as_read_open(file_path)?;
+
+    // Open synth sample
+    let mut synth_sample = SynthSample::default();
+    synth_sample.load(&mut stream, info)?;
+
+    // TODO: Return actual error
+    if synth_sample.sample_data.encoding != 3 {
+        panic!("Unsupported SynthSample with encoding {}", synth_sample.sample_data.encoding);
+    }
+
+    // Shouldn't fail...
+    Ok(synth_sample.save_as_xma_vec().unwrap())
+}
+
+/*fn decode_synth_sample_file(file_path: &Path, info: &SystemInfo) -> Result<(Vec<i16>, u16, u32), Box<dyn Error>> {
     let mut stream = FileStream::from_path_as_read_open(file_path)?;
 
     // Open synth sample
@@ -133,7 +155,7 @@ fn decode_synth_sample_file(file_path: &Path, info: &SystemInfo) -> Result<(Vec<
     )?;
 
     Ok((samples, 1, synth_sample.sample_data.sample_rate as u32))
-}
+}*/
 
 fn guess_type_from_magic(file_path: &Path) -> Option<FileType> {
     // Read first 8 bytes of file
