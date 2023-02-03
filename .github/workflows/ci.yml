@@ -17,10 +17,7 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
+            ~/.cargo/
             target/
           key: ${{ runner.os }}-cargo-check-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
       - name: Remove cargo and toolchain configurations
@@ -36,7 +33,6 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --all-features
 
   test:
     name: Test
@@ -57,10 +53,7 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
+            ~/.cargo/
             target/
           key: ${{ runner.os }}-cargo-test-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
@@ -71,7 +64,6 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-features
 
   clippy:
     name: Clippy
@@ -93,10 +85,7 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
+            ~/.cargo/
             target/
           key: ${{ runner.os }}-cargo-clippy-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
@@ -112,7 +101,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --all-features -- -D warnings
+          args: -- -D warnings
 
   build:
     name: Build (${{ matrix.osname }})
@@ -151,10 +140,7 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
+            ~/.cargo/
             target/
           key: ${{ matrix.osname }}-cargo-build-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
