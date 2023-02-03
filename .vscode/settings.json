@@ -1,6 +1,7 @@
 {
     "rust-analyzer.cargo.features": [
         "audio",
+        "audio_experimental",
         //"bevy/dynamic"
         "experimental",
         "midi"

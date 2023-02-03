@@ -50,6 +50,7 @@ pub fn read_frame_length<R: Read, E: Endianness>(reader: &mut BitReader<R, E>) -
     reader.read::<u16>(15)
 }
 
+#[cfg(feature = "audio_experimental")]
 pub fn decode_xma_packets(packets: &[u8], sample_count: i32) -> Result<Vec<i16>> {
     let mut reader = BitReader::endian(Cursor::new(packets), BigEndian);
 
