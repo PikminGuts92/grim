@@ -20,6 +20,8 @@ lazy_static = { workspace = true }
 log = { workspace = true }
 midly = { version = "0.5.3", optional = true }
 nalgebra = { version = "0.32.1", optional = true }
+# pyo3 = { version = "0.17.3", optional = true, features = [ "extension-module" ] }
+pyo3 = { git = "https://github.com/PyO3/pyo3", branch = "cfg-feature-pyo3", optional = true, features = [ "extension-module" ] }
 rayon = "1.6.1"
 regex = { version = "1.7.1", default-features = false, features = [ "std" ] }
 serde = { optional = true, workspace = true }
@@ -35,6 +37,7 @@ audio = [ "bitstream-io", "wav" ]
 audio_experimental = [ "ffmpeg-next" ]
 midi = [ "midly" ]
 model = [ "gltf", "gltf-json", "nalgebra", "serde" ]
+python = [ "pyo3" ]
 
 [[bench]]
 name = "texture_benchmark"
@@ -42,3 +45,4 @@ harness = false
 
 [lib]
 bench = false
+crate-type = [ "lib", "cdylib" ]
