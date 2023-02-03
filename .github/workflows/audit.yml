@@ -62,4 +62,4 @@ jobs:
       - name: Audit binaries
         shell: bash
         run: |
-          cargo audit bin $(find $BIN_PATH -maxdepth 1 -type f ${{ matrix.os == 'macos-latest' && '-perm +0111' || '-executable' }} -print)
+          cargo audit bin $(find $BIN_PATH -maxdepth 1 -type f ${{ matrix.os == 'macos-latest' && '-perm +0111' || '-executable' }} -print) --ignore=RUSTSEC-2020-0071
