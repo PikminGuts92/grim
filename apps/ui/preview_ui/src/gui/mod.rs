@@ -1,4 +1,5 @@
 mod ark;
+mod icons;
 mod milo;
 mod toolbar;
 
@@ -120,6 +121,68 @@ pub fn render_gui(ctx: &mut &Context, settings: &mut AppSettings, state: &mut Ap
             });
         });
     }
+
+    // Hotbar
+    egui::Window::new("Hotbar")
+        .title_bar(false)
+        .resizable(false)
+        .collapsible(false)
+        .anchor(egui::Align2::CENTER_TOP, [0., 10.])
+        .auto_sized()
+        //.fixed_size([12., 12.])
+        .show(ctx, |ui| {
+            const ICON_SIZE: egui::Vec2 = egui::Vec2::splat(12.);
+
+            ui.horizontal(|ui| {
+                if ui.add(
+                    egui::ImageButton::new(
+                        icons::FA_GRID.texture_id(ctx),
+                        ICON_SIZE
+                    ).selected(settings.show_gridlines))
+                    .on_hover_text("Grid lines")
+                    .clicked() {
+                    settings.show_gridlines = !settings.show_gridlines;
+                    state.add_event(AppEvent::ToggleGridLines(settings.show_gridlines));
+
+                    state.save_settings(&settings);
+                }
+
+                if ui.add(
+                    egui::ImageButton::new(
+                        icons::FA_CIRCLE.texture_id(ctx),
+                        ICON_SIZE
+                    ).selected(settings.show_wireframes))
+                    .on_hover_text("Wireframe")
+                    .clicked() {
+                    settings.show_wireframes = !settings.show_wireframes;
+                    state.add_event(AppEvent::ToggleWireframes(settings.show_wireframes));
+
+                    state.save_settings(&settings);
+                }
+
+                // TODO: Add to settings or something
+                ui.add(
+                    egui::ImageButton::new(
+                        icons::FA_CUBES.texture_id(ctx),
+                        ICON_SIZE
+                    ))
+                    .on_hover_text("Meshes");
+
+                ui.add(
+                    egui::ImageButton::new(
+                        icons::FA_ARROWS_MULTI.texture_id(ctx),
+                        ICON_SIZE
+                    ))
+                    .on_hover_text("Do Something");
+
+                ui.add(
+                    egui::ImageButton::new(
+                        icons::FA_REFRESH.texture_id(ctx),
+                        ICON_SIZE
+                    ))
+                    .on_hover_text("Refresh");
+            })
+        });
 
     // Bottom Toolbar
     /*egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {

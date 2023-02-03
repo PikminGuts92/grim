@@ -8,6 +8,7 @@ mod gltf;
 mod tex_path;
 //mod trans;
 
+#[cfg(feature = "python")] use pyo3::prelude::*;
 use std::{error::Error, fs::copy, path::Path};
 
 pub use self::export::*; // TODO: Remove later
@@ -164,4 +165,13 @@ pub(crate) fn path_as_string<'a, T: AsRef<Path>>(path: &'a T) -> &'a str {
         .as_ref()
         .to_str()
         .unwrap()
+}
+
+#[pyfunction]
+#[cfg(feature = "python")]
+pub(crate) fn print_test() -> PyResult<()> {
+    Python::with_gil(|_py| {
+        println!("Hello python, again! -Ferris");
+        Ok(())
+    })
 }

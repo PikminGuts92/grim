@@ -9,8 +9,11 @@ bevy = { version = "0.9.1", default-features = false, features = [ "bevy_core_pi
 bevy_egui = { version = "0.19.0", features = [ "immutable_ctx" ] }
 bevy_fly_camera = { git = "https://github.com/PikminGuts92/bevy_fly_camera", branch = "bevy-0.9" }
 bevy_infinite_grid = "0.6.0"
+egui_extras = { version = "0.20.0", features = [ "svg" ] }
+font-awesome-as-a-crate = "0.3.0"
 grim = { workspace = true }
 itertools = { workspace = true }
+lazy_static = { workspace = true }
 # native-dialog = "0.6.1"
 serde = { workspace = true }
 serde_json = { workspace = true }

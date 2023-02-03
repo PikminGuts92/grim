@@ -1,8 +1,12 @@
+mod errors;
 mod io;
+mod parser;
 
+pub use errors::*;
 pub use io::*;
+use parser::*;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct DataString {
     data: Vec<u8>,
 }
@@ -14,9 +18,9 @@ impl DataString {
         }
     }
 
-    pub fn from_string(str: String) -> DataString {
+    pub fn from_string<S: Into<String>>(str: S) -> DataString {
         DataString {
-            data: str.into_bytes(),
+            data: str.into().into_bytes(),
         }
     }
 
@@ -35,7 +39,7 @@ impl From<Vec<u8>> for DataString {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum DataArray {
     Integer(i32),
     Float(f32),

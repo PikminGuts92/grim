@@ -19,6 +19,7 @@ pub enum MiloObject {
     ObjectDir(ObjectDirInstance),
     P9SongPref(P9SongPref),
     PropAnim(PropAnim),
+    SynthSample(SynthSample),
     Tex(Tex),
     Trans(TransObject),
     TransAnim(TransAnim),
@@ -47,6 +48,7 @@ impl MiloObject {
             MiloObject::ObjectDir(obj_dir) => &obj_dir.name,
             MiloObject::P9SongPref(pref) => &pref.name,
             MiloObject::PropAnim(prop) => &prop.name,
+            MiloObject::SynthSample(synth) => &synth.name,
             MiloObject::Tex(tex) => &tex.name,
             MiloObject::Trans(trans) => &trans.name,
             MiloObject::TransAnim(trans_anim) => &trans_anim.name,
@@ -68,6 +70,7 @@ impl MiloObject {
             MiloObject::ObjectDir(_) => "ObjectDir",
             MiloObject::P9SongPref(_) => "P9SongPref",
             MiloObject::PropAnim(_) => "PropAnim",
+            MiloObject::SynthSample(_) => "SynthSample",
             MiloObject::Tex(_) => "Tex",
             MiloObject::Trans(_) => "Trans",
             MiloObject::TransAnim(_) => "TransAnim",
@@ -135,6 +138,7 @@ impl MiloObject {
                     "Mesh" => unpack_object(packed, info).map(|o| MiloObject::Mesh(o)),
                     "P9SongPref" => unpack_object(packed, info).map(|o| MiloObject::P9SongPref(o)),
                     "PropAnim" => unpack_object(packed, info).map(|o| MiloObject::PropAnim(o)),
+                    "SynthSample" => unpack_object(packed, info).map(|o| MiloObject::SynthSample(o)),
                     "Tex" => {
                         let mut stream = MemoryStream::from_slice_as_read(packed.data.as_slice());
 

@@ -45,6 +45,7 @@ pub struct AppSettings {
     pub window_height: f32,
     pub maximized: bool,
     pub show_gridlines: bool,
+    pub show_wireframes: bool,
 }
 
 impl Default for AppSettings {
@@ -56,6 +57,7 @@ impl Default for AppSettings {
             window_height: 720.0,
             maximized: false,
             show_gridlines: true,
+            show_wireframes: false,
         }
     }
 }

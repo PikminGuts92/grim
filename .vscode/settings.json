@@ -1,8 +1,12 @@
 {
     "rust-analyzer.cargo.features": [
+        "audio",
         //"bevy/dynamic"
+        "midi",
+        "model",
         "experimental",
-        "midi"
+        "midi",
+        "python"
     ],
     "rust-analyzer.inlayHints.chainingHints.enable": false,
     "rust-analyzer.inlayHints.typeHints.enable": false,

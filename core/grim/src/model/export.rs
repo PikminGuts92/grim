@@ -9,6 +9,7 @@ use nalgebra as na;
 use serde::ser::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -306,7 +307,8 @@ pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path, sys_in
 pub struct GltfExportSettings {
     pub custom_basename: Option<String>,
     pub embed_textures: bool,
-    pub write_as_binary: bool
+    pub write_as_binary: bool,
+    pub output_dir: PathBuf
 }
 
 pub struct ObjectDirData {
@@ -387,7 +389,30 @@ impl GltfExporter {
             info: system_info
         });
 
+        // If basename not set, use milo basename
+        if self.settings.custom_basename.is_none() {
+            let basename = self.get_basename().to_owned();
+            self.settings.custom_basename = Some(basename);
+        }
+
         Ok(())
+    }
+
+    fn get_basename(&self) -> &str {
+        if let Some(basename) = self.settings.custom_basename.as_ref() {
+            // Return custom basename if set
+            basename.as_str()
+        } else {
+            // Use basename from first milo file path
+            // Note: Call before mapping objects because this list gets drained... (super hacky)
+            self.object_dirs
+                .iter()
+                .find_map(|dir| dir.path
+                    .as_path()
+                    .file_stem()
+                    .and_then(|fs| fs.to_str()))
+                .unwrap_or("output")
+        }
     }
 
     fn map_objects(&mut self) {
@@ -579,7 +604,7 @@ impl GltfExporter {
                 let image = json::Image {
                     buffer_view: None,
                     mime_type: Some(json::image::MimeType(String::from("image/png"))),
-                    name: Some(image_name),
+                    name: Some(image_name.to_owned()),
                     uri: {
                         use base64::{Engine as _, engine::{self, general_purpose}, alphabet};
 
@@ -598,12 +623,26 @@ impl GltfExporter {
                         // Convert to png
                         let png_data = crate::texture::write_rgba_to_vec(width, height, &rgba).unwrap();
 
-                        // Encode to base64
-                        // TODO: Support writing to external files
-                        let mut str_data = String::from("data:image/png;base64,");
-                        general_purpose::STANDARD.encode_string(&png_data, &mut str_data);
+                        if self.settings.embed_textures {
+                            // Encode to base64
+                            let mut str_data = String::from("data:image/png;base64,");
+                            general_purpose::STANDARD.encode_string(&png_data, &mut str_data);
 
-                        Some(str_data)
+                            Some(str_data)
+                        } else {
+                            // Write as external file
+                            let output_dir = self.settings.output_dir.as_path();
+                            super::create_dir_if_not_exists(output_dir).unwrap();
+
+                            let png_path = output_dir.join(&image_name);
+
+                            let mut writer = std::fs::File::create(&png_path).unwrap();
+                            writer.write_all(&png_data).unwrap();
+
+                            println!("Wrote \"{image_name}\"");
+
+                            Some(image_name)
+                        }
                     },
                     extensions: None,
                     extras: None
@@ -1169,17 +1208,29 @@ impl GltfExporter {
     }*/
 
     fn build_binary(&self, gltf: &mut json::Root, acc_builder: AccessorBuilder) {
-        let (accessors, views, mut buffer, data) = acc_builder.generate("test.bin");
+        // Write as external file
+        let output_dir = self.settings.output_dir.as_path();
+        super::create_dir_if_not_exists(output_dir).unwrap();
 
-        // TODO: Write to external file
-        buffer.uri = {
+        let basename = self.get_basename();
+        let filename = format!("{basename}.bin");
+        let bin_path = output_dir.join(&filename);
+
+        let (accessors, views, buffer, data) = acc_builder.generate(&filename);
+
+        let mut writer = std::fs::File::create(&bin_path).unwrap();
+        writer.write_all(&data).unwrap();
+
+        println!("Wrote \"{filename}\"");
+
+        /*buffer.uri = {
             use base64::{Engine as _, engine::{self, general_purpose}, alphabet};
 
             let mut str_data = String::from("data:application/octet-stream;base64,");
             general_purpose::STANDARD.encode_string(&data, &mut str_data);
 
             Some(str_data)
-        };
+        };*/
 
         gltf.accessors = accessors;
         gltf.buffers = vec![buffer];
@@ -1264,9 +1315,9 @@ impl GltfExporter {
         Ok(())
     }
 
-    pub fn save_to_fs<T: AsRef<Path>>(&self, output_dir: T) -> Result<(), Box<dyn Error>> {
-        let output_dir = output_dir.as_ref();
-
+    pub fn save_to_fs(&self) -> Result<(), Box<dyn Error>> {
+        // Create output dir
+        let output_dir = self.settings.output_dir.as_path();
         super::create_dir_if_not_exists(output_dir)?;
 
         // TODO: Replace
@@ -1280,8 +1331,13 @@ impl GltfExporter {
         export_object_dir_to_gltf(obj_dir, output_dir, sys_info);*/
 
         // Write gltf json
-        let writer = std::fs::File::create(output_dir.join(format!("test.gltf"))).expect("I/O error");
+        let basename = self.get_basename();
+        let gltf_filename = format!("{basename}.gltf");
+        let gltf_path = output_dir.join(&gltf_filename);
+        let writer = std::fs::File::create(&gltf_path).expect("I/O error");
         json::serialize::to_writer_pretty(writer, &self.gltf).expect("Serialization error");
+
+        println!("Wrote \"{gltf_filename}\"");
 
         Ok(())
     }

@@ -6,6 +6,8 @@ edition.workspace = true
 
 [dependencies]
 base64 = "0.21.0"
+bitstream-io = { version = "1.6.0", optional = true }
+ffmpeg-next = { version = "5.1.1", optional = true }
 flate2 = "1.0.25"
 gltf = { version = "1.0.0", optional = true, features = [ "import", "names" ] }
 gltf-json = { version = "1.0.0", optional = true, features = [ "names" ] }
@@ -18,18 +20,25 @@ lazy_static = { workspace = true }
 log = { workspace = true }
 midly = { version = "0.5.3", optional = true }
 nalgebra = { version = "0.32.1", optional = true }
+nom = "7.1.1"
+# pyo3 = { version = "0.17.3", optional = true, features = [ "extension-module" ] }
+pyo3 = { git = "https://github.com/PyO3/pyo3", branch = "cfg-feature-pyo3", optional = true, features = [ "extension-module" ] }
 rayon = "1.6.1"
 regex = { version = "1.7.1", default-features = false, features = [ "std" ] }
 serde = { optional = true, workspace = true }
 thiserror = { workspace = true }
+wav = { version = "1.0.0", optional = true }
 
 [dev-dependencies]
 criterion = "0.4.0"
 rstest = "0.16.0"
 
 [features]
+audio = [ "bitstream-io", "wav" ]
+audio_experimental = [ "ffmpeg-next" ]
 midi = [ "midly" ]
 model = [ "gltf", "gltf-json", "nalgebra", "serde" ]
+python = [ "pyo3" ]
 
 [[bench]]
 name = "texture_benchmark"
@@ -37,3 +46,4 @@ harness = false
 
 [lib]
 bench = false
+crate-type = [ "lib", "cdylib" ]

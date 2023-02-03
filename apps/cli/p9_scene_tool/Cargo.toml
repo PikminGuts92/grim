@@ -1,0 +1,20 @@
+[package]
+name = "p9_scene_tool"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+build-time = "0.1.2"
+clap = { workspace = true }
+const_format = "0.2.26"
+grim = { workspace = true, features = [ "midi" ] }
+log = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+simplelog = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+criterion = "0.4.0"
+rstest = "0.15.0"

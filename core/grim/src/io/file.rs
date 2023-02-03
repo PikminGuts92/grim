@@ -1,5 +1,5 @@
 use std::{error::Error, io::Read};
-use std::fs::{File, metadata, read_dir};
+use std::fs::{copy, create_dir_all, File, metadata, read, read_dir, remove_dir_all, remove_file, write};
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Copy, Debug)]
@@ -77,4 +77,27 @@ pub fn read_to_bytes<T: AsRef<Path>>(path: T) -> Vec<u8> {
     file.read_to_end(&mut data).unwrap();
 
     data
+}
+
+pub fn create_new_file<T: AsRef<Path>>(file_path: T) -> std::io::Result<File> {
+    let file_path = file_path.as_ref();
+
+    /*if !file_path.is_file() {
+        // TODO: Throw error?
+    }*/
+
+    // Create directory
+    if let Some(output_dir) = file_path.parent() {
+        if !output_dir.exists() {
+            create_dir_all(&output_dir)?;
+        }
+    }
+
+    // Delete old file
+    if file_path.exists() {
+        // TODO: Investigate better approach to guarantee deletion
+        remove_file(file_path)?;
+    }
+
+    File::create(file_path)
 }
