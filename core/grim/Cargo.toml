@@ -20,6 +20,7 @@ lazy_static = { workspace = true }
 log = { workspace = true }
 midly = { version = "0.5.3", optional = true }
 nalgebra = { version = "0.32.1", optional = true }
+nom = "7.1.1"
 # pyo3 = { version = "0.17.3", optional = true, features = [ "extension-module" ] }
 pyo3 = { git = "https://github.com/PyO3/pyo3", branch = "cfg-feature-pyo3", optional = true, features = [ "extension-module" ] }
 rayon = "1.6.1"
