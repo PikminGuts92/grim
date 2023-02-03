@@ -218,6 +218,8 @@ fn consume_app_events(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut textures: ResMut<Assets<Image>>,
+    mut grid: Query<&mut Visibility, With<InfiniteGrid>>,
+    mut wireframe_config: ResMut<bevy::pbr::wireframe::WireframeConfig>,
     world_meshes: Query<(Entity, &WorldMesh)>,
 ) {
     for e in app_events.iter() {
@@ -274,6 +276,13 @@ fn consume_app_events(
 
                 println!("Updated milo");
             },
+            AppEvent::ToggleGridLines(show) => {
+                grid.single_mut().is_visible = *show;
+            },
+            AppEvent::ToggleWireframes(show) => {
+                //grid.single_mut().is_visible = *show;
+                wireframe_config.global = *show;
+            }
             /*AppEvent::RefreshMilo => {
                 return;
 
