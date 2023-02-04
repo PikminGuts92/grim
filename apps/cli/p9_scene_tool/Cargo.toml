@@ -7,7 +7,7 @@ edition.workspace = true
 [dependencies]
 build-time = "0.1.2"
 clap = { workspace = true }
-const_format = "0.2.26"
+const_format = "0.2.30"
 grim = { workspace = true, features = [ "midi" ] }
 log = { workspace = true }
 serde = { workspace = true }
@@ -17,4 +17,4 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 criterion = "0.4.0"
-rstest = "0.15.0"
+rstest = "0.16.0"
