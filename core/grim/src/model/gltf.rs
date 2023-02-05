@@ -48,7 +48,7 @@ impl GLTFImporter {
         for scene in document.scenes() {
             // Create group name
             let group_name = match scene.name() {
-                Some(name) => format!("{}.grp", name),
+                Some(name) => format!("{}.grp", name.to_ascii_lowercase()),
                 None => format!("group_{}.grp", scene.index()),
             };
 
@@ -90,7 +90,11 @@ impl GLTFImporter {
         for doc_mat in document.materials() {
             // Create mat name
             let mat_name = match doc_mat.name() {
-                Some(name) => format!("{}.mat", name),
+                Some(name) => match name.to_ascii_lowercase() {
+                    // Append .mat if not already present
+                    n if n.ends_with(".mat") => n,
+                    n => format!("{n}.mat")
+                },
                 None => format!("mat_{}.mat", doc_mat.index().unwrap()),
             };
 
@@ -182,7 +186,11 @@ impl GLTFImporter {
 
     fn read_mesh(&mut self, mesh: &Mesh) -> Vec<MeshObject> {
         let mesh_name_prefix = match mesh.name() {
-            Some(name) => name.to_string(),
+            Some(name) => match name.to_ascii_lowercase() {
+                // Remove .mesh ext if present (added back later)
+                n if n.ends_with(".mesh") => n[..(n.len() - 5)].to_string(),
+                n => n
+            },
             None => format!("mesh_{}", mesh.index()),
         };
 
