@@ -8,3 +8,6 @@ edition.workspace = true
 clap = { workspace = true }
 grim = { workspace = true, features = [ "audio" ] }
 thiserror = { workspace = true }
+
+[features]
+encode = [ "grim/audio_experimental" ]
