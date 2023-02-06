@@ -1,4 +1,5 @@
 use crate::{Platform, SystemInfo};
+use crate::io::IOEndian;
 #[cfg(feature = "python")] use pyo3::prelude::*;
 
 #[derive(Debug)]
@@ -56,6 +57,7 @@ impl Bitmap {
         // TODO: Get from args
         let sys_info = SystemInfo {
             platform: Platform::PS3,
+            endian: IOEndian::Little,
             ..SystemInfo::default()
         };
 
