@@ -101,3 +101,22 @@ pub fn create_new_file<T: AsRef<Path>>(file_path: T) -> std::io::Result<File> {
 
     File::create(file_path)
 }
+
+pub fn create_missing_dirs<T: AsRef<Path>>(file_path: T) -> std::io::Result<()> {
+    let file_path = file_path.as_ref();
+
+    let dir = if file_path.is_dir() {
+        Some(file_path)
+    } else {
+        file_path.parent()
+    };
+
+    // Create directory
+    if let Some(output_dir) = dir {
+        if !output_dir.exists() {
+            create_dir_all(&output_dir)?;
+        }
+    }
+
+    Ok(())
+}
