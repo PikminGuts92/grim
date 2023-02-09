@@ -62,9 +62,28 @@ fn encode_dxt_with_lib(rgba: &[u8], dx_img: &mut [u8], width: u32, height: u32, 
         _ => todo!("Implement other encodings")
     };
 
+    // Hacky DXT1...
+    let mut dxt1_img = None;
+    if enc.eq(&DxtVariant::DXT1) {
+        // Convert RGBA to RGB
+        // Needs to be this arrangement for image encoder library
+        let rgb = rgba
+            .chunks(4)
+            .map(|p| [p[0], p[1], p[2]])
+            .flatten()
+            .collect::<Vec<_>>();
+
+        dxt1_img = Some(rgb);
+    }
+
+    let image = dxt1_img
+        .as_ref()
+        .map(|dx| dx.as_slice())
+        .unwrap_or(rgba);
+
     // Encode dxt image
     let encoder = DxtEncoder::new(dx_img);
-    encoder.encode(rgba, width, height, enc).unwrap();
+    encoder.encode(image, width, height, enc).unwrap();
 }
 
 fn decode_dxt1_image(dx_img: &[u8], rgba: &mut [u8], width: u32, is_360: bool) {

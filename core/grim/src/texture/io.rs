@@ -61,16 +61,12 @@ impl Bitmap {
         match info.platform {
             Platform::X360 | Platform::PS3 => {
                 let is_360 = info.platform.eq(&Platform::X360);
-
-                // TODO: Support DXT1
-                //  Can't right now because underlying image library expects RGB slice instead of RGBA
-                let encoding = DXGI_Encoding::DXGI_FORMAT_BC3_UNORM;
-                /*let mut encoding = DXGI_Encoding::DXGI_FORMAT_BC1_UNORM;
+                let mut encoding = DXGI_Encoding::DXGI_FORMAT_BC1_UNORM;
 
                 // Use DXT5 encoding if alpha is used
-                if rgba.len() >= 4 && rgba.iter().skip(3).any(|&a| a < u8::MAX) {
+                if rgba.len() >= 4 && rgba.iter().skip(3).step_by(4).any(|&a| a < u8::MAX) {
                     encoding = DXGI_Encoding::DXGI_FORMAT_BC3_UNORM;
-                }*/
+                }
 
                 let (bpp, dx_img_size, bpl) = match encoding {
                     DXGI_Encoding::DXGI_FORMAT_BC1_UNORM => (4, ((width as usize) * (height as usize)) / 2, width / 2),
