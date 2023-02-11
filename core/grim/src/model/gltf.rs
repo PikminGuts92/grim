@@ -8,7 +8,7 @@ use gltf::mesh::util::*;
 use gltf::json::extensions::scene::*;
 use gltf::json::extensions::mesh::*;
 use gltf::scene::Node;
-use grim_traits::scene::{Color3, UV, Vector4};
+use grim_traits::scene::{Blend, Color3, UV, Vector4, ZMode};
 use itertools::{Itertools, izip};
 use nalgebra as na;
 use std::{borrow::Borrow, error::Error};
@@ -98,8 +98,12 @@ impl GLTFImporter {
                 None => format!("mat_{}.mat", doc_mat.index().unwrap()),
             };
 
-            let mut mat = MatObject::default();
-            mat.name = mat_name;
+            let mut mat = MatObject {
+                name: mat_name,
+                blend: Blend::kBlendSrcAlpha,
+                z_mode: ZMode::kZModeNormal,
+                ..Default::default()
+            };
 
             // Get base color
             let [r, g, b, a] = doc_mat.pbr_metallic_roughness().base_color_factor();
@@ -218,9 +222,9 @@ impl GLTFImporter {
 
         let faces: Vec<[u16; 3]> = faces_chunked
             .map(|f| [
-                *f.get(2).unwrap(), // Clockwise -> Anti
-                *f.get(1).unwrap(),
                 *f.get(0).unwrap(),
+                *f.get(1).unwrap(),
+                *f.get(2).unwrap(),
             ])
             .collect();
 
