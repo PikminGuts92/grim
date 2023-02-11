@@ -312,11 +312,17 @@ impl GLTFImporter {
 }
 
 pub(crate) fn transform_verts(verts: &mut Vec<Vert>) {
+    let rotate_on_z = na::Matrix4::from_axis_angle(&na::Vector3::z_axis(), std::f32::consts::PI);
+
     for vert in verts.iter_mut() {
         let Vector4 { x, y, z, .. } = &mut vert.pos;
 
         // Update position
         let pos = super::MILOSPACE_TO_GLSPACE.transform_vector(&na::Vector3::new(*x, *y, *z));
+
+        // Rotate
+        let pos = rotate_on_z.transform_vector(&pos);
+
         *x = *pos.get(0).unwrap();
         *y = *pos.get(1).unwrap();
         *z = *pos.get(2).unwrap();
