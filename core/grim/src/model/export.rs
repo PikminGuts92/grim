@@ -2310,11 +2310,13 @@ mod tests {
     #[case([1.0, 2.0, 3.0])]
     #[case([-1.0, 2.0, -10.0])]
     fn decompose_trs_with_translation_test(#[case] input_trans: [f32; 3]) {
+        let [tx, ty, tz] = input_trans;
+
         let mat = na::Matrix4::new(
-            1.0, 0.0, 0.0, input_trans[0],
-            0.0, 1.0, 0.0, input_trans[1],
-            0.0, 0.0, 1.0, input_trans[2],
-            0.0, 0.0, 0.0,            1.0,
+            1.0, 0.0, 0.0,  tx,
+            0.0, 1.0, 0.0,  ty,
+            0.0, 0.0, 1.0,  tz,
+            0.0, 0.0, 0.0, 1.0,
         );
 
         let (trans, rotate, scale) = decompose_trs(mat);
@@ -2322,5 +2324,27 @@ mod tests {
         assert_eq!(na::Vector3::from(input_trans), trans);
         assert_eq!(na::UnitQuaternion::identity(), rotate);
         assert_eq!(na::Vector3::new(1.0, 1.0, 1.0), scale);
+    }
+
+    #[rstest]
+    #[case([1.0 ,  1.0,  1.0])]
+    #[case([20.0, 20.0, 20.0])]
+    #[case([50.0, 20.0, 50.0])]
+    #[case([10.0, 20.0, 30.0])]
+    fn decompose_trs_with_scale_test(#[case] input_scale: [f32; 3]) {
+        let [sx, sy, sz] = input_scale;
+
+        let mat = na::Matrix4::new(
+             sx, 0.0, 0.0, 0.0,
+            0.0,  sy, 0.0, 0.0,
+            0.0, 0.0,  sz, 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        );
+
+        let (trans, rotate, scale) = decompose_trs(mat);
+
+        assert_eq!(na::Vector3::zeros(), trans);
+        assert_eq!(na::UnitQuaternion::identity(), rotate);
+        assert_eq!(na::Vector3::new(sx, sy, sz), scale);
     }
 }
