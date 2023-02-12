@@ -85,17 +85,11 @@ impl AssetManagager {
         self.trans_anims.push(trans_anim);
     }
 
-    pub fn get_groups(&self) -> &Vec<GroupObject> {
-        &self.groups
-    }
-
     pub fn dump_to_directory<T>(&self, out_dir: T) -> Result<(), Box<dyn Error>> where T: AsRef<Path> {
         // Create output dir
         create_dir_if_not_exists(&out_dir)?;
 
-        let groups = self.get_groups();
-
-        for grp in groups {
+        for grp in self.groups.iter() {
             // Iterate meshes
             let meshes: Vec<&MeshObject> = (&grp.objects).iter().filter_map(|m| self.get_mesh(m)).collect();
             for mesh in meshes {
@@ -121,19 +115,18 @@ impl AssetManagager {
                 println!("Wrote {}", &mesh.name);
             }
 
-            // Iterate trans anims
-            let trans_anims: Vec<&TransAnim> = (&grp.objects).iter().filter_map(|m| self.get_trans_anim(m)).collect();
-            for trans_anim in trans_anims {
-                // Write trans anim
-                let trans_anim_path = out_dir.as_ref().join(&trans_anim.name);
-                save_to_file(trans_anim, &trans_anim_path, &self.info)?;
-                println!("Wrote {}", &trans_anim.name);
-            }
-
             // Write group
             let group_path = out_dir.as_ref().join(&grp.name);
             save_to_file(grp, &group_path, &self.info)?;
             println!("Wrote {}", &grp.name);
+        }
+
+        // Iterate anims
+        for trans_anim in self.trans_anims.iter() {
+            // Write trans anim
+            let trans_anim_path = out_dir.as_ref().join(&trans_anim.name);
+            save_to_file(trans_anim, &trans_anim_path, &self.info)?;
+            println!("Wrote {}", &trans_anim.name);
         }
 
         Ok(())
