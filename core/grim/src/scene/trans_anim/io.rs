@@ -168,8 +168,8 @@ fn save_keys_vector3(keys: &[AnimEvent<Vector3>], writer: &mut Box<BinaryStream>
     writer.write_uint32(keys.len() as u32)?;
 
     for key in keys {
-        writer.write_float32(key.pos)?;
         save_vector3(&key.value, writer)?;
+        writer.write_float32(key.pos)?;
     }
 
     Ok(())
@@ -179,8 +179,8 @@ fn save_keys_quat(keys: &[AnimEvent<Quat>], writer: &mut Box<BinaryStream>) -> R
     writer.write_uint32(keys.len() as u32)?;
 
     for key in keys {
-        writer.write_float32(key.pos)?;
         save_quat(&key.value, writer)?;
+        writer.write_float32(key.pos)?;
     }
 
     Ok(())
