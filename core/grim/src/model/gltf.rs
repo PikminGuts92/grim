@@ -1,5 +1,6 @@
 use crate::{SystemInfo, io::*};
 use crate::model::{Draw, GroupObject, MatObject, MeshObject, TexPath, Trans, Vert};
+use crate::scene::TransAnim;
 use gltf::buffer::Data as BufferData;
 use gltf::{Document, Gltf, Mesh, Primitive, Scene};
 use gltf::image::{Data as ImageData, Source};
