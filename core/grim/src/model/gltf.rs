@@ -333,7 +333,11 @@ impl GLTFImporter {
             reader.read_positions().unwrap(),
             reader.read_normals().unwrap(),
             //reader.read_colors(0).unwrap().into_rgb_f32().into_iter(),
-            reader.read_tex_coords(0).unwrap().into_f32(),
+            //reader.read_tex_coords(0).unwrap().into_f32(),
+            reader.read_tex_coords(0) // Hacky way to get tex coords or default if none found
+                .map(|tc| tc.into_f32()
+                .collect::<Vec<_>>())
+                .unwrap_or_default()
         );
 
         let verts = verts_interleaved
