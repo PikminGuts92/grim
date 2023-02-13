@@ -82,6 +82,11 @@ impl GLTFImporter {
             asset_manager.add_group(group);
         }
 
+        let all_node_names = document
+            .nodes()
+            .map(|n| n.name())
+            .collect::<Vec<_>>();
+
         // Process anims
         for anim in document.animations() {
             let name = anim // .tnm
@@ -107,7 +112,12 @@ impl GLTFImporter {
 
             for (node_idx, channels) in group_channels {
                 // Ignore if node doesn't have associated name
-                let Some(target_name) = self.node_names.get(&node_idx) else {
+                /*let Some(target_name) = self.node_names.get(&node_idx) else {
+                    continue;
+                };*/
+
+                // Fallback on actual node name if mesh not found
+                let Some(target_name) = self.node_names.get(&node_idx).map(|n| n.as_str()).or_else(|| *all_node_names.get(node_idx).unwrap()) else {
                     continue;
                 };
 
