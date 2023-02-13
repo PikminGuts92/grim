@@ -140,7 +140,7 @@ impl GLTFImporter {
                             trans_anim.trans_keys = izip!(inputs.iter(), trans)
                                 .map(|(t, [x, z, y])| AnimEvent {
                                     pos: (*t * 30.) - 1.0,
-                                    value: Vector3 { x: x * 20., y: y * 20., z: z * 20. }
+                                    value: Vector3 { x, y, z }
                                 })
                                 .collect();
                         },
@@ -156,7 +156,7 @@ impl GLTFImporter {
                             trans_anim.scale_keys = izip!(inputs.iter(), scales)
                                 .map(|(t, [x, z, y])| AnimEvent {
                                     pos: (*t * 30.) - 1.0,
-                                    value: Vector3 { x: x * 20., y: y * 20., z: z * 20. }
+                                    value: Vector3 { x, y, z }
                                 })
                                 .collect();
                         }
