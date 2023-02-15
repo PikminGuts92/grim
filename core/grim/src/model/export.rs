@@ -2300,9 +2300,9 @@ mod tests {
 
         let (trans, rotate, scale) = decompose_trs(mat);
 
-        assert_eq!(na::Vector3::new(0.0, 0.0, 0.0), trans);
+        assert_eq!(na::Vector3::zeros(), trans);
         assert_eq!(na::UnitQuaternion::identity(), rotate);
-        assert_eq!(na::Vector3::new(1.0, 1.0, 1.0), scale);
+        assert_eq!(na::Vector3::from_element(1.0), scale);
     }
 
     #[rstest]
@@ -2310,17 +2310,80 @@ mod tests {
     #[case([1.0, 2.0, 3.0])]
     #[case([-1.0, 2.0, -10.0])]
     fn decompose_trs_with_translation_test(#[case] input_trans: [f32; 3]) {
+        let [tx, ty, tz] = input_trans;
+
         let mat = na::Matrix4::new(
-            1.0, 0.0, 0.0, input_trans[0],
-            0.0, 1.0, 0.0, input_trans[1],
-            0.0, 0.0, 1.0, input_trans[2],
-            0.0, 0.0, 0.0,            1.0,
+            1.0, 0.0, 0.0,  tx,
+            0.0, 1.0, 0.0,  ty,
+            0.0, 0.0, 1.0,  tz,
+            0.0, 0.0, 0.0, 1.0,
         );
 
         let (trans, rotate, scale) = decompose_trs(mat);
 
         assert_eq!(na::Vector3::from(input_trans), trans);
         assert_eq!(na::UnitQuaternion::identity(), rotate);
-        assert_eq!(na::Vector3::new(1.0, 1.0, 1.0), scale);
+        assert_eq!(na::Vector3::from_element(1.0), scale);
+    }
+
+    #[rstest]
+    #[case([1.0 ,  1.0,  1.0])]
+    #[case([20.0, 20.0, 20.0])]
+    #[case([50.0, 20.0, 50.0])]
+    #[case([10.0, 20.0, 30.0])]
+    fn decompose_trs_with_scale_test(#[case] input_scale: [f32; 3]) {
+        let [sx, sy, sz] = input_scale;
+
+        let mat = na::Matrix4::new(
+             sx, 0.0, 0.0, 0.0,
+            0.0,  sy, 0.0, 0.0,
+            0.0, 0.0,  sz, 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        );
+
+        let (trans, rotate, scale) = decompose_trs(mat);
+
+        assert_eq!(na::Vector3::zeros(), trans);
+        assert_eq!(na::UnitQuaternion::identity(), rotate);
+        assert_eq!(na::Vector3::new(sx, sy, sz), scale);
+    }
+
+    #[rstest]
+    #[case(90.0, [0.0, 0.0, 0.7071068, 0.7071067])] // Both should be 0.7071068. Precision issue?
+    fn decompose_trs_rotz_test(#[case] input_deg: f32, #[case] expected_result: [f32; 4]) {
+        let rad = (input_deg * std::f32::consts::PI) / 180.0;
+        let [i, j, k, w] = expected_result;
+
+        // Rotate on z-axis
+        let mat = na::Matrix4::from_axis_angle(&na::Vector3::z_axis(), rad);
+
+        let (trans, rotate, scale) = decompose_trs(mat);
+
+        assert_eq!(na::Vector3::zeros(), trans);
+        assert_eq!(na::UnitQuaternion::from_quaternion(na::Quaternion::new(w, i, j, k)), rotate);
+        assert_eq!(na::Vector3::from_element(1.0), scale);
+    }
+
+    #[rstest]
+    #[case(90.0, [1.0 ,  1.0,  1.0], [0.0, 0.0, 0.7071068, 0.7071067])]
+    #[case(90.0, [20.0, 20.0, 20.0], [0.0, 0.0, 0.7071068, 0.7071067])]
+    #[case(90.0, [50.0, 20.0, 50.0], [0.0, 0.0, 0.7071067, 0.7071068])]
+    #[case(90.0, [10.0, 20.0, 30.0], [0.0, 0.0, 0.7071067, 0.7071067])]
+    fn decompose_trs_rotz_with_scale_test(#[case] input_deg: f32, #[case] input_scale: [f32; 3], #[case] expected_result: [f32; 4]) {
+        let rad = (input_deg * std::f32::consts::PI) / 180.0;
+        let [sx, sy, sz] = input_scale;
+        let [i, j, k, w] = expected_result;
+
+        let expected_scale = na::Vector3::new(sx, sy, sz);
+
+        // Rotate on z-axis + scale
+        let mut mat = na::Matrix4::from_axis_angle(&na::Vector3::z_axis(), rad);
+        mat *= na::Matrix4::new_nonuniform_scaling(&expected_scale);
+
+        let (trans, rotate, scale) = decompose_trs(mat);
+
+        assert_eq!(na::Vector3::zeros(), trans);
+        assert_eq!(na::UnitQuaternion::from_quaternion(na::Quaternion::new(w, i, j, k)), rotate);
+        assert_eq!(expected_scale, scale);
     }
 }

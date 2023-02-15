@@ -1,7 +1,9 @@
 mod decode;
+#[cfg(feature = "encode")] mod encode;
 
 use clap::{Parser, Subcommand};
 use decode::*;
+#[cfg(feature = "encode")] use encode::*;
 use std::error::Error;
 
 // From Cargo.toml
@@ -22,7 +24,10 @@ struct Options {
 #[derive(Subcommand, Debug)]
 enum SubCommand {
     #[command(name = "decode", about = "Decode audio file")]
-    Decode(DecoderApp)
+    Decode(DecoderApp),
+    #[cfg(feature = "encode")]
+    #[command(name = "encode", about = "Encode audio file")]
+    Encode(EncoderApp)
 }
 
 #[derive(Debug)]
@@ -39,7 +44,8 @@ impl AudioTool {
 
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         match &mut self.options.commands {
-            SubCommand::Decode(app) => app.process()
+            SubCommand::Decode(app) => app.process(),
+            #[cfg(feature = "encode")] SubCommand::Encode(app) => app.process()
         }
     }
 }

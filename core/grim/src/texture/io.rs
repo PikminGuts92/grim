@@ -3,7 +3,7 @@ use crate::scene::ObjectReadWrite;
 use crate::texture::{Bitmap, decode_dx_image, decode_tpl_image, encode_dx_image, get_dx_bpp, DXGI_Encoding, TPLEncoding};
 use crate::system::{Platform, SystemInfo};
 use image::buffer::ConvertBuffer;
-use image::{ImageBuffer, RgbaImage, ImageEncoder};
+use image::{ImageBuffer, ImageEncoder, ImageFormat, open, RgbaImage};
 
 use rayon::prelude::*;
 use std::error::Error;
@@ -40,49 +40,59 @@ pub enum Image<'a> {
 
 impl Bitmap {
     pub fn from_image(image: Image, info: &SystemInfo) -> Bitmap {
-        if let Image::FromRGBA { rgba, width, height, mips: _} = image {
-            match info.platform {
-                Platform::X360 | Platform::PS3 => {
-                    let is_360 = info.platform.eq(&Platform::X360);
+        // Decode rgba image data
+        let rgba_buff; // Hack to get around rust lifetimes...
+        let (rgba, width, height, _mips) = match image {
+            Image::FromRGBA { rgba, width, height, mips } => {
+                (rgba, width, height, mips)
+            },
+            Image::FromPath(img_path) => {
+                let img = open(img_path).unwrap();
 
-                    // TODO: Support DXT1
-                    //  Can't right now because underlying image library expects RGB slice instead of RGBA
-                    let encoding = DXGI_Encoding::DXGI_FORMAT_BC3_UNORM;
-                    /*let mut encoding = DXGI_Encoding::DXGI_FORMAT_BC1_UNORM;
+                let width = img.width() as u16;
+                let height = img.height() as u16;
 
-                    // Use DXT5 encoding if alpha is used
-                    if rgba.len() >= 4 && rgba.iter().skip(3).any(|&a| a < u8::MAX) {
-                        encoding = DXGI_Encoding::DXGI_FORMAT_BC3_UNORM;
-                    }*/
+                rgba_buff = Some(img.into_rgba8().into_vec());
+                (rgba_buff.as_ref().map(|b| b.as_slice()).unwrap(), width, height, 0)
+            },
+            _ => todo!()
+        };
 
-                    let (bpp, dx_img_size, bpl) = match encoding {
-                        DXGI_Encoding::DXGI_FORMAT_BC1_UNORM => (4, ((width as usize) * (height as usize)) / 2, width / 2),
-                        _ => (8, (width as usize) * (height as usize), width)
-                    };
+        match info.platform {
+            Platform::X360 | Platform::PS3 => {
+                let is_360 = info.platform.eq(&Platform::X360);
+                let mut encoding = DXGI_Encoding::DXGI_FORMAT_BC1_UNORM;
 
-                    let mut dx_img = vec![0u8; dx_img_size];
+                // Use DXT5 encoding if alpha is used
+                if rgba.len() >= 4 && rgba.iter().skip(3).step_by(4).any(|&a| a < u8::MAX) {
+                    encoding = DXGI_Encoding::DXGI_FORMAT_BC3_UNORM;
+                }
 
-                    // Encode without mip maps for now
-                    let rgba = &rgba[..(width as usize * height as usize * 4)];
-                    encode_dx_image(rgba, &mut dx_img, width as u32, encoding, is_360);
+                let (bpp, dx_img_size, bpl) = match encoding {
+                    DXGI_Encoding::DXGI_FORMAT_BC1_UNORM => (4, ((width as usize) * (height as usize)) / 2, width / 2),
+                    _ => (8, (width as usize) * (height as usize), width)
+                };
 
-                    return Bitmap {
-                        bpp,
-                        encoding: encoding as u32,
-                        mip_maps: 0,
+                let mut dx_img = vec![0u8; dx_img_size];
 
-                        width,
-                        height,
-                        bpl,
+                // Encode without mip maps for now
+                let rgba = &rgba[..(width as usize * height as usize * 4)];
+                encode_dx_image(rgba, &mut dx_img, width as u32, encoding, is_360);
 
-                        raw_data: dx_img
-                    }
-                },
-                _ => todo!("Support other platforms")
-            }
+                Bitmap {
+                    bpp,
+                    encoding: encoding as u32,
+                    mip_maps: 0,
+
+                    width,
+                    height,
+                    bpl,
+
+                    raw_data: dx_img
+                }
+            },
+            _ => todo!("Support other platforms")
         }
-
-        todo!()
     }
 
     pub fn import_from_rgba(&mut self, rgba: &[u8]) {

@@ -101,9 +101,28 @@ impl ObjectReadWrite for TransAnim {
         save_object(self, &mut writer, info)?;
         save_anim(self, &mut writer, info, false)?;
 
-        todo!()
+        writer.write_prefixed_string(&self.trans_object)?;
 
-        //Ok(())
+        // Write rot + trans keys
+        save_keys_quat(&self.rot_keys, &mut writer)?;
+        save_keys_vector3(&self.trans_keys, &mut writer)?;
+
+        writer.write_prefixed_string(&self.trans_anim_owner)?;
+        writer.write_boolean(self.trans_spline)?;
+        writer.write_boolean(self.repeat_trans)?;
+
+        // Write scale keys
+        save_keys_vector3(&self.scale_keys, &mut writer)?;
+
+        writer.write_boolean(self.scale_spline)?;
+        writer.write_boolean(self.follow_path)?;
+        writer.write_boolean(self.rot_slerp)?;
+
+        if version > 6 {
+            writer.write_boolean(self.rot_spline)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -143,4 +162,26 @@ fn load_keys_quat(reader: &mut Box<BinaryStream>) -> Result<Vec<AnimEvent<Quat>>
     }
 
     Ok(keys)
+}
+
+fn save_keys_vector3(keys: &[AnimEvent<Vector3>], writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    writer.write_uint32(keys.len() as u32)?;
+
+    for key in keys {
+        save_vector3(&key.value, writer)?;
+        writer.write_float32(key.pos)?;
+    }
+
+    Ok(())
+}
+
+fn save_keys_quat(keys: &[AnimEvent<Quat>], writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    writer.write_uint32(keys.len() as u32)?;
+
+    for key in keys {
+        save_quat(&key.value, writer)?;
+        writer.write_float32(key.pos)?;
+    }
+
+    Ok(())
 }

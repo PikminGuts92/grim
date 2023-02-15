@@ -30,6 +30,7 @@ pub struct AssetManagager {
     meshes: Vec<MeshObject>,
     materials: Vec<MatObject>,
     textures: Vec<TexPath>,
+    trans_anims: Vec<TransAnim>,
 }
 
 impl AssetManagager {
@@ -40,6 +41,7 @@ impl AssetManagager {
             meshes: Vec::new(),
             materials: Vec::new(),
             textures: Vec::new(),
+            trans_anims: Vec::new(),
         }
     }
 
@@ -59,6 +61,10 @@ impl AssetManagager {
         self.textures.iter().find(|t| t.name.eq(name))
     }
 
+    pub fn get_trans_anim(&self, name: &str) -> Option<&TransAnim> {
+        self.trans_anims.iter().find(|t| t.name.eq(name))
+    }
+
     pub fn add_group(&mut self, group: GroupObject) {
         self.groups.push(group);
     }
@@ -75,19 +81,17 @@ impl AssetManagager {
         self.textures.push(tex);
     }
 
-    pub fn get_groups(&self) -> &Vec<GroupObject> {
-        &self.groups
+    pub fn add_trans_anim(&mut self, trans_anim: TransAnim) {
+        self.trans_anims.push(trans_anim);
     }
 
     pub fn dump_to_directory<T>(&self, out_dir: T) -> Result<(), Box<dyn Error>> where T: AsRef<Path> {
         // Create output dir
         create_dir_if_not_exists(&out_dir)?;
 
-        let groups = self.get_groups();
-
-        for grp in groups {
-            let meshes: Vec<&MeshObject> = (&grp.objects).iter().map(|m| self.get_mesh(m).unwrap()).collect();
-
+        for grp in self.groups.iter() {
+            // Iterate meshes
+            let meshes: Vec<&MeshObject> = (&grp.objects).iter().filter_map(|m| self.get_mesh(m)).collect();
             for mesh in meshes {
                 // Write mat
                 let mat = self.get_material(&mesh.mat).unwrap();
@@ -115,6 +119,14 @@ impl AssetManagager {
             let group_path = out_dir.as_ref().join(&grp.name);
             save_to_file(grp, &group_path, &self.info)?;
             println!("Wrote {}", &grp.name);
+        }
+
+        // Iterate anims
+        for trans_anim in self.trans_anims.iter() {
+            // Write trans anim
+            let trans_anim_path = out_dir.as_ref().join(&trans_anim.name);
+            save_to_file(trans_anim, &trans_anim_path, &self.info)?;
+            println!("Wrote {}", &trans_anim.name);
         }
 
         Ok(())
