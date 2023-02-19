@@ -9,9 +9,9 @@ pub use io::*;
 #[milo(Anim)]
 pub struct MeshAnim {
     pub mesh: String,
-    pub vert_point_keys: Vec<AnimEvent<Vector3>>,
-    pub vert_text_keys: Vec<AnimEvent<Vector2>>,
-    pub vert_color_keys: Vec<AnimEvent<Color4>>,
+    pub vert_point_keys: Vec<AnimEvent<Vec<Vector3>>>,
+    pub vert_text_keys: Vec<AnimEvent<Vec<Vector2>>>,
+    pub vert_color_keys: Vec<AnimEvent<Vec<Color4>>>,
     pub keys_owner: String,
 }
 
