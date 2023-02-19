@@ -68,7 +68,7 @@ pub struct Vector2 {
     pub y: f32,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Vector3 {
     pub x: f32,
     pub y: f32,
