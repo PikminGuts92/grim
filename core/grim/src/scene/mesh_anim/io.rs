@@ -66,18 +66,25 @@ impl ObjectReadWrite for MeshAnim {
     }
 }
 
-fn load_keys<T: std::fmt::Debug + Default>(reader: &mut Box<BinaryStream>, loader: impl Fn(&mut T, &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>>) -> Result<Vec<AnimEvent<T>>, Box<dyn Error>> {
+fn load_keys<T: std::fmt::Debug + Default>(reader: &mut Box<BinaryStream>, loader: impl Fn(&mut T, &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>>) -> Result<Vec<AnimEvent<Vec<T>>>, Box<dyn Error>> {
     let count = reader.read_uint32()?;
     let mut keys = Vec::new();
 
     for _ in 0..count {
-        let mut value = T::default();
-        loader(&mut value, reader)?;
+        let value_count = reader.read_uint32()?;
+        let mut values = Vec::new();
+
+        for _ in 0..value_count {
+            let mut value = T::default();
+            loader(&mut value, reader)?;
+
+            values.push(value);
+        }
 
         let pos = reader.read_float32()?;
 
         keys.push(AnimEvent {
-            value,
+            value: values,
             pos
         })
     }
