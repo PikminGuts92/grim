@@ -120,7 +120,7 @@ impl CharBonesSamples {
         self.computed_flags = (self.computed_sizes.last().unwrap() + 0xF) & 0xFFFF_FFF0;
     }
 
-    pub(crate) fn decode_samples(&self, sys_info: &SystemInfo) -> Vec<CharBoneSample> {
+    pub fn decode_samples(&self, sys_info: &SystemInfo) -> Vec<CharBoneSample> {
         let EncodedSamples::Compressed(bones, compressed_samples) = &self.samples else {
             // Maybe throw error?
             return Vec::new();
