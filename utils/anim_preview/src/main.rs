@@ -152,12 +152,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     let root_bone = BoneNode::new(&obj_dir);
 
     if let Some(root_bone) = root_bone {
-        let points = generate_bone_points(&root_bone);
+        let (points, lines) = generate_bone_points(&root_bone);
 
         MsgSender::new(root_bone.name)
-                .with_component(&points)?
-                .send(&mut session)
-                .unwrap();
+            .with_component(&points)?
+            .send(&mut session)
+            .unwrap();
+
+        MsgSender::new(format!("{}_lines", root_bone.name))
+            .with_component(&lines)?
+            .send(&mut session)
+            .unwrap();
     }
 
     session.show().unwrap();
@@ -165,19 +170,34 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn generate_bone_points(bone: &BoneNode) -> Vec<Point3D> {
+fn generate_bone_points(bone: &BoneNode) -> (Vec<Point3D>, Vec<LineStrip3D>) {
     let mut points = Vec::new();
+    let mut lines = Vec::new();
 
     //let v: na::Vector3<f32> = bone.transform.transform_vector(&na::Vector3::zeros());
     let v = bone.transform.column(3).xyz();
     points.push(Point3D::from([v[0], v[1], v[2]]));
 
+    // Generate line strips
+    let mut strips = bone
+        .children
+        .iter()
+        .map(|c| {
+            let cv = c.transform.column(3).xyz();
+            vec![[v[0], v[1], v[2]], [cv.x, cv.y, cv.z]].into()
+        })
+        .collect::<Vec<LineStrip3D>>();
+
+    lines.append(&mut strips);
+
     for child in bone.children.iter() {
-        let mut child_points = generate_bone_points(child);
+        let (mut child_points, mut child_lines) = generate_bone_points(child);
+
         points.append(&mut child_points);
+        lines.append(&mut child_lines);
     }
 
-    points
+    (points, lines)
 }
 
 pub struct BoneNode<'a> {
