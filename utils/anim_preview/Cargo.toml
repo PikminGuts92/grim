@@ -7,4 +7,5 @@ edition.workspace = true
 [dependencies]
 grim = { workspace = true }
 keyframe = "1.1.1"
+nalgebra = "0.32.1"
 rerun = "0.2.0"
