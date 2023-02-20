@@ -10,7 +10,7 @@ use keyframe::{CanTween, keyframes, Keyframe, AnimationSequence, functions::Line
 
 use grim::{Platform, SystemInfo};
 use grim::io::*;
-use grim::scene::{Anim, Object, ObjectDir, PackedObject, MeshAnim, MiloObject, Trans, Vector3};
+use grim::scene::{Anim, CharBoneSample, Object, ObjectDir, PackedObject, MeshAnim, MiloObject, Trans, Vector3};
 
 use nalgebra as na;
 
@@ -45,6 +45,31 @@ impl CanTween for Vec3Collection {
     }
 }
 
+struct MiloLoader {
+    pub path: PathBuf,
+    pub sys_info: SystemInfo,
+    pub obj_dir: ObjectDir,
+}
+
+impl MiloLoader {
+    pub fn from_path(milo_path: PathBuf) -> Result<Self, Box<dyn Error>> {
+        // Open milo
+        let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(&milo_path)?);
+        let milo = MiloArchive::from_stream(&mut stream)?;
+
+        // Unpack milo
+        let system_info = SystemInfo::guess_system_info(&milo, &milo_path);
+        let mut obj_dir = milo.unpack_directory(&system_info)?;
+        obj_dir.unpack_entries(&system_info)?;
+
+        Ok(Self {
+            path: milo_path,
+            sys_info: system_info,
+            obj_dir
+        })
+    }
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<_> = env::args().skip(1).collect();
 
@@ -62,16 +87,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Open milo
-    let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(&milo_path)?);
-    let milo = MiloArchive::from_stream(&mut stream)?;
-
-    // Unpack milo
-    let system_info = SystemInfo::guess_system_info(&milo, &milo_path);
-    let mut obj_dir = milo.unpack_directory(&system_info)?;
-    obj_dir.unpack_entries(&system_info)?;
+    let base_milo_loader = MiloLoader::from_path(milo_path)?;
 
     // Get mesh anims
-    let mesh_anims = obj_dir
+    let mesh_anims = base_milo_loader
+        .obj_dir
         .get_entries()
         .iter()
         .filter_map(|e| match e {
@@ -149,20 +169,92 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Get bones
-    let root_bone = BoneNode::new(&obj_dir);
+    let root_bone = BoneNode::new(&base_milo_loader.obj_dir);
 
-    if let Some(root_bone) = root_bone {
-        let (points, lines) = generate_bone_points(&root_bone);
+    if let Some(mut root_bone) = root_bone {
+        let anim_milo_loader_result = args
+            .get(1)
+            .map(|p| PathBuf::from(&p))
+            .and_then(|p| MiloLoader::from_path(p).ok());
 
-        MsgSender::new(root_bone.name)
-            .with_component(&points)?
-            .send(&mut session)
-            .unwrap();
+        if let Some(anim_milo_loader) = anim_milo_loader_result {
+            let info = &anim_milo_loader.sys_info;
+            let anims = anim_milo_loader
+                .obj_dir
+                .get_entries()
+                .iter()
+                .filter_map(|o| match o {
+                    Object::CharClipSamples(ccs) => Some(ccs),
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
 
-        MsgSender::new(format!("{}_lines", root_bone.name))
-            .with_component(&lines)?
-            .send(&mut session)
-            .unwrap();
+            let char_clip = args
+                .get(2)
+                .and_then(|anim_name| anims
+                    .iter()
+                    .find(|a| a
+                        .get_name()
+                        .eq(anim_name)))
+                .unwrap_or_else(|| anims.first().unwrap()); // Default to first one if not found (or_else didn't work...)
+            let default_frames = vec![0.0];
+
+            println!("Char clip: {}", char_clip.get_name());
+
+            let bone_samples = [&char_clip.full, &char_clip.one]
+                .iter()
+                .flat_map(|cbs| cbs
+                    .decode_samples(info)
+                    .into_iter()
+                    .map(|s| (s, if !cbs.frames.is_empty() { &cbs.frames } else { &default_frames })))
+                .collect::<Vec<_>>();
+
+            let sample_count = bone_samples
+                .iter()
+                .map(|(cbs, _)| 0
+                    .max(cbs.pos.as_ref().map(|(_, p)| p.len()).unwrap_or_default())
+                    .max(cbs.quat.as_ref().map(|(_, q)| q.len()).unwrap_or_default())
+                    .max(cbs.rotz.as_ref().map(|(_, r)| r.len()).unwrap_or_default())
+                )
+                .max()
+                .unwrap_or_default();
+
+            let bone_sample_map = bone_samples
+                .iter()
+                .map(|(cbs, frames)| (cbs.symbol.as_str(), (cbs, *frames)))
+                .collect::<HashMap<_, _>>();
+
+            println!("Found {sample_count} samples for {} bones", bone_samples.len());
+
+            /*for (bone, _) in bone_samples.iter() {
+                println!("{}", &bone.symbol);
+            }*/
+
+
+            for i in 0..sample_count {
+                // If sample not found, use last one?
+                // TODO: Iterpolate from frames
+
+                root_bone.recompute_world_transform(na::Matrix4::identity(), &bone_sample_map, i);
+                add_bones_to_session(&root_bone, &mut session, i);
+            }
+
+            /*for (char_bone_sample, frames) in bone_samples {
+                //char_bone_sample.
+            }*/
+        } else {
+            let (points, lines) = generate_bone_points(&root_bone);
+
+            MsgSender::new(root_bone.name)
+                .with_component(&points)?
+                .send(&mut session)
+                .unwrap();
+
+            MsgSender::new(format!("{}_lines", root_bone.name))
+                .with_component(&lines)?
+                .send(&mut session)
+                .unwrap();
+        }
     }
 
     session.show().unwrap();
@@ -175,7 +267,7 @@ fn generate_bone_points(bone: &BoneNode) -> (Vec<Point3D>, Vec<LineStrip3D>) {
     let mut lines = Vec::new();
 
     //let v: na::Vector3<f32> = bone.transform.transform_vector(&na::Vector3::zeros());
-    let v = bone.transform.column(3).xyz();
+    let v = bone.world_bind_transform.column(3).xyz();
     points.push(Point3D::from([v[0], v[1], v[2]]));
 
     // Generate line strips
@@ -183,7 +275,7 @@ fn generate_bone_points(bone: &BoneNode) -> (Vec<Point3D>, Vec<LineStrip3D>) {
         .children
         .iter()
         .map(|c| {
-            let cv = c.transform.column(3).xyz();
+            let cv = c.world_bind_transform.column(3).xyz();
             vec![[v[0], v[1], v[2]], [cv.x, cv.y, cv.z]].into()
         })
         .collect::<Vec<LineStrip3D>>();
@@ -204,7 +296,8 @@ pub struct BoneNode<'a> {
     pub name: &'a str,
     pub object: Option<&'a dyn Trans>,
     pub children: Vec<BoneNode<'a>>,
-    pub transform: na::Matrix4<f32>,
+    pub local_bind_transform: na::Matrix4<f32>,
+    pub world_bind_transform: na::Matrix4<f32>,
 }
 
 impl<'a> BoneNode<'a> {
@@ -248,7 +341,8 @@ impl<'a> BoneNode<'a> {
             name: dir_name,
             object: None,
             children: Vec::new(),
-            transform: na::Matrix4::identity(),
+            local_bind_transform: na::Matrix4::identity(),
+            world_bind_transform: na::Matrix4::identity(),
         };
 
         // Find bones that belong to object dir
@@ -297,12 +391,95 @@ impl<'a> BoneNode<'a> {
                     name: c.get_name().as_str(),
                     object: trans_obj,
                     children: Vec::new(),
-                    transform: self.transform * local_transform
+                    local_bind_transform: local_transform,
+                    world_bind_transform: self.world_bind_transform * local_transform
                 };
 
                 bone.children = bone.find_child_nodes(bone_map, child_map);
                 bone
             })
             .collect()
+    }
+
+    fn recompute_world_transform(&mut self, parent_transform: na::Matrix4<f32>, bone_sample_map: &HashMap<&str, (&CharBoneSample, &Vec<f32>)>, i: usize) {
+        if let Some((sample, _)) = bone_sample_map.get(self.name) {
+            // TODO: Multiple by bone weight?
+            let pos = sample
+                .pos
+                .as_ref()
+                .and_then(|(_, p)| p.get(i).or_else(|| p.last()))
+                .map(|v| na::Vector3::new(v.x, v.y, v.z))
+                .unwrap_or_default();
+
+            let quat = sample
+                .quat
+                .as_ref()
+                .and_then(|(_, q)| q.get(i).or_else(|| q.last()))
+                .map(|q| na::UnitQuaternion::from_quaternion(
+                    na::Quaternion::new(q.w, q.x, q.y, q.z)
+                ))
+                .unwrap_or(na::UnitQuaternion::identity());
+
+            let rotz = sample
+                .rotz
+                .as_ref()
+                .and_then(|(_, r)| r.get(i).or_else(|| r.last()))
+                .map(|z| na::UnitQuaternion::from_axis_angle(
+                    &na::Vector3::z_axis(),
+                    std::f32::consts::PI * z
+                ))
+                .unwrap_or(na::UnitQuaternion::identity());
+
+            let anim_transform = na::Matrix4::identity()
+                .append_translation(&pos) *
+                quat.to_homogeneous() *
+                rotz.to_homogeneous();
+
+            //let applied_transform = self.local_bind_transform * anim_transform;
+            self.world_bind_transform = parent_transform * self.local_bind_transform * anim_transform;
+        } else {
+            self.world_bind_transform = parent_transform * self.local_bind_transform;
+        }
+
+        for ch in self.children.iter_mut() {
+            ch.recompute_world_transform(self.world_bind_transform, bone_sample_map, i);
+        }
+    }
+
+    fn get_world_pos(&self) -> na::Vector3<f32> {
+        self.world_bind_transform.column(3).xyz()
+    }
+}
+
+fn add_bones_to_session(bone: &BoneNode, session: &mut Session, i: usize) {
+    let v = bone.get_world_pos();
+    let points = vec![Point3D::from([v[0], v[1], v[2]])];
+
+    // Generate line strips
+    let strips = bone
+        .children
+        .iter()
+        .map(|c| {
+            let cv = c.get_world_pos();
+            vec![[v[0], v[1], v[2]], [cv.x, cv.y, cv.z]].into()
+        })
+        .collect::<Vec<LineStrip3D>>();
+
+    MsgSender::new(bone.name)
+        .with_component(&points)
+        .unwrap()
+        .with_time(Timeline::new_sequence("frame"), i as i64)
+        .send(session)
+        .unwrap();
+
+    MsgSender::new(format!("{}_lines", bone.name))
+        .with_component(&strips)
+        .unwrap()
+        .with_time(Timeline::new_sequence("frame"), i as i64)
+        .send(session)
+        .unwrap();
+
+    for ch in bone.children.iter() {
+        add_bones_to_session(ch, session, i);
     }
 }
