@@ -13,9 +13,9 @@ use grim::scene::{Anim, Object, ObjectDir, PackedObject, MeshAnim, MiloObject, V
 
 use rerun::external::glam;
 use rerun::{
-    components::{ColorRGBA, Point3D, Radius},
+    components::{ColorRGBA, LineStrip3D, MeshId, Point3D, Radius, RawMesh3D},
     MsgSender, Session,
-    time::{Timeline}
+    time::Timeline
 };
 
 #[derive(Clone, Default)]
@@ -110,6 +110,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         for (i, frame) in interp_frames.into_iter().enumerate() {
             let Vec3Collection(points) = frame;
 
+            /*let strip: LineStrip3D = points
+                .iter()
+                .map(|Vector3 { x, y, z }| [ *x, *y, *z ])
+                .collect::<Vec<_>>()
+                .into();*/
+
+            /*let mesh = RawMesh3D {
+                mesh_id: MeshId::random(),
+                positions: points
+                    .iter()
+                    .map(|Vector3 { x, y, z }| [ *x, *y, *z ])
+                    .collect::<Vec<_>>()
+            };*/
+
             let glam_points = points
                 .into_iter()
                 .map(|Vector3 { x, y, z }| Point3D::new(x, y, z))
@@ -121,6 +135,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .with_time(Timeline::new_sequence("frame"), i as i64)
                 .send(&mut session)
                 .unwrap();
+
+            // Send line strip to rerun
+            /*MsgSender::new(mesh_anim.get_name().as_str())
+                .with_component(&[strip])?
+                .with_time(Timeline::new_sequence("frame"), i as i64)
+                .send(&mut session)
+                .unwrap();*/
         }
     }
 
