@@ -114,7 +114,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             SignedAxis3::POSITIVE_Z,
             Handedness::Right))
         .unwrap()
-        .with_splat(Transform::Rigid3({
+        /*.with_splat(Transform::Rigid3({
             let q = na::UnitQuaternion
                 ::from_axis_angle(
                     &na::Vector3::z_axis(),
@@ -126,7 +126,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 ..Default::default()
             }
         }))
-        .unwrap()
+        .unwrap()*/
         .with_timeless(true)
         .send(&mut session)
         .unwrap();
@@ -278,7 +278,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 //char_bone_sample.
             }*/
         } else {
-            let (points, lines) = generate_bone_points(&root_bone);
+            add_bones_to_session(&root_bone, &mut session, 0);
+
+            // Can probably delete
+            /*let (points, lines) = generate_bone_points(&root_bone);
 
             MsgSender::new(root_bone.name)
                 .with_component(&points)?
@@ -288,7 +291,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             MsgSender::new(format!("{}_lines", root_bone.name))
                 .with_component(&lines)?
                 .send(&mut session)
-                .unwrap();
+                .unwrap();*/
         }
     }
 
@@ -441,13 +444,15 @@ impl<'a> BoneNode<'a> {
 
     fn recompute_world_anim_transform(&mut self, parent_transform: na::Matrix4<f32>, bone_sample_map: &HashMap<&str, (&CharBoneSample, &Vec<f32>)>, i: usize) {
         if let Some((sample, _)) = bone_sample_map.get(self.name) {
-            // TODO: Multiple by bone weight?
+            // Decompose original local transform
+            let (mut trans, mut rotate, scale) = decompose_trs(self.local_bind_transform);
+
+            // TODO: Multiply by bone weight?
             let pos = sample
                 .pos
                 .as_ref()
                 .and_then(|(_, p)| p.get(i).or_else(|| p.last()))
-                .map(|v| na::Vector3::new(v.x, v.y, v.z))
-                .unwrap_or_default();
+                .map(|v| na::Vector3::new(v.x, v.y, v.z));
 
             let quat = sample
                 .quat
@@ -460,18 +465,37 @@ impl<'a> BoneNode<'a> {
                         q.y,
                         q.z
                     )
-                ))
-                .unwrap_or(na::UnitQuaternion::identity());
+                ));
 
             let rotz = sample
                 .rotz
                 .as_ref()
-                .and_then(|(_, r)| r.get(i).or_else(|| r.last()))
-                .map(|z| na::UnitQuaternion::from_axis_angle(
+                .and_then(|(_, r)| r.get(i).or_else(|| r.last()));
+                /*.map(|z| na::UnitQuaternion::from_axis_angle(
                     &na::Vector3::z_axis(),
                     std::f32::consts::PI * z
-                ))
-                .unwrap_or(na::UnitQuaternion::identity());
+                ));*/
+
+            // Override values if found
+            if let Some(pos) = pos {
+                trans = pos;
+            }
+
+            if let Some(quat) = quat {
+                rotate = quat;
+            }
+
+            if let Some(rotz) = rotz {
+                let (roll, pitch, yaw) = rotate.euler_angles();
+                //println!("({}, {}, {})", roll, pitch, yaw);
+
+                rotate = na::UnitQuaternion::from_euler_angles(roll, pitch, std::f32::consts::PI * rotz);
+
+                /*rotate = na::UnitQuaternion::from_axis_angle(
+                    &na::Vector3::z_axis(),
+                    *rotz
+                );*/
+            }
 
             /*let rotz2 = sample
                 .rotz
@@ -480,13 +504,19 @@ impl<'a> BoneNode<'a> {
                 .map(|z| na::Rotation3::from_axis_angle(&na::Vector3::z_axis(), *z).to_homogeneous())
                 .unwrap_or(na::UnitQuaternion::identity().to_homogeneous());*/
 
-            let anim_transform = na::Matrix4::identity()
+            /*let anim_transform = na::Matrix4::identity()
                 .append_translation(&pos) *
-                //quat.to_homogeneous() *
-                rotz.to_homogeneous();
+                quat.to_homogeneous() *
+                rotz.to_homogeneous();*/
+
+            // Re-compute local transform
+            let trs: na::Matrix4::<_> = (na::Matrix4::identity()
+                .append_translation(&trans) *
+                rotate.to_homogeneous())
+                .append_nonuniform_scaling(&scale);
 
             //let applied_transform = self.local_bind_transform * anim_transform;
-            self.world_anim_transform = parent_transform * self.local_bind_transform * anim_transform;
+            self.world_anim_transform = parent_transform * trs; // anim_transform;
         } else {
             self.world_anim_transform = parent_transform * self.local_bind_transform;
         }
@@ -524,6 +554,19 @@ fn add_bones_to_session(bone: &BoneNode, session: &mut Session, i: usize) {
             Point3D::from([v[0], v[1], v[2]])
         ])
         .unwrap()
+        .with_splat(Transform::Rigid3({
+            let q = na::UnitQuaternion
+                ::from_axis_angle(
+                    &na::Vector3::z_axis(),
+                    std::f32::consts::PI
+                );
+
+            Rigid3 {
+                rotation: Quaternion::new(q.i, q.j, q.k, q.w),
+                ..Default::default()
+            }
+        }))
+        .unwrap()
         /*.with_splat(ViewCoordinates::from_up_and_handedness(
             SignedAxis3::POSITIVE_Z,
             Handedness::Right))
@@ -554,7 +597,7 @@ fn add_bones_to_session(bone: &BoneNode, session: &mut Session, i: usize) {
                 vector: {
                     let v: na::Vector3<_> = bone
                         .world_bind_transform
-                        .transform_vector(&na::Vector3::from_element(0.25));
+                        .transform_vector(&na::Vector3::from_element(0.5));
 
                     /*let rotation = na::UnitQuaternion::from_matrix(&bone
                         .world_bind_transform.fixed_view::<3, 3>(0, 0).into()
@@ -569,7 +612,7 @@ fn add_bones_to_session(bone: &BoneNode, session: &mut Session, i: usize) {
         ])
         .unwrap()
         //.with_splat(Scalar(10.)).unwrap()
-        .with_splat(Radius(0.01)).unwrap()
+        .with_splat(Radius(0.05)).unwrap()
         .with_splat(ColorRGBA::from_rgb(0, 255, 0)).unwrap()
         /*.with_splat(ViewCoordinates::from_up_and_handedness(
             SignedAxis3::POSITIVE_Z,
@@ -582,4 +625,19 @@ fn add_bones_to_session(bone: &BoneNode, session: &mut Session, i: usize) {
     for ch in bone.children.iter() {
         add_bones_to_session(ch, session, i);
     }
+}
+
+// TODO: Move to shared part in lib
+fn decompose_trs(mat: na::Matrix4<f32>) -> (na::Vector3<f32>, na::UnitQuaternion<f32>, na::Vector3<f32>) {
+    // Decompose matrix to T*R*S
+    let translate = mat.column(3).xyz();
+    let rotation = na::UnitQuaternion::from_matrix(&mat.fixed_view::<3, 3>(0, 0).into());
+
+    let scale = na::Vector3::new(
+        mat.column(0).magnitude(),
+        mat.column(1).magnitude(),
+        mat.column(2).magnitude(),
+    );
+
+    (translate, rotation, scale)
 }
