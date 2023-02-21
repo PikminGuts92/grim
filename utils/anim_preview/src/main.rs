@@ -16,7 +16,8 @@ use nalgebra as na;
 
 use rerun::external::glam;
 use rerun::{
-    components::{ColorRGBA, LineStrip3D, MeshId, Point3D, Radius, RawMesh3D},
+    coordinates::{Handedness, SignedAxis3},
+    components::{Arrow3D, ColorRGBA, LineStrip3D, MeshId, Point3D, Quaternion, Radius, RawMesh3D, Rigid3, Scalar, TextEntry, Transform, Vec3D, ViewCoordinates},
     MsgSender, Session,
     time::Timeline
 };
@@ -102,6 +103,34 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut session = Session::new();
 
+    MsgSender::new(format!("world"))
+        /*.with_component(&[
+            ViewCoordinates::from_up_and_handedness(
+                SignedAxis3::POSITIVE_Z,
+                Handedness::Right)
+        ])
+        .unwrap()*/
+        .with_splat(ViewCoordinates::from_up_and_handedness(
+            SignedAxis3::POSITIVE_Z,
+            Handedness::Right))
+        .unwrap()
+        .with_splat(Transform::Rigid3({
+            let q = na::UnitQuaternion
+                ::from_axis_angle(
+                    &na::Vector3::z_axis(),
+                    std::f32::consts::PI
+                );
+
+            Rigid3 {
+                rotation: Quaternion::new(q.i, q.j, q.k, q.w),
+                ..Default::default()
+            }
+        }))
+        .unwrap()
+        .with_timeless(true)
+        .send(&mut session)
+        .unwrap();
+
     for mesh_anim in mesh_anims {
         println!("{}", mesh_anim.get_name());
         println!("{} point keys", mesh_anim.vert_point_keys.len());
@@ -172,6 +201,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let root_bone = BoneNode::new(&base_milo_loader.obj_dir);
 
     if let Some(mut root_bone) = root_bone {
+        /*root_bone = root_bone
+            .children
+            .into_iter()
+            .find(|b| b.name.eq("bone_pelvis.mesh"))
+            .unwrap();*/
+
         let anim_milo_loader_result = args
             .get(1)
             .map(|p| PathBuf::from(&p))
@@ -235,7 +270,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // If sample not found, use last one?
                 // TODO: Iterpolate from frames
 
-                root_bone.recompute_world_transform(na::Matrix4::identity(), &bone_sample_map, i);
+                root_bone.recompute_world_anim_transform(na::Matrix4::identity(), &bone_sample_map, i);
                 add_bones_to_session(&root_bone, &mut session, i);
             }
 
@@ -298,6 +333,7 @@ pub struct BoneNode<'a> {
     pub children: Vec<BoneNode<'a>>,
     pub local_bind_transform: na::Matrix4<f32>,
     pub world_bind_transform: na::Matrix4<f32>,
+    pub world_anim_transform: na::Matrix4<f32>,
 }
 
 impl<'a> BoneNode<'a> {
@@ -343,6 +379,7 @@ impl<'a> BoneNode<'a> {
             children: Vec::new(),
             local_bind_transform: na::Matrix4::identity(),
             world_bind_transform: na::Matrix4::identity(),
+            world_anim_transform: na::Matrix4::identity(),
         };
 
         // Find bones that belong to object dir
@@ -392,7 +429,8 @@ impl<'a> BoneNode<'a> {
                     object: trans_obj,
                     children: Vec::new(),
                     local_bind_transform: local_transform,
-                    world_bind_transform: self.world_bind_transform * local_transform
+                    world_bind_transform: self.world_bind_transform * local_transform,
+                    world_anim_transform: self.world_bind_transform * local_transform,
                 };
 
                 bone.children = bone.find_child_nodes(bone_map, child_map);
@@ -401,7 +439,7 @@ impl<'a> BoneNode<'a> {
             .collect()
     }
 
-    fn recompute_world_transform(&mut self, parent_transform: na::Matrix4<f32>, bone_sample_map: &HashMap<&str, (&CharBoneSample, &Vec<f32>)>, i: usize) {
+    fn recompute_world_anim_transform(&mut self, parent_transform: na::Matrix4<f32>, bone_sample_map: &HashMap<&str, (&CharBoneSample, &Vec<f32>)>, i: usize) {
         if let Some((sample, _)) = bone_sample_map.get(self.name) {
             // TODO: Multiple by bone weight?
             let pos = sample
@@ -416,7 +454,12 @@ impl<'a> BoneNode<'a> {
                 .as_ref()
                 .and_then(|(_, q)| q.get(i).or_else(|| q.last()))
                 .map(|q| na::UnitQuaternion::from_quaternion(
-                    na::Quaternion::new(q.w, q.x, q.y, q.z)
+                    na::Quaternion::new(
+                        q.w,
+                        q.x,
+                        q.y,
+                        q.z
+                    )
                 ))
                 .unwrap_or(na::UnitQuaternion::identity());
 
@@ -430,51 +473,108 @@ impl<'a> BoneNode<'a> {
                 ))
                 .unwrap_or(na::UnitQuaternion::identity());
 
+            /*let rotz2 = sample
+                .rotz
+                .as_ref()
+                .and_then(|(_, r)| r.get(i).or_else(|| r.last()))
+                .map(|z| na::Rotation3::from_axis_angle(&na::Vector3::z_axis(), *z).to_homogeneous())
+                .unwrap_or(na::UnitQuaternion::identity().to_homogeneous());*/
+
             let anim_transform = na::Matrix4::identity()
                 .append_translation(&pos) *
-                quat.to_homogeneous() *
+                //quat.to_homogeneous() *
                 rotz.to_homogeneous();
 
             //let applied_transform = self.local_bind_transform * anim_transform;
-            self.world_bind_transform = parent_transform * self.local_bind_transform * anim_transform;
+            self.world_anim_transform = parent_transform * self.local_bind_transform * anim_transform;
         } else {
-            self.world_bind_transform = parent_transform * self.local_bind_transform;
+            self.world_anim_transform = parent_transform * self.local_bind_transform;
         }
 
         for ch in self.children.iter_mut() {
-            ch.recompute_world_transform(self.world_bind_transform, bone_sample_map, i);
+            ch.recompute_world_anim_transform(self.world_anim_transform, bone_sample_map, i);
         }
     }
 
-    fn get_world_pos(&self) -> na::Vector3<f32> {
+    fn get_world_bind_pos(&self) -> na::Vector3<f32> {
         self.world_bind_transform.column(3).xyz()
+    }
+
+    fn get_world_anim_pos(&self) -> na::Vector3<f32> {
+        self.world_anim_transform.column(3).xyz()
     }
 }
 
 fn add_bones_to_session(bone: &BoneNode, session: &mut Session, i: usize) {
-    let v = bone.get_world_pos();
-    let points = vec![Point3D::from([v[0], v[1], v[2]])];
+    let v = bone.get_world_anim_pos();
 
     // Generate line strips
     let strips = bone
         .children
         .iter()
         .map(|c| {
-            let cv = c.get_world_pos();
+            let cv = c.get_world_anim_pos();
             vec![[v[0], v[1], v[2]], [cv.x, cv.y, cv.z]].into()
         })
         .collect::<Vec<LineStrip3D>>();
 
-    MsgSender::new(bone.name)
-        .with_component(&points)
+    // Add vertex
+    MsgSender::new(format!("world/{}", bone.name))
+        .with_component(&[
+            Point3D::from([v[0], v[1], v[2]])
+        ])
         .unwrap()
+        /*.with_splat(ViewCoordinates::from_up_and_handedness(
+            SignedAxis3::POSITIVE_Z,
+            Handedness::Right))
+        .unwrap()*/
+        //.with_splat(Radius(1.0))
+        //.unwrap()
         .with_time(Timeline::new_sequence("frame"), i as i64)
         .send(session)
         .unwrap();
 
-    MsgSender::new(format!("{}_lines", bone.name))
+    // Add lines from node to children
+    MsgSender::new(format!("world/{}/lines", bone.name))
         .with_component(&strips)
         .unwrap()
+        /*.with_splat(ViewCoordinates::from_up_and_handedness(
+            SignedAxis3::POSITIVE_Z,
+            Handedness::Right))
+        .unwrap()*/
+        .with_time(Timeline::new_sequence("frame"), i as i64)
+        .send(session)
+        .unwrap();
+
+    // Add direction arrow (not working)
+    MsgSender::new(format!("world/{}/arrows", bone.name))
+        .with_component(&[
+            Arrow3D {
+                origin: Vec3D([v[0], v[1], v[2]]),
+                vector: {
+                    let v: na::Vector3<_> = bone
+                        .world_bind_transform
+                        .transform_vector(&na::Vector3::from_element(0.25));
+
+                    /*let rotation = na::UnitQuaternion::from_matrix(&bone
+                        .world_bind_transform.fixed_view::<3, 3>(0, 0).into()
+                    );
+
+                    let (i, j, k) = rotation.euler_angles();
+                    let v = na::Vector3::new(i, j, k);*/
+
+                    Vec3D([v[0], v[1], v[2]])
+                }
+            }
+        ])
+        .unwrap()
+        //.with_splat(Scalar(10.)).unwrap()
+        .with_splat(Radius(0.01)).unwrap()
+        .with_splat(ColorRGBA::from_rgb(0, 255, 0)).unwrap()
+        /*.with_splat(ViewCoordinates::from_up_and_handedness(
+            SignedAxis3::POSITIVE_Z,
+            Handedness::Right))
+        .unwrap()*/
         .with_time(Timeline::new_sequence("frame"), i as i64)
         .send(session)
         .unwrap();
