@@ -134,11 +134,11 @@ impl CharBonesSamples {
 
         let read_packed_f32 = if sys_info.endian.eq(&IOEndian::Big) {
             |data: [u8; 2]| -> f32 {
-                ((u16::from_be_bytes(data) as f32) / 32767.0).max(-1.0)
+                ((i16::from_be_bytes(data) as f32) / 32767.0).max(-1.0)
             }
         } else {
             |data: [u8; 2]| -> f32 {
-                ((u16::from_le_bytes(data) as f32) / 32767.0).max(-1.0)
+                ((i16::from_le_bytes(data) as f32) / 32767.0).max(-1.0)
             }
         };
 
@@ -178,9 +178,9 @@ impl CharBonesSamples {
                             },
                             s @ 6 => {
                                 // Read packed data
-                                let x = read_packed_f32([sample[i    ], sample[i + 1]]);
-                                let y = read_packed_f32([sample[i + 2], sample[i + 3]]);
-                                let z = read_packed_f32([sample[i + 4], sample[i + 5]]);
+                                let x = read_packed_f32([sample[i    ], sample[i + 1]]) * 1345.; // TODO: Investigate better constant
+                                let y = read_packed_f32([sample[i + 2], sample[i + 3]]) * 1345.;
+                                let z = read_packed_f32([sample[i + 4], sample[i + 5]]) * 1345.;
 
                                 i += s as usize;
                                 Vector3 { x, y, z }
