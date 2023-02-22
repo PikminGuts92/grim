@@ -300,43 +300,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn generate_bone_points(bone: &BoneNode) -> (Vec<Point3D>, Vec<LineStrip3D>) {
-    let mut points = Vec::new();
-    let mut lines = Vec::new();
-
-    //let v: na::Vector3<f32> = bone.transform.transform_vector(&na::Vector3::zeros());
-    let v = bone.world_bind_transform.column(3).xyz();
-    points.push(Point3D::from([v[0], v[1], v[2]]));
-
-    // Generate line strips
-    let mut strips = bone
-        .children
-        .iter()
-        .map(|c| {
-            let cv = c.world_bind_transform.column(3).xyz();
-            vec![[v[0], v[1], v[2]], [cv.x, cv.y, cv.z]].into()
-        })
-        .collect::<Vec<LineStrip3D>>();
-
-    lines.append(&mut strips);
-
-    for child in bone.children.iter() {
-        let (mut child_points, mut child_lines) = generate_bone_points(child);
-
-        points.append(&mut child_points);
-        lines.append(&mut child_lines);
-    }
-
-    (points, lines)
-}
-
 pub struct BoneNode<'a> {
     pub name: &'a str,
     pub object: Option<&'a dyn Trans>,
     pub children: Vec<BoneNode<'a>>,
     pub local_bind_transform: na::Matrix4<f32>,
-    pub world_bind_transform: na::Matrix4<f32>,
-    pub world_anim_transform: na::Matrix4<f32>,
+    pub inverse_bind_transform: na::Matrix4<f32>,
+    pub anim_transform: na::Matrix4<f32>,
 }
 
 impl<'a> BoneNode<'a> {
@@ -381,12 +351,12 @@ impl<'a> BoneNode<'a> {
             object: None,
             children: Vec::new(),
             local_bind_transform: na::Matrix4::identity(),
-            world_bind_transform: na::Matrix4::identity(),
-            world_anim_transform: na::Matrix4::identity(),
+            inverse_bind_transform: na::Matrix4::identity().try_inverse().unwrap(),
+            anim_transform: na::Matrix4::identity(),
         };
 
         // Find bones that belong to object dir
-        root.children = root.find_child_nodes(&bones, &child_map);
+        root.children = root.find_child_nodes(root.local_bind_transform, &bones, &child_map);
 
         if root.children.is_empty() {
             return None;
@@ -395,7 +365,7 @@ impl<'a> BoneNode<'a> {
         Some(root)
     }
 
-    fn find_child_nodes(&self, bone_map: &HashMap<&str, &'a dyn Trans>, child_map: &HashMap<&str, Vec<&'a dyn Trans>>) -> Vec<BoneNode<'a>> {
+    fn find_child_nodes(&self, parent_transform: na::Matrix4<f32>, bone_map: &HashMap<&str, &'a dyn Trans>, child_map: &HashMap<&str, Vec<&'a dyn Trans>>) -> Vec<BoneNode<'a>> {
         let parent_name = self.name;
 
         let Some(children) = child_map.get(parent_name) else {
@@ -427,22 +397,26 @@ impl<'a> BoneNode<'a> {
                     })
                     .unwrap_or(na::Matrix4::identity());
 
+                let current_transform = parent_transform * local_transform;
+
                 let mut bone = BoneNode {
                     name: c.get_name().as_str(),
                     object: trans_obj,
                     children: Vec::new(),
                     local_bind_transform: local_transform,
-                    world_bind_transform: self.world_bind_transform * local_transform,
-                    world_anim_transform: self.world_bind_transform * local_transform,
+                    inverse_bind_transform: current_transform.try_inverse().unwrap(),
+                    anim_transform: current_transform,
                 };
 
-                bone.children = bone.find_child_nodes(bone_map, child_map);
+                bone.children = bone.find_child_nodes(current_transform, bone_map, child_map);
                 bone
             })
             .collect()
     }
 
     fn recompute_world_anim_transform(&mut self, parent_transform: na::Matrix4<f32>, bone_sample_map: &HashMap<&str, (&CharBoneSample, &Vec<f32>)>, i: usize) {
+        let current_transform;
+
         if let Some((sample, _)) = bone_sample_map.get(self.name) {
             // Decompose original local transform
             let (mut trans, mut rotate, scale) = decompose_trs(self.local_bind_transform);
@@ -453,6 +427,7 @@ impl<'a> BoneNode<'a> {
                 .as_ref()
                 .and_then(|(_, p)| p.get(i).or_else(|| p.last()))
                 .map(|v| na::Vector3::new(v.x, v.y, v.z));
+                //.unwrap_or_else(|| na::Vector3::zeros());
 
             let quat = sample
                 .quat
@@ -466,15 +441,17 @@ impl<'a> BoneNode<'a> {
                         q.z
                     )
                 ));
+                //.unwrap_or_else(|| na::UnitQuaternion::identity());
 
             let rotz = sample
                 .rotz
                 .as_ref()
-                .and_then(|(_, r)| r.get(i).or_else(|| r.last()));
-                /*.map(|z| na::UnitQuaternion::from_axis_angle(
+                .and_then(|(_, r)| r.get(i).or_else(|| r.last()))
+                .map(|z| na::UnitQuaternion::from_axis_angle(
                     &na::Vector3::z_axis(),
                     std::f32::consts::PI * z
-                ));*/
+                ));
+                //.unwrap_or_else(|| na::UnitQuaternion::identity());
 
             // Override values if found
             if let Some(pos) = pos {
@@ -489,49 +466,38 @@ impl<'a> BoneNode<'a> {
                 let (roll, pitch, yaw) = rotate.euler_angles();
                 //println!("({}, {}, {})", roll, pitch, yaw);
 
-                rotate = na::UnitQuaternion::from_euler_angles(roll, pitch, std::f32::consts::PI * rotz);
+                //rotate = na::UnitQuaternion::from_euler_angles(roll, pitch, std::f32::consts::PI * rotz);
+                //rotate.renormalize();
 
                 /*rotate = na::UnitQuaternion::from_axis_angle(
                     &na::Vector3::z_axis(),
-                    *rotz
+                    std::f32::consts::PI * rotz
                 );*/
+
+                rotate *= rotz;
             }
 
-            /*let rotz2 = sample
-                .rotz
-                .as_ref()
-                .and_then(|(_, r)| r.get(i).or_else(|| r.last()))
-                .map(|z| na::Rotation3::from_axis_angle(&na::Vector3::z_axis(), *z).to_homogeneous())
-                .unwrap_or(na::UnitQuaternion::identity().to_homogeneous());*/
-
-            /*let anim_transform = na::Matrix4::identity()
-                .append_translation(&pos) *
-                quat.to_homogeneous() *
-                rotz.to_homogeneous();*/
-
-            // Re-compute local transform
-            let trs: na::Matrix4::<_> = (na::Matrix4::identity()
+            // Compute local trs transform
+            let anim_transform = (na::Matrix4::identity()
                 .append_translation(&trans) *
                 rotate.to_homogeneous())
                 .append_nonuniform_scaling(&scale);
 
-            //let applied_transform = self.local_bind_transform * anim_transform;
-            self.world_anim_transform = parent_transform * trs; // anim_transform;
+
+            current_transform = parent_transform * anim_transform;
         } else {
-            self.world_anim_transform = parent_transform * self.local_bind_transform;
+            current_transform = parent_transform * self.local_bind_transform;
         }
 
         for ch in self.children.iter_mut() {
-            ch.recompute_world_anim_transform(self.world_anim_transform, bone_sample_map, i);
+            ch.recompute_world_anim_transform(current_transform, bone_sample_map, i);
         }
-    }
 
-    fn get_world_bind_pos(&self) -> na::Vector3<f32> {
-        self.world_bind_transform.column(3).xyz()
+        self.anim_transform = current_transform;
     }
 
     fn get_world_anim_pos(&self) -> na::Vector3<f32> {
-        self.world_anim_transform.column(3).xyz()
+        self.anim_transform.column(3).xyz()
     }
 }
 
@@ -596,7 +562,7 @@ fn add_bones_to_session(bone: &BoneNode, session: &mut Session, i: usize) {
                 origin: Vec3D([v[0], v[1], v[2]]),
                 vector: {
                     let v: na::Vector3<_> = bone
-                        .world_bind_transform
+                        .anim_transform
                         .transform_vector(&na::Vector3::from_element(0.5));
 
                     /*let rotation = na::UnitQuaternion::from_matrix(&bone
