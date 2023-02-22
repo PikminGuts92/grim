@@ -501,7 +501,7 @@ impl GltfExporter {
         let node_index = gltf.nodes.len();
 
         // Get + compute transform matrix
-        let mat = match (self.get_transform(name), depth) {
+        let node_matrix = match (self.get_transform(name), depth) {
             (Some(trans), 0) => {
                 let m = trans.get_world_xfm();
 
@@ -530,25 +530,46 @@ impl GltfExporter {
             _ => na::Matrix4::identity()
         };
 
+        // Deconstruct into individual parts
+        let (translate, rotation, scale) = decompose_trs(node_matrix);
+
         gltf.nodes.push(gltf_json::Node {
             camera: None,
             children: None,
             extensions: None,
             extras: None,
-            matrix: if mat.is_identity(f32::EPSILON) {
-                // Don't add identities
-                None
-            } else {
-                mat
-                    .as_slice()
-                    .try_into()
-                    .ok()
-            },
+            matrix: None,
             mesh: None,
             name: Some(name.to_owned()),
-            rotation: None,
-            scale: None,
-            translation: None,
+            // Don't add identities
+            rotation: if rotation.eq(&na::UnitQuaternion::identity()) {
+                None
+            } else {
+                Some(json::scene::UnitQuaternion([
+                    rotation[0],
+                    rotation[1],
+                    rotation[2],
+                    rotation[3]
+                ]))
+            },
+            scale: if scale.eq(&na::Vector3::from_element(1.0)) {
+                None
+            } else {
+                Some([
+                    scale[0],
+                    scale[1],
+                    scale[2]
+                ])
+            },
+            translation: if translate.eq(&na::Vector3::zeros()) {
+                None
+            } else {
+                Some([
+                    translate[0],
+                    translate[1],
+                    translate[2]
+                ])
+            },
             skin: None,
             weights: None,
         });
@@ -770,6 +791,30 @@ impl GltfExporter {
                 &n.children,
                 parent_mat * n.matrix
                     .map(|m| na::Matrix4::from_column_slice(&m))
+                    .or_else(|| {
+                        // Re-construct into trs
+                        // TODO: Probably don't deconstruct in first place
+                        let trans = n.translation
+                            .map(na::Vector3::from)
+                            .unwrap_or_else(na::Vector3::zeros);
+
+                        let rotate = n.rotation
+                            .map(|json::scene::UnitQuaternion([x, y, z, w])|
+                                na::UnitQuaternion::from_quaternion(
+                                    na::Quaternion::new(w, x, y, z)
+                                )
+                            )
+                            .unwrap_or_else(|| na::UnitQuaternion::identity());
+
+                        let scale = n.scale
+                            .map(na::Vector3::from)
+                            .unwrap_or_else(|| na::Vector3::from_element(1.0));
+
+                        Some((na::Matrix4::identity()
+                            .append_translation(&trans) *
+                            rotate.to_homogeneous())
+                            .append_nonuniform_scaling(&scale))
+                    })
                     .unwrap_or_default()
             ))
             .unwrap();
@@ -1643,22 +1688,24 @@ impl GltfExporter {
                 };
 
                 // Get existing matrix for node
-                let node_matrix = gltf
-                    .nodes[node_idx]
-                    .matrix
-                    .map(|m| na::Matrix4::from_column_slice(&m))
-                    .unwrap_or(na::Matrix4::identity() /*super::MILOSPACE_TO_GLSPACE*/);
+                let node = &gltf.nodes[node_idx];
 
-                // Decompose matrix to T*R*S
-                let (translate, rotation, scale) = decompose_trs(node_matrix);
+                let node_trans = node.translation
+                    .map(na::Vector3::from)
+                    .unwrap_or_else(na::Vector3::zeros);
 
-                // Update node
-                if let Some(node) = gltf.nodes.get_mut(node_idx) {
-                    node.matrix = None;
-                    node.translation = Some([translate[0], translate[1], translate[2]]);
-                    node.rotation = Some(json::scene::UnitQuaternion([rotation[0], rotation[1], rotation[2], rotation[3]]));
-                    node.scale = Some([scale[0], scale[1], scale[2]])
-                }
+                let node_rotate = node.rotation
+                    .map(|json::scene::UnitQuaternion([x, y, z, w])|
+                        na::UnitQuaternion::from_quaternion(
+                            na::Quaternion::new(w, x, y, z)
+                        )
+                    )
+                    .unwrap_or_else(|| na::UnitQuaternion::identity());
+
+                // TODO: Add scaling transform samples...
+                let node_scale = node.scale
+                    .map(na::Vector3::from)
+                    .unwrap_or_else(|| na::Vector3::from_element(1.0));
 
                 // Compute samples as matrices
                 //let translate_samples = bone.pos.take().map(|(pw, p)| p.into_iter().map(|v| na::Matrix4::new_translation(&na::Vector3::new(v.x, v.y, v.z))));
@@ -1735,19 +1782,20 @@ impl GltfExporter {
                     extras: None
                 });*/
 
+                const FPS: f32 = 1. / 30.;
+
                 // Add translations (.pos)
                 if let Some((w, samples)) = bone.pos.take() {
                     let input_idx = acc_builder.add_scalar(
                         format!("{}_{}_translation_input", clip_name, bone_name),
                         //frames.iter().map(|f| *f)
-                        samples.iter().enumerate().map(|(i, _)| i as f32)
+                        samples.iter().enumerate().map(|(i, _)| (i as f32) * FPS)
                     ).unwrap();
 
                     let output_idx = acc_builder.add_array(
                         format!("{}_{}_translation_output", clip_name, bone_name),
                         samples.into_iter().map(|s| {
-                            let mut v = na::Vector3::new(s.x * w, s.y * w, s.z * w);
-                            v += translate;
+                            let v = na::Vector3::new(s.x * w, s.y * w, s.z * w);
 
                             [v.x, v.y, v.z]
                         })
@@ -1783,7 +1831,7 @@ impl GltfExporter {
                     let output_idx = acc_builder.add_array(
                         format!("{}_{}_translation_output", clip_name, bone_name),
                         {
-                            let v = translate;
+                            let v = node_trans;
                             vec![[v.x, v.y, v.z]]
                         }
                     ).unwrap();
@@ -1856,7 +1904,7 @@ impl GltfExporter {
 
                 // Combined rotations
                 let mut rotation_samples = (0..rotation_sample_count)
-                    .map(|_| rotation)
+                    .map(|_| node_rotate)
                     /*.map(|_| {
                         let q = rotation.as_vector();
                         na::Quaternion::new(q[3], q[0], q[1], q[2])
@@ -1880,7 +1928,7 @@ impl GltfExporter {
                         //*rot = *rot * q;
 
                         //*rot = rot.rotation_to(&na::UnitQuaternion::from_quaternion(q));
-                        *rot = *rot * na::UnitQuaternion::from_quaternion(q);
+                        *rot = na::UnitQuaternion::from_quaternion(q);
                         //*rot = na::UnitQuaternion::from_quaternion(rot.normalize());
                     }
                 }
@@ -1897,16 +1945,17 @@ impl GltfExporter {
 
                         //let qq = na::Quaternion::new(q[3], q[0], q[1], q[2]);
 
-                        *rot = *rot * q;
+                        *rot *= q;
                     }
                 }
 
                 // Add all rotations
+                // TODO: Add empty rotation sample?
                 if rotation_samples.len() > 0 {
                     let input_idx = acc_builder.add_scalar(
                         format!("{}_{}_rotation_input", clip_name, bone_name),
                         //frames.iter().map(|f| *f)
-                        rotation_samples.iter().enumerate().map(|(i, _)| i as f32)
+                        rotation_samples.iter().enumerate().map(|(i, _)| (i as f32) * FPS)
                     ).unwrap();
 
                     let output_idx = acc_builder.add_array(
@@ -1963,24 +2012,13 @@ fn align_to_multiple_of_four(n: usize) -> usize {
 fn decompose_trs(mat: na::Matrix4<f32>) -> (na::Vector3<f32>, na::UnitQuaternion<f32>, na::Vector3<f32>) {
     // Decompose matrix to T*R*S
     let translate = mat.column(3).xyz();
-    //let cc = node_matrix.fixed_view::<3, 3>(0, 0);
-    //let rot = na::UnitQuaternion::from_matrix(&cc.into());
     let rotation = na::UnitQuaternion::from_matrix(&mat.fixed_view::<3, 3>(0, 0).into());
-    //let scale = mat.column(0).xyz().component_mul(&mat.column(1).xyz()).component_mul(&mat.column(2).xyz());
+
     let scale = na::Vector3::new(
         mat.column(0).magnitude(),
         mat.column(1).magnitude(),
         mat.column(2).magnitude(),
     );
-
-    /*let smx = mat.column(0).magnitude();
-    let smy = mat.column(1).magnitude();
-    let smz = mat.column(2).magnitude();
-
-    let scale = na::Vector3::new(smx, smy, smz);
-
-    let rot_base = na::UnitQuaternion::from_matrix(&mat.fixed_view::<3, 3>(0, 0).into());*/
-
 
     (translate, rotation, scale)
 }
