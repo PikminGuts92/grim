@@ -429,7 +429,25 @@ impl GltfExporter {
             let entries = dir_entry.entries.drain(..).collect::<Vec<_>>();
             let parent = Rc::new(dir_entry);
 
+            // Ignore groups + meshes in lower lods or shadow
+            // TODO: Work out better way to filter
+            let ignored_objects = entries
+                .iter()
+                .filter_map(|e| match (e, e.get_name()) {
+                    (Object::Group(grp), n) if ["shadow", "lod1", "lod2", "lod01", "lod02", "LOD01", "LOD02"]
+                        .iter().any(|f| n.contains(f)) => {
+                        Some(grp.objects.to_owned().into_iter().chain([n.to_owned()]))
+                    },
+                    _ => None
+                })
+                .flatten()
+                .collect::<HashSet<_>>();
+
             for entry in entries {
+                if ignored_objects.contains(entry.get_name()) {
+                    continue;
+                }
+
                 let name = entry.get_name().to_owned();
 
                 match entry {
@@ -452,11 +470,6 @@ impl GltfExporter {
                         );
                     },
                     Object::Mesh(mesh) => {
-                        if mesh.name.contains("shadow") {
-                            // Skip shadows for now
-                            continue;
-                        }
-
                         self.meshes.insert(
                             name,
                             MappedObject::new(mesh, parent.clone())
