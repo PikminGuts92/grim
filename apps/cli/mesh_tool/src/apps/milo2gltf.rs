@@ -47,7 +47,16 @@ impl SubApp for Milo2GltfApp {
             ..Default::default()
         });
         exporter.add_milo_from_path(milo_path)?;
+
+        // Add extra milos
         for extra_path in self.extra_milo_paths.iter() {
+            let extra_path = PathBuf::from(extra_path);
+            let extra_path_file_name = extra_path
+                .file_name()
+                .and_then(|f| f.to_str())
+                .unwrap();
+
+            println!("Adding {}", extra_path_file_name);
             exporter.add_milo_from_path(extra_path)?;
         }
 
