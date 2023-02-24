@@ -452,6 +452,11 @@ impl GltfExporter {
                         );
                     },
                     Object::Mesh(mesh) => {
+                        if mesh.name.contains("shadow") {
+                            // Skip shadows for now
+                            continue;
+                        }
+
                         self.meshes.insert(
                             name,
                             MappedObject::new(mesh, parent.clone())
@@ -804,7 +809,7 @@ impl GltfExporter {
                                     na::Quaternion::new(w, x, y, z)
                                 )
                             )
-                            .unwrap_or_else(|| na::UnitQuaternion::identity());
+                            .unwrap_or_else(na::UnitQuaternion::identity);
 
                         let scale = n.scale
                             .map(na::Vector3::from)
@@ -1942,8 +1947,6 @@ impl GltfExporter {
                             &na::Vector3::z_axis(),
                             std::f32::consts::PI * (z * w)
                         );
-
-                        //let qq = na::Quaternion::new(q[3], q[0], q[1], q[2]);
 
                         *rot *= q;
                     }
