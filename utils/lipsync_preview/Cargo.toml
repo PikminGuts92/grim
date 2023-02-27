@@ -1,12 +1,13 @@
 [package]
-name = "anim_preview"
+name = "lipsync_preview"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 
 [dependencies]
-grim = { workspace = true }
+grim = { workspace = true, features = [ "audio" ] }
+eframe = "0.21.3"
 keyframe = "1.1.1"
 nalgebra = "0.32.1"
-rerun = "0.2.0"
+#rerun = "0.2.0"
 shared = { path = "../shared" }

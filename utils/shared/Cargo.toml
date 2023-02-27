@@ -1,0 +1,8 @@
+[package]
+name = "shared"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+grim = { workspace = true }
