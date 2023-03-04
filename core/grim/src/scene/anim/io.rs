@@ -63,7 +63,7 @@ pub(crate) fn load_anim<T: Anim>(anim: &mut T, reader: &mut Box<BinaryStream>, i
 
 pub(crate) fn save_anim<T: Anim>(anim: &T, writer: &mut Box<BinaryStream>, info: &SystemInfo, write_meta: bool)  -> Result<(), Box<dyn Error>> {
     // TODO: Get version from system info
-    let version = if version == 10 { 0 } else { 4 };
+    let version = if info.version == 10 { 0 } else { 4 };
     writer.write_uint32(version)?;
 
     if write_meta {
