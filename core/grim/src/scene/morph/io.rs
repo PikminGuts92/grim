@@ -61,6 +61,7 @@ impl ObjectReadWrite for Morph {
 
         // TODO: Get version from system info
         let version = 3;
+        writer.write_uint32(version)?;
 
         if version > 3 {
             save_object(self, &mut writer, info)?;
