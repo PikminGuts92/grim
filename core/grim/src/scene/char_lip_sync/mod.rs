@@ -28,7 +28,7 @@ impl Default for CharLipSync {
 }
 
 pub struct VisemeFrame<'a> {
-    pub viemes: Vec<(&'a str, u8)>, // Viseme name, weight
+    pub visemes: Vec<(&'a str, u8)>, // Viseme name, weight
 }
 
 impl CharLipSync {
@@ -60,7 +60,7 @@ impl CharLipSync {
             }
 
             frames.push(VisemeFrame {
-                viemes: weights
+                visemes: weights
             });
 
             idx += 1;
