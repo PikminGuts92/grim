@@ -102,6 +102,7 @@ impl Object {
             Object::PropAnim(obj) => obj,
             Object::Tex(obj) => obj,
             Object::Trans(obj) => obj,
+            Object::TransAnim(obj) => obj,
             _ => todo!("Test"),
         };
 

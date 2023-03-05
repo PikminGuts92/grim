@@ -141,8 +141,6 @@ impl ObjectReadWrite for TransAnim {
             // 4x ints
             writer.write_uint64(0)?;
             writer.write_uint64(0)?;
-
-            writer.write_uint32(0)?; // Empty string
         }
 
         writer.write_prefixed_string(&self.trans_object)?;
