@@ -9,6 +9,7 @@ use thiserror::Error;
 
 use grim::{Platform, SystemInfo};
 use grim::io::*;
+use grim::midi::{MidiEvent, MidiTextType, MidiFile, MidiTempo, MidiText, MidiTrack};
 use grim::scene::{AnimEvent, CharLipSync, Object, ObjectDir, ObjectDirBase, MiloObject, Morph, MorphPose, PackedObject, Quat, Tex, TransAnim};
 
 #[derive(Parser, Debug)]
@@ -17,6 +18,8 @@ pub struct Milo2KrApp {
     pub input_path: String,
     #[arg(help = "Path to output rnd file", required = true)]
     pub output_path: String,
+    #[arg(short = 'm', long, help = "Base MIDI file", required = true)]
+    pub midi: String,
     #[arg(short, long, help = "Enable to leave output milo archive uncompressed", required = false)]
     pub uncompressed: bool,
 }
@@ -27,6 +30,12 @@ impl SubApp for Milo2KrApp {
     fn process(&mut self) -> Result<(), Box<dyn Error>> {
         let milo_path = Path::new(&self.input_path);
         let rnd_path = Path::new(&self.output_path);
+
+        // Open midi
+        let Some(mid) = MidiFile::from_path(&self.midi) else {
+            println!("Unable to open midi file");
+            return Ok(());
+        };
 
         if let Some(file_name) = milo_path.file_name() {
             let file_name = file_name.to_str().unwrap_or("file");
@@ -58,7 +67,40 @@ impl SubApp for Milo2KrApp {
 
         let song_length = (default_lipsync.frames_count as f32 / LIPSYNC_FPS as f32) * 1000.;
 
-        let morphs = convert_lipsync_to_morphs(default_lipsync);
+        let mut morphs = convert_lipsync_to_morphs(default_lipsync);
+
+        // Update realtime positions to midi ticks
+        // TODO: Move to same method
+        for morph in morphs.iter_mut() {
+            for pose in morph.poses.iter_mut() {
+                let mut tempos = mid.tempo.iter().rev();
+                let tpq = mid.ticks_per_quarter;
+
+                let mut update_tempo = || {
+                    if let Some(tempo) = tempos.next() {
+                        (tempo.pos_realtime.unwrap(), tempo.pos, tempo.mpq)
+                    } else {
+                        (0.0, 0, 60_000_000 / 120)
+                    }
+                };
+
+                let (mut curr_pos_ms, mut curr_pos_ticks, mut curr_mpq) = update_tempo();
+
+                for ev in pose.events.iter_mut().rev() {
+                    // Update current tempo
+                    while (ev.pos as f64) < curr_pos_ms {
+                        (curr_pos_ms, curr_pos_ticks, curr_mpq) = update_tempo();
+                    }
+
+                    // Calculate delta ticks
+                    let delta_ms = (ev.pos as f64) - curr_pos_ms;
+                    let delta_ticks = (1000.0 * (tpq as f64) * delta_ms) / (curr_mpq as f64);
+
+                    let tick_pos = (curr_pos_ticks as f64) + delta_ticks;
+                    ev.pos = tick_pos as f32;
+                }
+            }
+        }
 
         let kr_info = SystemInfo {
             platform: Platform::PS2,
@@ -197,13 +239,15 @@ fn convert_visemes_to_poses(viseme_weights: &HashMap<&str, Vec<(usize, u8)>>, po
 
     for (_, viseme_names) in pose_map {
         // TODO: Average weights between hi + lo values
+        // TODO: Only add new event if value changes
         let weights = viseme_names
             .iter()
+            .skip(1)
             .filter_map(|v| viseme_weights.get(v))
             .map(|v| v
                 .iter()
                 .map(|(i, w)| AnimEvent {
-                    value: *w as f32 / 255.0,
+                    value: (*w as f32 / 255.0) * 1.2814, // Max seems to be 199. This effectively increases to 255.
                     pos: (*i as f32 / LIPSYNC_FPS as f32) * 1000.0
                 }) //((*i as f32 / LIPSYNC_FPS as f32) * 1000.0, *w as f32 / 255.0))
                 .collect()
