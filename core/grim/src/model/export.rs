@@ -425,7 +425,7 @@ impl GltfExporter {
 
         self.dirs_rc.clear();
 
-        for mut dir_entry in self.object_dirs.drain(..) {
+        for (i, mut dir_entry) in self.object_dirs.drain(..).enumerate() {
             let entries = dir_entry.entries.drain(..).collect::<Vec<_>>();
             let parent = Rc::new(dir_entry);
 
@@ -499,6 +499,80 @@ impl GltfExporter {
 
             self.dirs_rc.push(parent);
         }
+
+        // Hacky way to default parent to fix skeleton
+        // Find first parent containing bones
+        let parent_skeleton = self.transforms
+            .values()
+            .map(|t| (&t.parent, true))
+            .chain(self.meshes.values().map(|m| (&m.parent, is_mesh_joint(m))))
+            .find_map(|t| match t {
+                (parent, true) => Some(parent.clone()),
+                _ => None
+            });
+
+        let Some(parent_skeleton) = parent_skeleton else {
+            return;
+        };
+
+        // Update meshes with bones to reference parent skeleton
+        /*self.meshes
+            .values_mut()
+            .filter(|m| match m {
+                (parent, _, true) if m.as_ref().path.ne(&parent_skeleton.as_ref().path) => {
+                    todo!()
+                },
+                _ => todo!()
+            });*/
+
+        let mut new_children = HashSet::new();
+
+        for (_, m) in self.meshes.iter_mut() {
+            // Ignore meshes in skeleton dir
+            if m.parent.as_ref().path.eq(&parent_skeleton.as_ref().path) {
+                 continue;
+            }
+
+            if m.object.bones.iter().any(|b| !b.name.is_empty()) {
+                // Update mesh parent if at least one bone found
+                /*m.object.parent = match &parent_skeleton.dir {
+                    ObjectDir::ObjectDir(base) => base.name.to_owned(),
+                };*/
+
+                let dir_name = match &m.parent.dir {
+                    ObjectDir::ObjectDir(base) => &base.name,
+                };
+
+                if !new_children.contains(dir_name) {
+                    new_children.insert(dir_name.to_owned());
+                }
+            }
+        }
+
+        // Add empty trans objects to link children to parent skeleton
+        for child_name in new_children.drain() {
+            self.transforms.insert(child_name.to_owned(), MappedObject {
+                parent: parent_skeleton.clone(),
+                object: TransObject {
+                    name: child_name,
+                    parent: match &parent_skeleton.dir {
+                        ObjectDir::ObjectDir(base) => base.name.to_owned(),
+                    },
+                    ..Default::default()
+                }
+            });
+        }
+
+        /*let parent_skeleton = self.transforms
+            .values()
+            .map(|t| (&t.parent, &t.object as &dyn Trans, true))
+            .chain(self.meshes.values().map(|m| (&m.parent, &m.object as &dyn Trans, is_mesh_joint(m))))
+            .filter(|t| match t {
+                (parent, _, true) if parent.as_ref().path.ne(&self.dirs_rc[0].as_ref().path) => {
+                    todo!()
+                },
+                _ => todo!()
+            });*/
     }
 
     fn get_transform<'a>(&'a self, name: &str) -> Option<&'a dyn Trans> {
@@ -751,6 +825,7 @@ impl GltfExporter {
             .nodes
             .iter()
             .map(|n| n.value())
+            .filter(|_| false)
             .collect::<Vec<_>>();
 
         let mut skins = Vec::new();
@@ -758,7 +833,7 @@ impl GltfExporter {
 
         for (i, idx) in root_indices.into_iter().enumerate() {
             let mut joints = Vec::new();
-            self.find_joints(gltf, idx, &mut joints, na::Matrix4::identity());
+            self.find_joints(gltf, idx, &mut joints, na::Matrix4::identity(), 0);
 
             if !joints.is_empty() {
                 // TODO: Figure out how to handle when nested
@@ -800,7 +875,7 @@ impl GltfExporter {
         bone_indices
     }
 
-    fn find_joints(&self, gltf: &json::Root, idx: usize, joints: &mut Vec<(usize, na::Matrix4<f32>)>, parent_mat: na::Matrix4<f32>) {
+    fn find_joints(&self, gltf: &json::Root, idx: usize, joints: &mut Vec<(usize, na::Matrix4<f32>)>, parent_mat: na::Matrix4<f32>, depth: usize) {
         let (node_name, children, mat) = gltf
             .nodes
             .get(idx)
@@ -842,9 +917,20 @@ impl GltfExporter {
             || self.meshes.get(node_name.as_str()).map(is_mesh_joint).unwrap_or_default();
 
         if is_joint {
-            // Calculate inverse bind matrix (shouldn't fail but idk)
+            // Calculate inverse bind matrix (shouldn't fail)
             // Also convert to gl space
-            let mut ibm = mat.try_inverse().unwrap_or_default() * super::MILOSPACE_TO_GLSPACE;
+            /*let mut ibm = if depth > 0 {
+                (mat * super::MILOSPACE_TO_GLSPACE).try_inverse().unwrap_or_default()
+            } else {
+                mat.try_inverse().unwrap_or_default()
+            };*/
+
+            let mut ibm = mat.try_inverse().unwrap_or_default();
+
+            /*if depth == 0 {
+                ibm *= super::MILOSPACE_TO_GLSPACE
+            }*/
+
             ibm[15] = 1.0; // Force for precision
 
             // Add index to joint list
@@ -854,7 +940,7 @@ impl GltfExporter {
         if let Some(children) = children {
             // Traverse children
             for child in children {
-                self.find_joints(gltf, child.value(), joints, mat);
+                self.find_joints(gltf, child.value(), joints, mat, depth + 1);
             }
         }
     }
