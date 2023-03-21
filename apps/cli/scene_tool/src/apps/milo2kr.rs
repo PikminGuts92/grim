@@ -220,6 +220,7 @@ fn convert_lipsync_to_morphs(lipsync: &CharLipSync) -> Vec<Morph> {
         },
         Morph {
             name: String::from("song_lid.mrf"),
+            //poses: convert_blink_visemes_to_lid_poses(&viseme_weights),
             poses: vec![
                 MorphPose::default(),
                 MorphPose::default()
@@ -231,6 +232,24 @@ fn convert_lipsync_to_morphs(lipsync: &CharLipSync) -> Vec<Morph> {
             poses: convert_visemes_to_poses(&viseme_weights, &mouth_pose_map),
             ..Morph::default()
         },
+    ]
+}
+
+fn convert_blink_visemes_to_lid_poses(viseme_weights: &HashMap<&str, Vec<(usize, u8)>>) -> Vec<MorphPose> {
+    vec![
+        MorphPose::default(), // First one is always empty
+        MorphPose {
+            events: match viseme_weights.get("Blink") {
+                Some(blink) => blink
+                    .iter()
+                    .map(|(i, w)| AnimEvent {
+                        value: (*w as f32 / 255.0),
+                        pos: (*i as f32 / LIPSYNC_FPS as f32) * 1000.0
+                    })
+                    .collect(),
+                _ => Vec::new() // TODO: Generate blink events
+            }
+        }
     ]
 }
 
