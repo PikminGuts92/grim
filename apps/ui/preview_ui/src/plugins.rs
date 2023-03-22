@@ -1,4 +1,4 @@
-use bevy::{prelude::*, log::LogPlugin, app::PluginGroupBuilder, window::{PresentMode, WindowMode, WindowResized}};
+use bevy::{prelude::*, log::LogPlugin, app::PluginGroupBuilder, window::{PresentMode, WindowMode, WindowResized, WindowResolution}};
 use crate::settings::*;
 use crate::state::*;
 use std::{env::args, path::{Path, PathBuf}};
@@ -15,16 +15,20 @@ pub struct GrimPlugin;
 // https://github.com/mcpar-land/bevy_fly_camera/pull/19
 impl PluginGroup for MinimalPlugins {
     fn build(self) -> PluginGroupBuilder {
+        // Reference: https://github.com/bevyengine/bevy/blob/main/crates/bevy_internal/src/default_plugins.rs
         PluginGroupBuilder::start::<Self>()
             // Basic stuff
             .add(bevy::log::LogPlugin::default())
-            .add(bevy::core::CorePlugin::default())
+            .add(bevy::core::TaskPoolPlugin::default())
+            .add(bevy::core::TypeRegistrationPlugin::default())
+            .add(bevy::core::FrameCountPlugin::default())
             .add(bevy::time::TimePlugin::default())
             .add(bevy::transform::TransformPlugin::default())
             .add(bevy::hierarchy::HierarchyPlugin::default())
             .add(bevy::diagnostic::DiagnosticsPlugin::default())
             .add(bevy::input::InputPlugin::default())
             .add(bevy::window::WindowPlugin::default())
+            .add(bevy::a11y::AccessibilityPlugin)
             // Optional features being used
             .add(bevy::asset::AssetPlugin::default())
             .add(bevy::scene::ScenePlugin::default())
@@ -50,15 +54,17 @@ impl Plugin for GrimPlugin {
         app
             //.add_plugins(DefaultPlugins);
             .add_plugins(MinimalPlugins.set(WindowPlugin {
-                window: WindowDescriptor {
+                primary_window: Some(Window {
                     title: format!("Preview v{}", VERSION),
-                    width: app_settings.window_width,
-                    height: app_settings.window_height,
+                    resolution: WindowResolution::new(
+                        app_settings.window_width,
+                        app_settings.window_height
+                    ),
                     mode: WindowMode::Windowed,
                     present_mode: PresentMode::Fifo, // vsync
                     resizable: true,
                     ..Default::default()
-                },
+                }),
                 ..Default::default()
             }))
             .insert_resource(bevy::pbr::wireframe::WireframeConfig {
