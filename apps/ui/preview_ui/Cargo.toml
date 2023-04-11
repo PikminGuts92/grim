@@ -5,8 +5,8 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
-bevy = { version = "0.10.0", default-features = false, features = [ "bevy_core_pipeline", "bevy_pbr", "bevy_render", "bevy_winit", "x11" ] }
-bevy_egui = { version = "0.20.1", features = [ "immutable_ctx" ] }
+bevy = { version = "0.10.1", default-features = false, features = [ "bevy_core_pipeline", "bevy_pbr", "bevy_render", "bevy_winit", "x11" ] }
+bevy_egui = { version = "0.20.2", features = [ "immutable_ctx" ] }
 bevy_fly_camera = "0.10.0"
 bevy_infinite_grid = { git = "https://github.com/PikminGuts92/bevy_infinite_grid.git", branch = "bevy-0.10" } # TODO: Update after published to crates.io
 egui_extras = { version = "0.21.0", features = [ "svg" ] }
