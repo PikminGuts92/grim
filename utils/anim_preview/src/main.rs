@@ -18,7 +18,7 @@ use rerun::external::glam;
 use rerun::{
     coordinates::{Handedness, SignedAxis3},
     components::{Arrow3D, ColorRGBA, LineStrip3D, MeshId, Point3D, Quaternion, Radius, RawMesh3D, Rigid3, Scalar, TextEntry, Transform, Vec3D, ViewCoordinates},
-    MsgSender, Session,
+    MsgSender, Session, SessionBuilder,
     time::Timeline
 };
 
@@ -78,7 +78,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .collect::<Vec<_>>();
 
-    let mut session = Session::new();
+    let mut session = SessionBuilder::new("anim_preview").buffered();
 
     MsgSender::new(format!("world"))
         /*.with_component(&[
@@ -272,7 +272,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    session.show().unwrap();
+    rerun::native_viewer::show(&session).unwrap();
 
     Ok(())
 }
