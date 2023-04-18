@@ -1,4 +1,4 @@
-use super::MiloObject;
+use super::Object;
 
 #[derive(Default)]
 pub struct ClipNode {
@@ -18,7 +18,7 @@ pub struct FrameEvent {
     pub script: String,
 }
 
-pub trait CharClip : MiloObject {
+pub trait CharClip : Object {
     fn get_start_beat(&self) -> f32;
     fn set_start_beat(&mut self, start_beat: f32);
 
