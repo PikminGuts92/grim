@@ -6,6 +6,7 @@ use grim_traits::scene::*;
 pub use io::*;
 
 // TODO: Combine with keys used by prop anim
+//  Maybe rename to AnimKey...
 #[derive(Debug, Default)]
 pub struct AnimEvent<T: std::fmt::Debug + Default> {
     pub value: T,

@@ -1,0 +1,12 @@
+[package]
+name = "anim_preview"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+grim = { workspace = true }
+keyframe = "1.1.1"
+nalgebra = "0.32.2"
+rerun = "0.4.0"
+shared = { path = "../shared" }

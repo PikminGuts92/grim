@@ -15,7 +15,7 @@ use events::*;
 use gui::*;
 use render::{render_milo, render_milo_entry};
 use settings::*;
-use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{PresentMode, WindowMode, WindowResized}, winit::WinitWindows};
+use bevy::{prelude::*, render::camera::PerspectiveProjection, window::{PresentMode, PrimaryWindow, WindowMode, WindowResized}, winit::WinitWindows};
 use bevy_egui::{EguiContext, EguiPlugin, egui, egui::{Color32, Context, Pos2, Ui}};
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use bevy_infinite_grid::{GridShadowCamera, InfiniteGridBundle, InfiniteGrid, InfiniteGridPlugin};
@@ -40,7 +40,7 @@ fn main() {
         .add_event::<AppEvent>()
         .add_event::<AppFileEvent>()
         //.insert_resource(ClearColor(Color::BLACK))
-        .insert_resource(Msaa { samples: 4 })
+        .insert_resource(Msaa::Sample4)
         .add_plugin(GrimPlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(FlyCameraPlugin)
@@ -57,9 +57,11 @@ fn main() {
         .run();
 }
 
-fn render_gui_system(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, egui_ctx: ResMut<EguiContext>, mut event_writer: EventWriter<AppEvent>) {
-    render_gui(&mut egui_ctx.ctx(), &mut *settings, &mut *state);
-    render_gui_info(&mut egui_ctx.ctx(), &mut *state);
+fn render_gui_system(mut settings: ResMut<AppSettings>, mut state: ResMut<AppState>, mut egui_ctx_query: Query<&mut EguiContext, With<PrimaryWindow>>, mut event_writer: EventWriter<AppEvent>) {
+    let egui_ctx = egui_ctx_query.single_mut();
+
+    render_gui(&mut egui_ctx.get(), &mut *settings, &mut *state);
+    render_gui_info(&mut egui_ctx.get(), &mut *state);
 
     state.consume_events(|ev| {
         event_writer.send(ev);
@@ -79,7 +81,7 @@ fn detect_meshes(
     for (mesh_id, world_mesh, visibility) in mesh_entities.iter() {
         if let Some(_mesh) = meshes.get(mesh_id) {
             let is_visible = visibility
-                .map_or(false, |v| v.is_visible);
+                .map_or(false, |v| v == Visibility::Visible);
 
             // Ignore invisible meshes
             if !is_visible {
@@ -101,13 +103,13 @@ fn setup(
     mut commands: Commands,
     _meshes: ResMut<Assets<Mesh>>,
     _materials: ResMut<Assets<StandardMaterial>>,
-    mut windows: ResMut<Windows>,
+    mut primary_window_query: Query<&mut Window, With<PrimaryWindow>>,
     settings: Res<AppSettings>,
     _state: Res<AppState>,
 ) {
     // Set primary window to maximized if preferred
     if settings.maximized {
-        let window = windows.primary_mut();
+        let mut window = primary_window_query.single_mut();
         window.set_maximized(true);
     }
 
@@ -176,8 +178,10 @@ fn setup(
             shadow_color: None, // No shadow
             ..InfiniteGrid::default()
         },
-        visibility: Visibility {
-            is_visible: settings.show_gridlines,
+        visibility: if settings.show_gridlines {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
         },
         ..InfiniteGridBundle::default()
     });
@@ -277,7 +281,11 @@ fn consume_app_events(
                 println!("Updated milo");
             },
             AppEvent::ToggleGridLines(show) => {
-                grid.single_mut().is_visible = *show;
+                *grid.single_mut() = if *show {
+                    Visibility::Visible
+                } else {
+                    Visibility::Hidden
+                };
             },
             AppEvent::ToggleWireframes(show) => {
                 //grid.single_mut().is_visible = *show;
@@ -391,10 +399,11 @@ fn create_ark_tree(ark: &Ark) -> ArkDirNode {
 fn control_camera(
     key_input: Res<Input<KeyCode>>,
     mouse_input: Res<Input<MouseButton>>,
-    egui_ctx: Res<bevy_egui::EguiContext>,
+    mut egui_ctx_query: Query<&mut EguiContext, With<PrimaryWindow>>,
     mut cam_query: Query<&mut FlyCamera>,
 ) {
-    let ctx = egui_ctx.ctx();
+    let mut egui_ctx = egui_ctx_query.single_mut();
+    let ctx = egui_ctx.get_mut();
 
     let key_down = is_camera_button_down(&key_input);
     let mouse_down = mouse_input.pressed(MouseButton::Left);
@@ -429,13 +438,13 @@ fn is_camera_button_down(key_input: &Res<Input<KeyCode>>) -> bool {
 
 fn window_resized(
     mut resize_events: EventReader<WindowResized>,
-    mut windows: ResMut<Windows>,
+    primary_window_query: Query<Entity, With<PrimaryWindow>>,
     mut settings: ResMut<AppSettings>,
     app_state: Res<AppState>,
     winit_windows: NonSend<WinitWindows>,
 ) {
-    let primary_window = windows.primary_mut();
-    let window = winit_windows.get_window(primary_window.id()).unwrap();
+    let primary_window_id = primary_window_query.single();
+    let window = winit_windows.get_window(primary_window_id).unwrap();
     let maximized = window.is_maximized();
 
     if settings.maximized != maximized {
@@ -456,7 +465,7 @@ fn window_resized(
     }
 
     for e in resize_events.iter() {
-        println!("Window resized: {}x{}", e.width, e.height);
+        println!("Window resized: {}x{}", e.width as u32, e.height as u32);
 
         settings.window_width = e.width;
         settings.window_height = e.height;
@@ -469,7 +478,7 @@ fn drop_files(
     mut file_event_writer: EventWriter<AppFileEvent>,
 ) {
     for d in drag_drop_events.iter() {
-        if let FileDragAndDrop::DroppedFile { id: _, path_buf } = d {
+        if let FileDragAndDrop::DroppedFile { path_buf, .. } = d {
             println!("Dropped \"{}\"", path_buf.to_str().unwrap());
 
             file_event_writer.send(AppFileEvent::Open(path_buf.to_owned()));
@@ -479,7 +488,7 @@ fn drop_files(
 
 fn is_drop_event(dad_event: &FileDragAndDrop) -> bool {
     match dad_event {
-        FileDragAndDrop::DroppedFile { id: _, path_buf: _ } => true,
+        FileDragAndDrop::DroppedFile { .. } => true,
         _ => false
     }
 }
