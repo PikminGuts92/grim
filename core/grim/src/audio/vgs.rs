@@ -131,7 +131,7 @@ impl VgsFile {
         let channel_count = self.get_channel_count();
         let mut channel_data = Vec::new();
 
-        let mut decoder_state = (0., 0.);
+        let mut decoder = VAGDecoder::new();
 
         for VgsChannelInfo { sample_rate, block_count } in self.channels.iter() {
             if sample_rate.eq(&0) || block_count.eq(&0) {
@@ -146,7 +146,7 @@ impl VgsFile {
                 let end_idx = start_idx + VAG_BYTES_PER_BLOCK;
 
                 let block = &self.data[start_idx..end_idx];
-                let decoded_samples = self.decode_vag_block(block, &mut decoder_state);
+                let decoded_samples = decoder.decode_block(block);
 
                 decoded_samples.into_iter().for_each(|s| decoded_data.push(s));
             }
@@ -156,8 +156,26 @@ impl VgsFile {
 
         channel_data
     }
+}
 
-    fn decode_vag_block(&self, block: &[u8], (s0, s1): &mut (f64, f64)) -> [i16; VAG_SAMPLES_PER_BLOCK] {
+pub struct VAGDecoder {
+    state: (f64, f64)
+}
+
+impl VAGDecoder {
+    pub fn new() -> Self {
+        VAGDecoder {
+            state: (0., 0.)
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.state = (0., 0.);
+    }
+
+    pub fn decode_block(&mut self, block: &[u8]) -> [i16; VAG_SAMPLES_PER_BLOCK] {
+        let (ref mut s0, ref mut s1) = self.state;
+
         let mut predictor = high_nibble(block[0]) as usize;
         let shift = low_nibble(block[0]);
         //let flags = block[1];
