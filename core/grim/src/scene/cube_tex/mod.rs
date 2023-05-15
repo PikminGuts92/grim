@@ -5,10 +5,20 @@ use grim_macros::*;
 use grim_traits::scene::*;
 pub use io::*;
 
+pub struct CubeTexProperties {
+    pub bpp: u32,
+    pub width: u32,
+    pub height: u32,
+    pub num_mip_maps: u32,
+    pub bitmap_encoding: u32, // DXT5, RGBA, etc.
+}
+
 #[milo]
 pub struct CubeTexObject {
     pub some_num_1: u32,
     pub some_num_2: u32,
+
+    pub properties: Vec<CubeTexProperties>,
 
     pub right_ext_path: String,
     pub left_ext_path: String,
@@ -38,6 +48,8 @@ impl Default for CubeTexObject {
             // CubeTex object
             some_num_1: 64,
             some_num_2: 4,
+
+            properties: Vec::new(),
 
             right_ext_path: String::default(),
             left_ext_path: String::default(),

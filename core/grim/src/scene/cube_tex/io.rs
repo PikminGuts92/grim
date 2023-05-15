@@ -1,14 +1,15 @@
 use crate::io::{BinaryStream, SeekFrom, Stream};
 use crate::scene::*;
-use crate::SystemInfo;
 use crate::texture::Bitmap;
+use crate::SystemInfo;
 use grim_traits::scene::*;
 use std::error::Error;
 
 fn is_version_supported(version: u32) -> bool {
     match version {
         1 => true, // GH2 360
-        _ => false
+        2 => true, // TBRB/RB3/DC1
+        _ => false,
     }
 }
 
@@ -24,8 +25,12 @@ impl ObjectReadWrite for CubeTexObject {
 
         load_object(self, &mut stream, info)?;
 
-        self.some_num_1 = stream.read_uint32()?;
-        self.some_num_2 = stream.read_uint32()?;
+        if version < 2 {
+            self.some_num_1 = stream.read_uint32()?;
+            self.some_num_2 = stream.read_uint32()?;
+        } else {
+            self.properties = load_cubetex_properties(&mut stream)?;
+        }
 
         self.right_ext_path = stream.read_prefixed_string()?;
         self.left_ext_path = stream.read_prefixed_string()?;
@@ -34,7 +39,9 @@ impl ObjectReadWrite for CubeTexObject {
         self.front_ext_path = stream.read_prefixed_string()?;
         self.back_ext_path = stream.read_prefixed_string()?;
 
-        self.some_bool = stream.read_boolean()?;
+        if version < 2 {
+            self.some_bool = stream.read_boolean()?; // only seems to exist on version 1
+        }
 
         if stream.pos() == stream.len()? as u64 {
             return Ok(());
@@ -108,4 +115,19 @@ impl ObjectReadWrite for CubeTexObject {
 
         Ok(())
     }
+}
+
+fn load_cubetex_properties(reader: &mut Box<BinaryStream>,) -> Result<Vec<CubeTexProperties>, Box<dyn Error>> {
+    let mut properties = Vec::new();
+    for _ in 0..7 {
+        let bpp = reader.read_uint32()?;
+        let width = reader.read_uint32()?;
+        let height = reader.read_uint32()?;
+        let num_mip_maps = reader.read_uint32()?;
+        let bitmap_encoding = reader.read_uint32()?;
+
+        properties.push(CubeTexProperties {bpp,width,height,num_mip_maps,bitmap_encoding,})
+    }
+
+    Ok(properties)
 }
