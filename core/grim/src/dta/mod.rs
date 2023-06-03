@@ -139,6 +139,22 @@ impl DataArray {
             _ => None
         }
     }
+
+    pub fn as_string(&self) -> Option<&DataString> {
+        match self {
+            DataArray::Variable(s)
+                | DataArray::Object(s)
+                | DataArray::Symbol(s)
+                | DataArray::IfDef(s)
+                | DataArray::String(s)
+                | DataArray::Define(s)
+                | DataArray::Include(s)
+                | DataArray::Merge(s)
+                | DataArray::IfNDef(s)
+                | DataArray::Undef(s) => Some(s),
+            _ => None
+        }
+    }
 }
 
 #[derive(Debug, Default)]
