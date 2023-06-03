@@ -57,27 +57,34 @@ impl RootData {
     }
 
     pub fn load_with_settings(&mut self, stream: &mut Box<BinaryStream>, settings: DataArrayIOSettings) -> Result<(), Box<dyn Error>> {
-        // Clear data
-        self.data.clear();
+        match settings {
+            DataArrayIOSettings::Milo => {
+                return self.load(stream);
+            },
+            DataArrayIOSettings::Forge => todo!("Can't read Forge dtb"),
+            DataArrayIOSettings::Amplitude => {
+                // Clear data
+                self.data.clear();
 
-        // Read data
-        let data_version = stream.read_uint8()?;
+                // Read data
+                let data_version = stream.read_uint8()?;
 
-        if data_version != 2 {
-            return Err(Box::new(DtaLoadError::UnknownVersion {
-                version: data_version as u32
-            }));
+                if data_version != 2 {
+                    return Err(Box::new(DtaLoadError::UnknownVersion {
+                        version: data_version as u32
+                    }));
+                }
+
+                // Read original file names (ignore for now)
+                let name_count = stream.read_uint32()?;
+                for _ in 0..name_count {
+                    stream.read_prefixed_string()?;
+                }
+
+                self.data = load_array_amp(stream)?;
+                Ok(())
+            }
         }
-
-        // Read original file names (ignore for now)
-        let name_count = stream.read_uint32()?;
-        for _ in 0..name_count {
-            stream.read_prefixed_string()?;
-        }
-
-        self.data = load_array_amp(stream)?;
-
-        Ok(())
     }
 }
 
