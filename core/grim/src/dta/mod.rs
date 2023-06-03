@@ -94,6 +94,51 @@ impl DataArray {
             DataArray::Undef(_)       => 0x25,
         }
     }
+
+    pub fn find_value_for_symbol<'a, 'b, T: Into<&'b DataString>>(&'a self, symbol: T) -> Option<&[DataArray]> {
+        let DataArray::Array(array) = self else {
+            return None;
+        };
+
+        let symbol = symbol.into();
+
+        match array.split_first() {
+            // Found element
+            Some((DataArray::Symbol(s) | DataArray::String(s), elements)) if s.eq(symbol) => {
+                // Return remaining elements
+                return Some(elements);
+            },
+            // Keep searching
+            _ => {}
+        }
+
+        // Recursively search
+        for val in array {
+            let result = val.find_value_for_symbol(symbol);
+
+            if result.is_some() {
+                return result;
+            }
+        }
+
+        None
+    }
+
+    pub fn as_float(&self) -> Option<f32> {
+        match self {
+            DataArray::Float(f) => Some(*f),
+            DataArray::Integer(i) => Some(*i as f32),
+            _ => None
+        }
+    }
+
+    pub fn as_integer(&self) -> Option<i32> {
+        match self {
+            DataArray::Integer(i) => Some(*i),
+            DataArray::Float(f) => Some(*f as i32),
+            _ => None
+        }
+    }
 }
 
 #[derive(Debug, Default)]
