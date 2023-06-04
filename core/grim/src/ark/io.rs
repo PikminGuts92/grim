@@ -1,14 +1,41 @@
 use crate::ark::*;
 use crate::io::*;
 use std::collections::HashMap;
+use std::io::Read;
 use std::path::Path;
 #[cfg(feature = "python")] use pyo3::prelude::*;
 
 const MAX_HDR_SIZE: u64 = 20 * 0x100000; // 20MB
+const FREQ_ARK_VERSION: i32 = i32::from_le_bytes(*b"ARK\0");
 
 impl Ark {
     pub fn from_path<T: AsRef<Path>>(path: T) -> Result<Ark, ArkReadError> {
         let path = path.as_ref();
+
+        // Check if extension is .ark
+        let is_ark = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or_default()
+            .eq_ignore_ascii_case("ark");
+
+        if is_ark {
+            let (version_major, _version_minor) = peek_ark_version(path)?;
+
+            if version_major == FREQ_ARK_VERSION {
+                todo!("Arks from frequency is not supported")
+            }
+
+            let mut ark = Ark {
+                version: version_major,
+                encryption: ArkEncryption::None,
+                path: path.to_owned(),
+                ..Default::default()
+            };
+
+            ark.parse_amp_ark()?;
+            return Ok(ark);
+        }
 
         let hdr_size = get_file_size(path);
         if hdr_size > MAX_HDR_SIZE {
@@ -51,6 +78,82 @@ impl Ark {
 
         ark.parse_header(read_hdr)?;
         Ok(ark)
+    }
+
+    fn parse_amp_ark(&mut self) -> Result<(), ArkReadError> {
+        let mut stream = FileStream::from_path_as_read_open(&self.path)
+            .map_err(|_| ArkReadError::ArkNotSupported)?;
+        let mut reader = BinaryStream::from_stream(&mut stream);
+
+        reader.seek(SeekFrom::Start(4)).unwrap();
+        let entry_count = reader.read_uint32().unwrap();
+
+        // Read strings
+        reader.seek(SeekFrom::Current((20 * entry_count) as i64)).unwrap();
+
+        let strings: Vec<String> = if self.version == 1 {
+            // Read size-prefixed strings from OPM amp demo
+            let string_count = reader.read_uint32()
+                .map_err(|_| ArkReadError::ArkNotSupported)?;
+
+            let mut strings = vec![String::new(); string_count as usize];
+
+            for s in strings.iter_mut() {
+                *s = reader.read_prefixed_string()
+                    .map_err(|_| ArkReadError::ArkNotSupported)?;
+            }
+
+            strings
+        } else {
+            // Read strings from blob + string entries
+            let mut strings = parse_string_blob(&mut reader)?;
+            let string_indicies = parse_string_indices(&mut reader)?;
+
+            string_indicies
+                .into_iter()
+                .map(|si| strings
+                    .remove(&si)
+                    .unwrap_or_default())
+                .collect()
+        };
+
+        // Read entries
+        reader.seek(SeekFrom::Start(4)).unwrap();
+        for id in 0..entry_count {
+            let mut offset = 0;
+
+            if self.version != 1 {
+                offset = reader.read_uint32()
+                    .map_err(|_| ArkReadError::ArkNotSupported)?;
+            }
+
+            let file_name_idx = reader.read_uint32().map_err(|_| ArkReadError::ArkNotSupported)? as usize;
+            let dir_path_idx = reader.read_uint32().map_err(|_| ArkReadError::ArkNotSupported)? as usize;
+
+            if self.version == 1 {
+                offset = reader.read_uint32()
+                    .map_err(|_| ArkReadError::ArkNotSupported)?;
+            }
+
+            let size = reader.read_uint32().map_err(|_| ArkReadError::ArkNotSupported)? as usize;
+            let inflated_size = reader.read_uint32().map_err(|_| ArkReadError::ArkNotSupported)? as usize;
+
+            let file_name = &strings[file_name_idx];
+            let dir_path = &strings[dir_path_idx];
+
+            self.entries.push(ArkOffsetEntry {
+                id,
+                path: create_full_path(dir_path, file_name),
+                offset: offset as u64,
+                part: 0,
+                size,
+                inflated_size,
+            });
+        }
+
+        self.sort_entries_by_name();
+
+        Ok(())
     }
 
     fn parse_header(&mut self, hdr: &[u8]) -> Result<(), ArkReadError> {
@@ -205,4 +308,33 @@ fn get_ark_part_and_offset(offset: u64, part_size_ranges: &[(u64, u64)]) -> (u32
         .find(|(_, (start, end))| &offset >= start && &offset < end)
         .map(|(i, (start, _))| (i as u32, &offset - start))
         .unwrap()
+}
+
+fn peek_ark_version(path: &Path) -> Result<(i32, Option<i32>), ArkReadError> {
+    let mut ark_file = std::fs::File::open(path)
+        .map_err(|_| ArkReadError::ArkNotSupported)?;
+
+    let v1 = {
+        // Read ark version
+        let mut buffer = [0u8; 4];
+
+        ark_file.read_exact(&mut buffer)
+            .map_err(|_| ArkReadError::ArkNotSupported)?;
+
+        i32::from_le_bytes(buffer)
+    };
+
+    let v2 = if v1 == FREQ_ARK_VERSION {
+        // Read minor version from freq ark
+        let mut buffer = [0u8; 4];
+
+        ark_file.read_exact(&mut buffer)
+            .map_err(|_| ArkReadError::ArkNotSupported)?;
+
+        Some(i32::from_le_bytes(buffer))
+    } else {
+        None
+    };
+
+    Ok((v1, v2))
 }
