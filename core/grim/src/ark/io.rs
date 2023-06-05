@@ -24,6 +24,10 @@ impl Ark {
 
             if version_major == FREQ_ARK_VERSION {
                 todo!("Arks from frequency is not supported")
+            } else if ![1, 2].contains(&version_major) {
+                return Err(ArkReadError::ArkVersionNotSupported {
+                    version: version_major
+                });
             }
 
             let mut ark = Ark {
