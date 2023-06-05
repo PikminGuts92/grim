@@ -224,7 +224,7 @@ fn load_node(stream: &mut Box<BinaryStream>) -> Result<DataArray, Box<dyn Error>
 fn load_node_amp(stream: &mut Box<BinaryStream>, node_type: u32) -> Result<DataArray, Box<dyn Error>> {
     let node = match node_type {
         0x00 => DataArray::Integer(stream.read_int32()?),
-        0x01 => DataArray::String(load_string(stream)?),
+        0x01 => DataArray::Symbol(load_string(stream)?),
         0x02 => DataArray::Float(stream.read_float32()?),
         0x03 => DataArray::Array(load_array_amp(stream)?),
         _ => unreachable!("Shouldn't be reached. Node type of \"{node_type}\" is invalid"),
