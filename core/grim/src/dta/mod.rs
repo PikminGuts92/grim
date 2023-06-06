@@ -350,7 +350,7 @@ mod tests {
     #[case(DataArray::Float(0.38), b"0.38")]
     #[case(DataArray::Float(-0.45), b"-0.45")]
     #[case(DataArray::Variable("test".into()), b"$test")]
-    // TODO: Test case for func
+    // TODO: Test case for func + object
     #[case(DataArray::Symbol("test".into()), b"test")]
     #[case(DataArray::Symbol("lol look at these spaces".into()), b"\"lol look at these spaces\"")]
     #[case(DataArray::KDataUnhandled, b"kDataUnhandled")]
