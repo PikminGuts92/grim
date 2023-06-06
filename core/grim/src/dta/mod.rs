@@ -11,7 +11,7 @@ use parser::*;
 #[derive(Debug)]
 pub struct DTAFormat {
     pub use_quoted_symbols: bool, // Ex: 'shortsongname'
-    pub indent_char: char,
+    pub indent_char: u8,
     pub indent_char_count: u8,
 }
 
@@ -19,7 +19,7 @@ impl Default for DTAFormat {
     fn default() -> Self {
         Self {
             use_quoted_symbols: false,
-            indent_char: ' ',
+            indent_char: b' ',
             indent_char_count: 3
         }
     }
@@ -203,18 +203,31 @@ impl DataArray {
 
         // TODO: Move to separate function
         fn write_elements<T: std::io::Write>(stream: &mut T, elements: &Vec<DataArray>, format: &DTAFormat, depth: u32) -> Result<(bool, u32), std::io::Error> {
-            let _only_simple_types = elements.iter().all(|e| e.is_simple_type());
-
-            // TODO: Support vertical write
+            let only_simple_types = elements.iter().all(|e| e.is_simple_type());
 
             // Always write first element without special spacing
             for element in elements.iter().take(1) {
                 element.write_to_stream(stream, format, depth, false)?;
             }
 
-            for element in elements.iter().skip(1) {
-                stream.write_all(&[CHAR_SPACE])?;
-                element.write_to_stream(stream, format, depth, false)?;
+            if only_simple_types {
+                // Write as single line
+                for element in elements.iter().skip(1) {
+                    stream.write_all(&[CHAR_SPACE])?;
+                    element.write_to_stream(stream, format, depth + 1, false)?;
+                }
+            } else if !only_simple_types && elements.len() > 1 {
+                // Write on multiple lines
+                let indent_size = (format.indent_char_count as usize) * (depth as usize + 1);
+                let indent = (0..indent_size)
+                    .map(|_| format.indent_char)
+                    .collect::<Vec<_>>();
+
+                for element in elements.iter().skip(1) {
+                    stream.write_all(&[CHAR_NEWLINE])?;
+                    stream.write_all(&indent)?;
+                    element.write_to_stream(stream, format, depth + 1, false)?;
+                }
             }
 
             Ok((false, 0))
@@ -357,7 +370,9 @@ mod tests {
     #[case(DataArray::IfDef("something1".into()), b"#ifdef something1")]
     #[case(DataArray::Else, b"#else")]
     #[case(DataArray::EndIf, b"#endif")]
-    #[case(DataArray::Array(vec![DataArray::Symbol(DataString::from_string("version")), DataArray::String(DataString::from_string("v123"))]), b"(version \"v123\")")]
+    #[case(DataArray::Array(vec![DataArray::Symbol("version".into()), DataArray::Integer(123)]), b"(version 123)")]
+    #[case(DataArray::Array(vec![DataArray::Symbol("name".into()), DataArray::String("Doctor Worm".into())]), b"(name\n   \"Doctor Worm\")")]
+    #[case(DataArray::Array(vec![DataArray::Symbol("doctorworm".into()), DataArray::Array(vec![DataArray::Symbol("name".into()), DataArray::String("Doctor Worm".into())])]), b"(doctorworm\n   (name\n      \"Doctor Worm\"))")]
     // TODO: Test case for command
     #[case(DataArray::String("test".into()), b"\"test\"")]
     // TODO: Test case for property
