@@ -122,7 +122,7 @@ impl Ark {
         };
 
         // Read entries
-        reader.seek(SeekFrom::Start(4)).unwrap();
+        reader.seek(SeekFrom::Start(8)).unwrap(); // Skip version + entry count
         for id in 0..entry_count {
             let mut offset = 0;
 
@@ -142,12 +142,18 @@ impl Ark {
             let size = reader.read_uint32().map_err(|_| ArkReadError::ArkNotSupported)? as usize;
             let inflated_size = reader.read_uint32().map_err(|_| ArkReadError::ArkNotSupported)? as usize;
 
-            let file_name = &strings[file_name_idx];
-            let dir_path = &strings[dir_path_idx];
-
             self.entries.push(ArkOffsetEntry {
                 id,
-                path: create_full_path(dir_path, file_name),
+                path: if dir_path_idx < strings.len() {
+                    // Join dir path + file name
+                    let file_name = &strings[file_name_idx];
+                    let dir_path = &strings[dir_path_idx];
+
+                    create_full_path(dir_path, file_name)
+                } else {
+                    // Take just file name
+                    strings[file_name_idx].to_owned()
+                },
                 offset: offset as u64,
                 part: 0,
                 size,
