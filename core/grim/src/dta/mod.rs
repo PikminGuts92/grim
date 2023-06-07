@@ -2,11 +2,12 @@ mod errors;
 mod io;
 mod parser;
 
-use std::todo;
-
 pub use errors::*;
 pub use io::*;
 use parser::*;
+
+const CHAR_NEWLINE: u8 = b'\n';
+const CHAR_SPACE: u8 = b' ';
 
 #[derive(Debug)]
 pub struct DTAFormat {
@@ -192,49 +193,10 @@ impl DataArray {
     }
 
     pub fn print_with_format<T: std::io::Write>(&self, stream: &mut T, format: DTAFormat) -> Result<(), std::io::Error> {
-        self.write_to_stream(stream, &format, 0, true).map(|_| ())
+        self.write_to_stream(stream, &format, 0).map(|_| ())
     }
 
-    fn write_to_stream<T: std::io::Write>(&self, stream: &mut T, format: &DTAFormat, depth: u32, is_vertical: bool) -> Result<(bool, u32), std::io::Error> {
-        use std::io::Write;
-
-        const CHAR_NEWLINE: u8 = b'\n';
-        const CHAR_SPACE: u8 = b' ';
-
-        // TODO: Move to separate function
-        fn write_elements<T: std::io::Write>(stream: &mut T, elements: &Vec<DataArray>, format: &DTAFormat, depth: u32) -> Result<(bool, u32), std::io::Error> {
-            let only_simple_types = elements.iter().all(|e| e.is_simple_type());
-
-            // Always write first element without special spacing
-            for element in elements.iter().take(1) {
-                element.write_to_stream(stream, format, depth, false)?;
-            }
-
-            if only_simple_types {
-                // Write as single line
-                for element in elements.iter().skip(1) {
-                    stream.write_all(&[CHAR_SPACE])?;
-                    element.write_to_stream(stream, format, depth + 1, false)?;
-                }
-            } else if !only_simple_types && elements.len() > 1 {
-                // Write on multiple lines
-                let indent_size = (format.indent_char_count as usize) * (depth as usize + 1);
-                let indent = (0..indent_size)
-                    .map(|_| format.indent_char)
-                    .collect::<Vec<_>>();
-
-                for element in elements.iter().skip(1) {
-                    stream.write_all(&[CHAR_NEWLINE])?;
-                    stream.write_all(&indent)?;
-                    element.write_to_stream(stream, format, depth + 1, false)?;
-                }
-            }
-
-            Ok((false, 0))
-        }
-
-        let is_newline = false;
-
+    fn write_to_stream<T: std::io::Write>(&self, stream: &mut T, format: &DTAFormat, depth: u32) -> Result<(), std::io::Error> {
         match self {
             DataArray::Integer(i) => {
                 write!(stream, "{i}")?;
@@ -324,7 +286,7 @@ impl DataArray {
             },
         };
 
-        Ok((is_newline, depth))
+        Ok(())
     }
 
     fn is_simple_type(&self) -> bool {
@@ -348,6 +310,45 @@ impl RootData {
     pub fn new() -> RootData {
         RootData::default()
     }
+
+    pub fn print<T: std::io::Write>(&self, stream: &mut T) -> Result<(), std::io::Error> {
+        self.print_with_format(stream, DTAFormat::default())
+    }
+
+    pub fn print_with_format<T: std::io::Write>(&self, stream: &mut T, format: DTAFormat) -> Result<(), std::io::Error> {
+        write_elements(stream, &self.data, &format, 0)
+    }
+}
+
+fn write_elements<T: std::io::Write>(stream: &mut T, elements: &Vec<DataArray>, format: &DTAFormat, depth: u32) -> Result<(), std::io::Error> {
+    let only_simple_types = elements.iter().all(|e| e.is_simple_type());
+
+    // Always write first element without special spacing
+    for element in elements.iter().take(1) {
+        element.write_to_stream(stream, format, depth)?;
+    }
+
+    if only_simple_types {
+        // Write as single line
+        for element in elements.iter().skip(1) {
+            stream.write_all(&[CHAR_SPACE])?;
+            element.write_to_stream(stream, format, depth + 1)?;
+        }
+    } else if !only_simple_types && elements.len() > 1 {
+        // Write on multiple lines
+        let indent_size = (format.indent_char_count as usize) * (depth as usize + 1);
+        let indent = (0..indent_size)
+            .map(|_| format.indent_char)
+            .collect::<Vec<_>>();
+
+        for element in elements.iter().skip(1) {
+            stream.write_all(&[CHAR_NEWLINE])?;
+            stream.write_all(&indent)?;
+            element.write_to_stream(stream, format, depth + 1)?;
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
