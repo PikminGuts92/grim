@@ -242,12 +242,12 @@ impl DataArray {
             },
             DataArray::Array(da) => {
                 stream.write_all(b"(")?;
-                write_elements(stream, da, format, depth)?;
+                write_elements(stream, da, format, depth, false)?;
                 stream.write_all(b")")?;
             },
             DataArray::Command(da) => {
                 stream.write_all(b"{")?;
-                write_elements(stream, da, format, depth)?;
+                write_elements(stream, da, format, depth, false)?;
                 stream.write_all(b"}")?;
             },
             DataArray::String(s) => {
@@ -258,7 +258,7 @@ impl DataArray {
             },
             DataArray::Property(da) => {
                 stream.write_all(b"[")?;
-                write_elements(stream, da, format, depth)?;
+                write_elements(stream, da, format, depth, false)?;
                 stream.write_all(b"]")?;
             },
             DataArray::Define(t) => {
@@ -316,11 +316,11 @@ impl RootData {
     }
 
     pub fn print_with_format<T: std::io::Write>(&self, stream: &mut T, format: DTAFormat) -> Result<(), std::io::Error> {
-        write_elements(stream, &self.data, &format, 0)
+        write_elements(stream, &self.data, &format, 0, true)
     }
 }
 
-fn write_elements<T: std::io::Write>(stream: &mut T, elements: &Vec<DataArray>, format: &DTAFormat, depth: u32) -> Result<(), std::io::Error> {
+fn write_elements<T: std::io::Write>(stream: &mut T, elements: &Vec<DataArray>, format: &DTAFormat, depth: u32, is_root: bool) -> Result<(), std::io::Error> {
     let only_simple_types = elements.iter().all(|e| e.is_simple_type());
 
     // Always write first element without special spacing
@@ -336,7 +336,8 @@ fn write_elements<T: std::io::Write>(stream: &mut T, elements: &Vec<DataArray>, 
         }
     } else if !only_simple_types && elements.len() > 1 {
         // Write on multiple lines
-        let indent_size = (format.indent_char_count as usize) * (depth as usize + 1);
+        let extra_indent = if is_root { 0 } else { 1 };
+        let indent_size = (format.indent_char_count as usize) * (depth as usize + extra_indent);
         let indent = (0..indent_size)
             .map(|_| format.indent_char)
             .collect::<Vec<_>>();
