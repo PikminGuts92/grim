@@ -7,7 +7,7 @@ use itertools::*;
 use gltf_json as json;
 use nalgebra as na;
 use serde::ser::Serialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::error::Error;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -1235,7 +1235,7 @@ impl GltfExporter {
                 primitives: vec![
                     json::mesh::Primitive {
                         attributes: {
-                            let mut map = HashMap::new();
+                            let mut map = BTreeMap::new();
 
                             // Add positions
                             if let Some(acc_idx) = pos_idx {
