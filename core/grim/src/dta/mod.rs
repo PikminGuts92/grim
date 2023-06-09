@@ -101,7 +101,23 @@ impl Default for DataArray {
     }
 }
 
+impl From<i32> for DataArray {
+    fn from(value: i32) -> Self {
+        DataArray::Integer(value)
+    }
+}
+
+impl From<f32> for DataArray {
+    fn from(value: f32) -> Self {
+        DataArray::Float(value)
+    }
+}
+
 impl DataArray {
+    pub fn from<T: Into<DataArray>>(data: T) -> Self {
+        data.into()
+    }
+
     pub(crate) fn get_enum_value(&self) -> u32 {
         match self {
             DataArray::Integer(_)     => 0x00,
