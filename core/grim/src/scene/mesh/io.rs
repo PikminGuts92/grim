@@ -16,6 +16,7 @@ pub enum MeshLoadError {
 
 fn is_version_supported(version: u32) -> bool {
     match version {
+        13 | 14 => true, // Amp Demo/Amp
         25 => true, // GH1
         28 => true, // GH2/GH2 360
         34 => true, // RB1/RB2
@@ -40,15 +41,110 @@ impl ObjectReadWrite for MeshObject {
         load_trans(self, &mut reader, info, false)?;
         load_draw(self, &mut reader, info, false)?;
 
+        if version < 15 {
+            _ = reader.read_prefixed_string()?; // Some string
+
+            // Read bones
+            self.bones.clear();
+            let bone_count = reader.read_uint32()?;
+
+            for _ in 0..bone_count {
+                let mut bone = BoneTrans::default();
+
+                bone.name = reader.read_prefixed_string()?;
+                self.bones.push(bone);
+            }
+        }
+
+        if version < 20 {
+            // Skip 2 ints
+            reader.seek(SeekFrom::Current(8))?;
+        }
+
+        if version < 3 {
+            // Skip int
+            reader.seek(SeekFrom::Current(4))?;
+        }
+
         self.mat = reader.read_prefixed_string()?;
+        if version == 27 {
+            // Secondary material?
+            _ = reader.read_prefixed_string()?;
+        }
+
         self.geom_owner = reader.read_prefixed_string()?;
+        if version < 13 {
+            // Secondary geom owner?
+            _ = reader.read_prefixed_string()?;
+        }
 
-        self.mutable = reader.read_uint32()?.into();
-        self.volume = reader.read_uint32()?.into();
+        if version < 15 {
+            // Set on mesh instead of base trans object
+            let trans_parent = reader.read_prefixed_string()?;
+            self.set_parent(trans_parent);
+        }
 
-        let bsp = reader.read_uint8()?;
-        if bsp != 0 {
-            panic!("Expected bsp field to be 0, not \"{}\" in Mesh", bsp);
+        if version < 14 {
+            // Skip empty RndTransformable strings
+            _ = reader.read_prefixed_string()?;
+            _ = reader.read_prefixed_string()?;
+        }
+
+        if version < 3 {
+            // Skip vector3
+            reader.seek(SeekFrom::Current(12))?;
+        }
+
+        if version < 15 {
+            // Set on mesh instead of base draw object
+            load_sphere(self.get_sphere_mut(), &mut reader)?;
+        }
+
+        if version < 8 {
+            // Skip some bool
+            _ = reader.read_boolean()?;
+        }
+
+        if version < 15 {
+            // Skip unknown string + float
+            _ = reader.read_prefixed_string()?;
+            reader.seek(SeekFrom::Current(4))?;
+        }
+
+        // Read mutable value
+        if version < 16 {
+            if version > 11 {
+                _ = reader.read_boolean()?;
+            }
+
+            // Just hard-code as default value
+            self.mutable = Mutable::kMutableNone;
+        } else {
+            self.mutable = reader.read_uint32()?.into();
+        }
+
+        // Read volume value
+        if version > 17 {
+            self.volume = reader.read_uint32()?.into();
+        }
+
+        // Read bsp value
+        if version > 18 {
+            // Ignored but still validated
+            let bsp = reader.read_uint8()?;
+            if bsp != 0 {
+                panic!("Expected bsp field to be 0, not \"{}\" in Mesh", bsp);
+            }
+        }
+
+        if version == 7 {
+            // Skip another unknown bool
+            _ = reader.read_boolean()?;
+        }
+
+        if version < 11 {
+            // Skip unknown int
+            reader.seek(SeekFrom::Current(4))?;
         }
 
         let vert_count = reader.read_uint32()?;
@@ -66,6 +162,41 @@ impl ObjectReadWrite for MeshObject {
         self.vertices.clear();
         self.raw_vertices.clear();
         for _ in 0..vert_count {
+            let mut vec = Vert::default();
+
+            // TODO: Should probably clean up this loop
+            if version <= 14 {
+                // Amp (56 bytes)
+                // Position
+                vec.pos.x = reader.read_float32()?;
+                vec.pos.y = reader.read_float32()?;
+                vec.pos.z = reader.read_float32()?;
+
+                // Bone indices
+                vec.bones[0] = reader.read_uint16()?;
+                vec.bones[1] = reader.read_uint16()?;
+                vec.bones[2] = reader.read_uint16()?;
+                vec.bones[3] = reader.read_uint16()?;
+
+                // Normals
+                vec.normals.x = reader.read_float32()?;
+                vec.normals.y = reader.read_float32()?;
+                vec.normals.z = reader.read_float32()?;
+
+                // Weights
+                vec.weights[0] = reader.read_float32()?;
+                vec.weights[1] = reader.read_float32()?;
+                vec.weights[2] = reader.read_float32()?;
+                vec.weights[3] = reader.read_float32()?;
+
+                // UVs
+                vec.uv.u = reader.read_float32()?;
+                vec.uv.v = reader.read_float32()?;
+
+                self.vertices.push(vec);
+                continue;
+            }
+
             // TODO: Remove once next gen vertex format is figured out
             if version >= 36 && is_ng {
                 // Read raw vert data
@@ -76,8 +207,6 @@ impl ObjectReadWrite for MeshObject {
                 reader.seek(SeekFrom::Current(-36))?;
                 self.raw_vertices.push(raw_vert);
             }
-
-            let mut vec = Vert::default();
 
             // Position
             vec.pos.x = reader.read_float32()?;
@@ -209,6 +338,20 @@ impl ObjectReadWrite for MeshObject {
             face[2] = reader.read_uint16()?;
 
             self.faces.push(face);
+        }
+
+        if version < 24 {
+            // Read pairs of shorts, matches face count
+            // Not always present, skip for now
+            let short_count = reader.read_uint32()?;
+            reader.seek(SeekFrom::Current((short_count * 2) as i64 * std::mem::size_of::<u16>() as i64))?;
+
+            if version >= 14 {
+                // Skip int
+                reader.seek(SeekFrom::Current(4))?;
+            }
+
+            return Ok(());
         }
 
         let group_count = reader.read_uint32()?;
