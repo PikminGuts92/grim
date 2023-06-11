@@ -4,6 +4,7 @@ use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
 use itertools::Itertools;
+use log::debug;
 use std::{env::args, path::{Path, PathBuf}};
 
 type ConsumeEventFn = fn(AppEvent);
@@ -33,7 +34,7 @@ pub struct AppState {
 impl AppState {
     pub fn save_settings(&self, settings: &AppSettings) {
         settings.save_to_file(&self.settings_path);
-        println!("Saved settings to \"{}\"", &self.settings_path.to_str().unwrap());
+        debug!("Saved settings to \"{}\"", &self.settings_path.to_str().unwrap());
     }
 
     pub fn consume_events(&mut self, mut callback: impl FnMut(AppEvent)) {

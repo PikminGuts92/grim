@@ -1,6 +1,7 @@
 use bevy::{prelude::*, log::LogPlugin, app::PluginGroupBuilder, window::{PresentMode, WindowMode, WindowResized, WindowResolution}};
 use crate::settings::*;
 use crate::state::*;
+use log::info;
 use std::{env::args, path::{Path, PathBuf}};
 
 const SETTINGS_FILE_NAME: &str = "settings.json";
@@ -89,7 +90,7 @@ fn load_state() -> AppState {
 
 fn load_settings(settings_path: &Path) -> AppSettings {
     let settings = AppSettings::load_from_file(settings_path);
-    println!("Loaded settings from \"{}\"", settings_path.to_str().unwrap());
+    info!("Loaded settings from \"{}\"", settings_path.to_str().unwrap());
 
     settings
 }

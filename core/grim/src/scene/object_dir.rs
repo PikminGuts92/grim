@@ -2,6 +2,7 @@ use crate::{SystemInfo};
 use crate::io::{BinaryStream, FileSearchDepth, FileStream, MemoryStream, PathFinder, SeekFrom, Stream};
 use crate::scene::*;
 use lazy_static::lazy_static;
+use log::warn;
 use regex::Regex;
 use std::error::Error;
 
@@ -102,6 +103,8 @@ impl<'a> ObjectDir {
             for entry in obj_dir.entries.iter_mut() {
                 if let Some(new_entry) = entry.unpack(info) {
                     *entry = new_entry;
+                } else {
+                    warn!("Unable to unpack \"{}\" ({})", entry.get_name(), entry.get_type());
                 }
             }
         }

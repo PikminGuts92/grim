@@ -3,6 +3,7 @@ use bevy::render::render_resource::{AddressMode, Extent3d, SamplerDescriptor, Te
 use bevy::render::texture::ImageSampler;
 
 use itertools::*;
+use log::warn;
 
 use std::collections::HashMap;
 use std::error::Error;
@@ -305,7 +306,7 @@ fn get_computed_mat<'a>(
     }
 
     if !parent_name.is_empty() {
-        println!("Can't find trans for {}", parent_name);
+        warn!("Can't find trans for {}", parent_name);
     }
 
     map_matrix(milo_object.get_world_xfm())
@@ -330,7 +331,7 @@ fn get_product_local_mat<'a>(
     }
 
     if parent_name.is_empty() {
-        println!("Can't find trans for {}", parent_name);
+        warn!("Can't find trans for {}", parent_name);
     }
 
     map_matrix(milo_object.get_local_xfm())

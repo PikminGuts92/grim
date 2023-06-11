@@ -7,6 +7,8 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 pub use loader::*;
 pub use milo_entry::*;
 
+use log::{debug, info, warn, error};
+
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
@@ -102,7 +104,7 @@ pub fn render_milo(
             //  ATI2 = Bc5RgUnorm
             match bitmap.unpack_rgba(system_info) {
                 Ok(rgba) => {
-                    println!("Processing {}", tex.get_name());
+                    debug!("Processing {}", tex.get_name());
 
                     // TODO: Figure out how bevy can support mip maps
                     let tex_size = (bitmap.width as usize) * (bitmap.height as usize) * 4;
@@ -121,13 +123,13 @@ pub fn render_milo(
                     tex_map.insert(tex.get_name().as_str(), bevy_tex);
                 },
                 Err(_err) => {
-                    println!("Failed to convert {}", tex.get_name());
+                    error!("Failed to convert {}", tex.get_name());
                 }
             }
         }
     }
 
-    println!("Found {} groups, {} meshes, {} textures, and {} materials", groups.len(), meshes.len(), textures.len(), mats.len());
+    debug!("Found {} groups, {} meshes, {} textures, and {} materials", groups.len(), meshes.len(), textures.len(), mats.len());
 
     for mesh in meshes {
         // Ignore meshes without geometry (used mostly in GH1)
@@ -183,11 +185,11 @@ pub fn render_milo(
             .find(|m| m.get_name().eq(&mesh.mat));
 
         if mat.is_none() {
-            println!("Mat not found for \"{}\"", &mesh.mat);
+            warn!("Mat not found for \"{}\"", &mesh.mat);
         } else {
             let mat = mat.unwrap();
             if !mat.diffuse_tex.is_empty() && tex_map.get(mat.diffuse_tex.as_str()).is_none() {
-                println!("Diffuse tex not found for \"{}\"", &mat.diffuse_tex);
+                warn!("Diffuse tex not found for \"{}\"", &mat.diffuse_tex);
             }
         }
 
@@ -237,7 +239,7 @@ pub fn render_milo(
             ..Default::default()
         });
 
-        println!("Added {}", &mesh.name);
+        debug!("Added {}", &mesh.name);
     }
 }
 

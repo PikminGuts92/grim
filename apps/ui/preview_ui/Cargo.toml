@@ -14,6 +14,7 @@ font-awesome-as-a-crate = "0.3.0"
 grim = { workspace = true }
 itertools = { workspace = true }
 lazy_static = { workspace = true }
+log = { workspace = true }
 # native-dialog = "0.6.1"
 serde = { workspace = true }
 serde_json = { workspace = true }

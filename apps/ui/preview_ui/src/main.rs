@@ -22,6 +22,7 @@ use bevy_infinite_grid::{GridShadowCamera, InfiniteGridBundle, InfiniteGrid, Inf
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
+use log::{debug, info, warn};
 use plugins::*;
 use state::*;
 use std::{env::args, path::{Path, PathBuf}};
@@ -244,7 +245,7 @@ fn consume_app_events(
                     commands.entity(entity).despawn_recursive();
                 }
                 if i > 0 {
-                    println!("Removed {} meshes in scene", i);
+                    debug!("Removed {} meshes in scene", i);
                 }
 
                 /*if render_entry {
@@ -278,7 +279,7 @@ fn consume_app_events(
 
                 state.milo_view.selected_entry = entry_name.to_owned();
 
-                println!("Updated milo");
+                debug!("Updated milo");
             },
             AppEvent::ToggleGridLines(show) => {
                 *grid.single_mut() = if *show {
@@ -306,7 +307,7 @@ fn consume_app_events(
                     );
                 }
 
-                println!("Updated milo");
+                debug!("Updated milo");
             },*/
         }
     }
@@ -321,11 +322,11 @@ fn open_file(
 
     if ext.contains("hdr") {
         // Open ark
-        println!("Opening hdr from \"{}\"", file_path.display());
+        info!("Opening hdr from \"{}\"", file_path.display());
 
         let ark_res = Ark::from_path(file_path);
         if let Ok(ark) = ark_res {
-            println!("Successfully opened ark with {} entries", ark.entries.len());
+            debug!("Successfully opened ark with {} entries", ark.entries.len());
 
             state.root = Some(create_ark_tree(&ark));
             state.ark = Some(ark);
@@ -334,11 +335,11 @@ fn open_file(
         || ext.contains("gh")
         || ext.contains("rnd") { // TODO: Break out into static regex
         // Open milo
-        println!("Opening milo from \"{}\"", file_path.display());
+        info!("Opening milo from \"{}\"", file_path.display());
 
         match open_and_unpack_milo(file_path) {
             Ok((milo, info)) => {
-                println!("Successfully opened milo with {} entries", milo.get_entries().len());
+                debug!("Successfully opened milo with {} entries", milo.get_entries().len());
 
                 state.milo = Some(milo);
                 state.system_info = Some(info);
@@ -369,12 +370,12 @@ fn open_file(
 
                 app_event_writer.send(AppEvent::SelectMiloEntry(selected_entry));
             },
-            Err(_err) => {
-                // TODO: Log error
+            Err(err) => {
+                warn!("Unable to unpack milo file:\n\t: {:?}", err);
             }
         }
     } else {
-        println!("Unknown file type \"{}\"", file_path.display());
+        info!("Unknown file type \"{}\"", file_path.display());
     }
 }
 
@@ -449,9 +450,9 @@ fn window_resized(
 
     if settings.maximized != maximized {
         if maximized {
-            println!("Window maximized");
+            debug!("Window maximized");
         } else {
-            println!("Window unmaximized");
+            debug!("Window unmaximized");
         }
 
         settings.maximized = maximized;
@@ -465,7 +466,7 @@ fn window_resized(
     }
 
     for e in resize_events.iter() {
-        println!("Window resized: {}x{}", e.width as u32, e.height as u32);
+        debug!("Window resized: {}x{}", e.width as u32, e.height as u32);
 
         settings.window_width = e.width;
         settings.window_height = e.height;
@@ -479,7 +480,7 @@ fn drop_files(
 ) {
     for d in drag_drop_events.iter() {
         if let FileDragAndDrop::DroppedFile { path_buf, .. } = d {
-            println!("Dropped \"{}\"", path_buf.to_str().unwrap());
+            debug!("Dropped \"{}\"", path_buf.to_str().unwrap());
 
             file_event_writer.send(AppFileEvent::Open(path_buf.to_owned()));
         }
