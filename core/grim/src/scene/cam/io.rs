@@ -3,6 +3,15 @@ use crate::scene::*;
 use crate::SystemInfo;
 use grim_traits::scene::*;
 use std::error::Error;
+use thiserror::Error as ThisError;
+
+#[derive(Debug, ThisError)]
+pub enum CamLoadError {
+    #[error("Cam version {version} is not supported")]
+    CamVersionNotSupported {
+        version: u32
+    },
+}
 
 fn is_version_supported(version: u32) -> bool {
     match version {
@@ -18,8 +27,9 @@ impl ObjectReadWrite for CamObject {
 
         let version = reader.read_uint32()?;
         if !is_version_supported(version) {
-            // TODO: Switch to custom error
-            panic!("Cam version \"{}\" is not supported!", version);
+            return Err(Box::new(CamLoadError::CamVersionNotSupported {
+                version
+            }));
         }
 
         load_object(self, &mut reader, info)?;
