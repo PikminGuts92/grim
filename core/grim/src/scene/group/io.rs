@@ -4,6 +4,15 @@ use crate::SystemInfo;
 use grim_traits::scene::*;
 use std::collections::HashSet;
 use std::error::Error;
+use thiserror::Error as ThisError;
+
+#[derive(Debug, ThisError)]
+pub enum GroupLoadError {
+    #[error("Group version {version} is not supported")]
+    GroupVersionNotSupported {
+        version: u32
+    },
+}
 
 fn is_version_supported(version: u32) -> bool {
     match version {
@@ -22,8 +31,9 @@ impl ObjectReadWrite for GroupObject {
 
         let version = reader.read_uint32()?;
         if !is_version_supported(version) {
-            // TODO: Switch to custom error
-            panic!("Group version \"{}\" is not supported!", version);
+            return Err(Box::new(GroupLoadError::GroupVersionNotSupported {
+                version
+            }));
         }
 
         load_object(self, &mut reader, info)?;

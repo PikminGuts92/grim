@@ -4,6 +4,15 @@ use crate::scene::*;
 use crate::SystemInfo;
 use grim_traits::scene::*;
 use std::error::Error;
+use thiserror::Error as ThisError;
+
+#[derive(Debug, ThisError)]
+pub enum MeshLoadError {
+    #[error("Mesh version {version} is not supported")]
+    MeshVersionNotSupported {
+        version: u32
+    },
+}
 
 fn is_version_supported(version: u32) -> bool {
     match version {
@@ -22,8 +31,9 @@ impl ObjectReadWrite for MeshObject {
 
         let version = reader.read_uint32()?;
         if !is_version_supported(version) {
-            // TODO: Switch to custom error
-            panic!("Mesh version \"{}\" is not supported!", version);
+            return Err(Box::new(MeshLoadError::MeshVersionNotSupported {
+                version
+            }));
         }
 
         load_object(self, &mut reader, info)?;
