@@ -15,11 +15,12 @@ pub enum MatLoadError {
 
 fn is_version_supported(version: u32) -> bool {
     match version {
-        21 => true,      // GH1
+        8 | 9 => true,        // Amp Demo/Amp
+        21 => true,           // GH1
         25 | 27 | 28 => true, // GH2 4-song/GH2/GH2 360
-        41 | 47 => true, // RB1/RB2
-        55 | 56 => true, // TBRB/GDRB
-        68 => true,      // RB3
+        41 | 47 => true,      // RB1/RB2
+        55 | 56 => true,      // TBRB/GDRB
+        68 => true,           // RB3
         _ => false
     }
 }
@@ -37,7 +38,30 @@ impl ObjectReadWrite for MatObject {
 
         load_object(self, &mut reader, info)?;
 
-        if version <= 21 {
+        // Amp/GH1 mats can be linked to many textures
+        if version <= 9 {
+            // Read tex entries
+            let tex_count = reader.read_uint32()?;
+
+            for _ in 0..tex_count {
+                let map_type = reader.read_uint32()?;
+
+                // Skip unknown data
+                reader.seek(SeekFrom::Current(61))?;
+
+                // Set name
+                let name = reader.read_prefixed_string()?;
+                match map_type {
+                    2 => self.emissive_map = name,
+                    4 => self.diffuse_tex = name,
+                    5 => self.environ_map = name,
+                    _ => continue,
+                };
+            }
+
+            // Skip remaining unknown crap
+            return Ok(());
+        } else if version <= 21 {
             // Read tex entries
             let tex_count = reader.read_uint32()?;
 
