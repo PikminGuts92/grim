@@ -18,8 +18,9 @@ impl Tex {
 
     fn is_magic_valid(magic: u32, info: &SystemInfo) -> bool {
         match info.version {
-            // GH1
+            // Amp/GH1
             10 => match magic {
+                5 => true, // Amp
                 8 => true,
                 _ => false
             },
@@ -75,7 +76,13 @@ impl ObjectReadWrite for Tex {
         self.bpp = reader.read_uint32()?;
 
         self.ext_path = reader.read_prefixed_string()?;
-        self.index_f = reader.read_float32()?;
+
+        if magic >= 8 {
+            self.index_f = reader.read_float32()?
+        } else {
+            self.index_f = 0.0
+        }
+
         self.index = reader.read_int32()?;
 
         // RB3 encoding
