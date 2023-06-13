@@ -686,6 +686,75 @@ impl GltfExporter {
         node_index
     }
 
+    fn load_external_texture(&self, tex: &Tex, system_info: &SystemInfo, milo_path: &Path) -> Option<crate::texture::Bitmap> {
+        // TODO: Clean all this crap up
+        use std::io::Read;
+
+        println!("{milo_path:?}");
+
+        // Load external texture
+        let milo_dir_path = milo_path.parent().unwrap();
+
+        // Insert "gen" sub folder
+        // TODO: Support loading from milo gen folder too
+        let ext_img_path = match tex.ext_path.rfind('/') {
+            Some(_) => todo!("Support external textures in nested relative path"), // Use [..]
+            None => milo_dir_path.join("gen").join(&tex.ext_path),
+        };
+
+        let ext_img_file_stem = ext_img_path.file_stem().and_then(|fs| fs.to_str()).unwrap();
+        let ext_img_path_dir = ext_img_path.parent().unwrap();
+
+        let files = ext_img_path_dir.find_files_with_depth(FileSearchDepth::Immediate).unwrap();
+
+        // TODO: Do case-insensitive compare
+        let matching_file = files
+            .iter()
+            .find(|f| f
+                .file_stem()
+                //.is_some_and(|fs| fs.eq_ignore_ascii_case(ext_img_file_stem))
+                .and_then(|fs| fs.to_str())
+                .is_some_and(|fs| fs.starts_with(ext_img_file_stem))
+            );
+
+        if let Some(file_path) = matching_file {
+            log::info!("Found external texture file!\n\t{file_path:?}");
+
+            let data = if file_path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("gz")) {
+                // File is gz compressed
+                let mut file = std::fs::File::open(file_path).unwrap();
+
+                // Read to buffer
+                let mut file_data = Vec::new();
+                file.read_to_end(&mut file_data).unwrap();
+
+                // Inflate
+                crate::io::inflate_gzip_block_no_buffer(&file_data).unwrap()
+            } else {
+                let mut file = std::fs::File::open(file_path).unwrap();
+
+                // Read to buffer
+                let mut file_data = Vec::new();
+                file.read_to_end(&mut file_data).unwrap();
+
+                file_data
+            };
+
+            let mut stream = crate::io::MemoryStream::from_slice_as_read(&data);
+            let bitmap = crate::texture::Bitmap::from_stream(&mut stream, system_info);
+
+            if bitmap.is_ok() {
+                log::info!("Successfully opened bitmap");
+            } else {
+                log::warn!("Error opening bitmap");
+            }
+
+            return bitmap.ok();
+        }
+
+        None
+    }
+
     fn process_textures(&self, gltf: &mut json::Root) -> HashMap<String, usize> {
         let mut image_indices = HashMap::new();
 
@@ -707,6 +776,7 @@ impl GltfExporter {
             .map(|(i, mt)| {
                 let t = &mt.object;
                 let sys_info = &mt.parent.info;
+                let milo_path = mt.parent.path.as_path();
 
                 // Remove .tex extension
                 // TODO: Use more robust method
@@ -721,17 +791,26 @@ impl GltfExporter {
                     uri: {
                         use base64::{Engine as _, engine::{self, general_purpose}, alphabet};
 
+                        let mut ext_tex = None;
+
                         // Decode image
-                        let rgba = t.bitmap
+                        let (rgba, (width, height)) = t.bitmap
                             .as_ref()
-                            .unwrap()
-                            .unpack_rgba(sys_info)
+                            .or_else(|| {
+                                // Load external texture
+                                ext_tex = self.load_external_texture(t, sys_info, milo_path);
+                                ext_tex.as_ref()
+                            })
+                            .map(|b| (
+                                b.unpack_rgba(sys_info).unwrap(),
+                                (b.width as u32, b.height as u32)
+                            ))
                             .unwrap();
 
-                        let (width, height) = t.bitmap
+                        /*let (width, height) = t.bitmap
                             .as_ref()
                             .map(|b| (b.width as u32, b.height as u32))
-                            .unwrap();
+                            .unwrap();*/
 
                         // Convert to png
                         let png_data = crate::texture::write_rgba_to_vec(width, height, &rgba).unwrap();
