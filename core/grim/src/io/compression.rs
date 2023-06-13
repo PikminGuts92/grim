@@ -45,6 +45,19 @@ pub fn inflate_gzip_block(data: &[u8], buffer: &mut [u8]) -> Result<Vec<u8>, Box
     Ok(inflated_data)
 }
 
+pub fn inflate_gzip_block_no_buffer(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    if data.is_empty() {
+        // Fast exit
+        return Ok(Vec::new());
+    }
+
+    let mut buffer = Vec::new();
+    let mut decoder = GzDecoder::new(data);
+    decoder.read_to_end(&mut buffer)?;
+
+    Ok(buffer)
+}
+
 pub fn deflate_zlib_block(data: &[u8], buffer: &mut [u8]) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut compressor = Compress::new(Compression::best(), false);
     let status = compressor.compress(data, buffer, FlushCompress::Finish)?;

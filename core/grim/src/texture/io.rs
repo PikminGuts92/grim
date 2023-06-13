@@ -119,6 +119,7 @@ impl Bitmap {
             // Decode PS2 bitmap
             let mut rgba = vec![0u8; self.calc_rgba_size()];
             decode_from_bitmap(self, info, &mut rgba[..])?;
+
             return Ok(rgba);
         } else if info.platform == Platform::PS3 || info.platform == Platform::X360 {
             // Decode next gen texture
