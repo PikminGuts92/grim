@@ -34,6 +34,7 @@ impl Platform {
                 Some("milo_ps3") => Platform::PS3,
                 Some("milo_wii") => Platform::Wii,
                 Some("milo_xbox") => Platform::X360,
+                Some("rnd") => Platform::PS2,
                 Some("rnd_ps2") => Platform::PS2,
                 Some("gh") => Platform::PS2,
                 _ => Platform::X360,
