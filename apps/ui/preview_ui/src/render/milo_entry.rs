@@ -8,6 +8,7 @@ use log::warn;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
+use std::io::Read;
 use std::num::NonZeroU8;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -26,10 +27,11 @@ pub fn render_milo_entry(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     bevy_textures: &mut ResMut<Assets<Image>>,
     milo: &ObjectDir,
+    milo_path: &Path,
     milo_entry: Option<String>,
     system_info: &SystemInfo,
 ) {
-    let mut loader = MiloLoader::new(milo);
+    let mut loader = MiloLoader::new(milo, milo_path);
 
     // Get meshes for single object or return all meshes
     // TODO: Make less hacky
@@ -345,10 +347,79 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
         return loader.get_cached_texture(tex_name);
     }
 
+    let mut ext_tex = None;
+
     // Get bitmap and decode texture
     // TODO: Check for external textures
     loader.get_texture(tex_name)
-        .and_then(|t| t.bitmap.as_ref())
+        .and_then(|t| {
+            if t.bitmap.is_some() {
+                t.bitmap.as_ref()
+            } else {
+                // Load external texture
+                let milo_dir_path = loader.get_milo_path().parent().unwrap();
+
+                // Insert "gen" sub folder
+                // TODO: Support loading from milo gen folder too
+                let ext_img_path = match t.ext_path.rfind('/') {
+                    Some(_) => todo!("Support external textures in nested relative path"), // Use [..]
+                    None => milo_dir_path.join("gen").join(&t.ext_path),
+                };
+
+                let ext_img_file_stem = ext_img_path.file_stem().and_then(|fs| fs.to_str()).unwrap();
+                let ext_img_path_dir = ext_img_path.parent().unwrap();
+
+                let files = ext_img_path_dir.find_files_with_depth(FileSearchDepth::Immediate).unwrap();
+
+                // TODO: Do case-insensitive compare
+                let matching_file = files
+                    .iter()
+                    .find(|f| f
+                        .file_stem()
+                        //.is_some_and(|fs| fs.eq_ignore_ascii_case(ext_img_file_stem))
+                        .and_then(|fs| fs.to_str())
+                        .is_some_and(|fs| fs.starts_with(ext_img_file_stem))
+                    );
+
+                if let Some(file_path) = matching_file {
+                    log::info!("Found external texture file!\n\t{file_path:?}");
+
+                    let data = if file_path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("gz")) {
+                        // File is gz compressed
+                        let mut file = std::fs::File::open(file_path).unwrap();
+
+                        // Read to buffer
+                        let mut file_data = Vec::new();
+                        file.read_to_end(&mut file_data).unwrap();
+
+                        // Inflate
+                        grim::io::inflate_gzip_block_no_buffer(&file_data).unwrap()
+                    } else {
+                        let mut file = std::fs::File::open(file_path).unwrap();
+
+                        // Read to buffer
+                        let mut file_data = Vec::new();
+                        file.read_to_end(&mut file_data).unwrap();
+
+                        file_data
+                    };
+
+                    let mut stream = grim::io::MemoryStream::from_slice_as_read(&data);
+                    let bitmap = grim::texture::Bitmap::from_stream(&mut stream, system_info);
+
+                    if bitmap.is_ok() {
+                        log::info!("Successfully opened bitmap");
+                    } else {
+                        log::warn!("Error opening bitmap");
+                    }
+
+                    ext_tex = bitmap.ok();
+                    return ext_tex.as_ref();
+                }
+
+                None
+            }
+        })
         .and_then(|b| match (system_info.platform, b.encoding) {
             (Platform::X360 | Platform::PS3, 8 | 24 | 32) => {
                 let enc = match b.encoding {

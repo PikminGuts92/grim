@@ -22,6 +22,7 @@ pub struct AppState {
     pub root: Option<ArkDirNode>,
     pub system_info: Option<SystemInfo>,
     pub milo: Option<ObjectDir>,
+    pub open_file_path: Option<PathBuf>,
     pub settings_path: PathBuf,
     pub show_options: bool,
     pub pending_events: Vec<AppEvent>,

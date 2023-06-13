@@ -264,6 +264,7 @@ fn consume_app_events(
                 }*/
 
                 let milo = state.milo.as_ref().unwrap();
+                let milo_path = state.open_file_path.as_ref().unwrap();
                 let info = state.system_info.as_ref().unwrap();
 
                 // Render everything for now
@@ -273,6 +274,7 @@ fn consume_app_events(
                     &mut materials,
                     &mut textures,
                     milo,
+                    milo_path,
                     entry_name.to_owned(),
                     info
                 );
@@ -318,6 +320,9 @@ fn open_file(
     state: &mut ResMut<AppState>,
     app_event_writer: &mut EventWriter<AppEvent>,
 ) {
+    // Clear file path
+    state.open_file_path.take();
+
     let ext = file_path.extension().unwrap().to_str().unwrap();
 
     if ext.contains("hdr") {
@@ -330,6 +335,7 @@ fn open_file(
 
             state.root = Some(create_ark_tree(&ark));
             state.ark = Some(ark);
+            state.open_file_path = Some(file_path.to_owned());
         }
     } else if ext.contains("milo")
         || ext.contains("gh")
@@ -343,6 +349,7 @@ fn open_file(
 
                 state.milo = Some(milo);
                 state.system_info = Some(info);
+                state.open_file_path = Some(file_path.to_owned());
 
                 //ev_update_state.send(AppEvent::RefreshMilo);
 

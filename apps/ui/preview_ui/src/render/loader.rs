@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 pub struct MiloLoader<'a> {
     milo: &'a ObjectDir,
+    milo_path: &'a std::path::Path,
     objects: HashMap<&'a str, &'a Object>,
     groups: HashMap<&'a str, &'a GroupObject>,
     mats: HashMap<&'a str, &'a MatObject>,
@@ -25,7 +26,7 @@ pub enum TextureEncoding {
 }
 
 impl<'a> MiloLoader<'a> {
-    pub fn new(milo: &ObjectDir) -> MiloLoader {
+    pub fn new(milo: &'a ObjectDir, milo_path: &'a std::path::Path) -> MiloLoader<'a> {
         let entries = milo.get_entries();
 
         let objects = entries
@@ -74,6 +75,7 @@ impl<'a> MiloLoader<'a> {
 
         MiloLoader {
             milo,
+            milo_path,
             objects,
             groups,
             mats,
@@ -128,6 +130,10 @@ impl<'a> MiloLoader<'a> {
         self.transforms
             .get(name)
             .and_then(|o| Some(*o))
+    }
+
+    pub fn get_milo_path(&self) -> &std::path::Path {
+        self.milo_path
     }
 }
 
