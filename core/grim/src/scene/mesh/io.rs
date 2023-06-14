@@ -17,11 +17,12 @@ pub enum MeshLoadError {
 fn is_version_supported(version: u32) -> bool {
     match version {
         13 | 14 => true, // Amp Demo/Amp
-        25 => true, // GH1
-        28 => true, // GH2/GH2 360
-        34 => true, // RB1/RB2
+        22 => true,      // AntiGrav
+        25 => true,      // GH1
+        28 => true,      // GH2/GH2 360
+        34 => true,      // RB1/RB2
         36 | 37 => true, // TBRB/GDRB
-        38 => true, // RB3
+        38 => true,      // RB3
         _ => false
     }
 }
@@ -165,8 +166,8 @@ impl ObjectReadWrite for MeshObject {
             let mut vec = Vert::default();
 
             // TODO: Should probably clean up this loop
-            if version <= 14 {
-                // Amp (56 bytes)
+            if version <= 22 {
+                // Amp/AntiGrav (56 bytes)
                 // Position
                 vec.pos.x = reader.read_float32()?;
                 vec.pos.y = reader.read_float32()?;
@@ -345,6 +346,21 @@ impl ObjectReadWrite for MeshObject {
             // Not always present, skip for now
             let short_count = reader.read_uint32()?;
             reader.seek(SeekFrom::Current((short_count * 2) as i64 * std::mem::size_of::<u16>() as i64))?;
+
+            if version >= 22 {
+                // TODO: Preserve this data
+                let group_count = reader.read_uint32()?;
+
+                for _ in 0..group_count {
+                    reader.seek(SeekFrom::Current(4))?; // Some number
+
+                    let short_count = reader.read_uint32()?;
+                    reader.seek(SeekFrom::Current(short_count as i64 * 2))?;
+
+                    let int_count = reader.read_uint32()?;
+                    reader.seek(SeekFrom::Current(int_count as i64 * 4))?;
+                }
+            }
 
             if version >= 14 {
                 // Skip int
