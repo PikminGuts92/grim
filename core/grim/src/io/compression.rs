@@ -1,7 +1,7 @@
 //use flate2::{Compress, Decompress};
 
 use flate2::{Compress, Compression, Decompress, FlushCompress, FlushDecompress, Status};
-use flate2::read::GzDecoder;
+use flate2::read::{DeflateDecoder, GzDecoder};
 use std::error::Error;
 use std::io::Read;
 
@@ -53,6 +53,19 @@ pub fn inflate_gzip_block_no_buffer(data: &[u8]) -> Result<Vec<u8>, Box<dyn Erro
 
     let mut buffer = Vec::new();
     let mut decoder = GzDecoder::new(data);
+    decoder.read_to_end(&mut buffer)?;
+
+    Ok(buffer)
+}
+
+pub fn inflate_deflate_block_no_buffer(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    if data.is_empty() {
+        // Fast exit
+        return Ok(Vec::new());
+    }
+
+    let mut buffer = Vec::new();
+    let mut decoder = DeflateDecoder::new(data);
     decoder.read_to_end(&mut buffer)?;
 
     Ok(buffer)

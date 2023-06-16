@@ -19,7 +19,7 @@ use grim::scene::{GroupObject, Matrix, MeshObject, Milo, MiloObject, Object, Obj
 use grim::texture::Bitmap;
 
 use crate::WorldMesh;
-use super::{map_matrix, MiloLoader, TextureEncoding};
+use super::{ImageInfo, map_matrix, MiloLoader, TextureEncoding};
 
 pub fn render_milo_entry(
     commands: &mut Commands,
@@ -339,7 +339,7 @@ fn get_product_local_mat<'a>(
     map_matrix(milo_object.get_local_xfm())
 }
 
-fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_info: &SystemInfo) -> Option<&'b (&'a Tex, Vec<u8>, TextureEncoding)> {
+fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_info: &SystemInfo) -> Option<&'b (&'a Tex, Vec<u8>, ImageInfo)> {
     // Check for cached texture
     if let Some(_cached) = loader.get_cached_texture(tex_name).take() {
         // TODO: Figure out why commented out line doesn't work (stupid lifetimes)
@@ -360,9 +360,13 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
                 let milo_dir_path = loader.get_milo_path().parent().unwrap();
 
                 // Insert "gen" sub folder
-                // TODO: Support loading from milo gen folder too
-                let ext_img_path = match t.ext_path.rfind('/') {
-                    Some(_) => todo!("Support external textures in nested relative path"), // Use [..]
+                // TODO: Support loading from milo gen folder too?
+                let ext_img_path = match t.ext_path.rfind("/") {
+                    Some(last_slash_idx) => {
+                        let (dir_path, file_name) = t.ext_path.split_at(last_slash_idx);
+
+                        milo_dir_path.join(dir_path).join("gen").join(&file_name[1..])
+                    },
                     None => milo_dir_path.join("gen").join(&t.ext_path),
                 };
 
@@ -394,6 +398,16 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
 
                         // Inflate
                         grim::io::inflate_gzip_block_no_buffer(&file_data).unwrap()
+                    } else if file_path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("z")) {
+                        // File is zlib compressed
+                        let mut file = std::fs::File::open(file_path).unwrap();
+
+                        // Read to buffer
+                        let mut file_data = Vec::new();
+                        file.read_to_end(&mut file_data).unwrap();
+
+                        // Inflate
+                        grim::io::inflate_deflate_block_no_buffer(&file_data).unwrap()
                     } else {
                         let mut file = std::fs::File::open(file_path).unwrap();
 
@@ -423,10 +437,10 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
         .and_then(|b| match (system_info.platform, b.encoding) {
             (Platform::X360 | Platform::PS3, 8 | 24 | 32) => {
                 let enc = match b.encoding {
-                     8 => TextureEncoding::DXT1,
-                    24 => TextureEncoding::DXT5,
-                    32 | _ => TextureEncoding::ATI2,
-                };
+                    8 => TextureEncoding::DXT1,
+                   24 => TextureEncoding::DXT5,
+                   32 | _ => TextureEncoding::ATI2,
+               };
 
                 let mut data = b.raw_data.to_owned();
 
@@ -440,20 +454,26 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
                     }
                 }
 
-                Some((data, enc))
+                Some((data, ImageInfo {
+                    encoding: enc,
+                    ..b.into()
+                }))
             },
             _ => b.unpack_rgba(system_info).ok()
-                .and_then(|rgba| Some((rgba, TextureEncoding::RGBA)))
+                .and_then(|rgba| Some((rgba, ImageInfo {
+                    encoding: TextureEncoding::RGBA,
+                    ..b.into()
+                })))
         })
-        .and_then(move |(rgba, enc)| {
+        .and_then(move |(rgba, image_info)| {
             // Cache decoded texture
-            loader.set_cached_texture(tex_name, rgba, enc);
+            loader.set_cached_texture(tex_name, rgba, image_info);
             loader.get_cached_texture(tex_name)
         })
 }
 
-fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
-    let (tex, rgba, enc) = tex;
+fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, ImageInfo)) -> Image {
+    let (tex, rgba, ImageInfo { width, height, mips: _, encoding: enc }) = tex;
 
     let bpp: usize = match enc {
         TextureEncoding::DXT1 => 4,
@@ -461,7 +481,7 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
         TextureEncoding::RGBA => 32,
     };
 
-    let tex_size = ((tex.width as usize) * (tex.height as usize) * bpp) / 8;
+    let tex_size = ((*width as usize) * (*height as usize) * bpp) / 8;
     let use_mips = rgba.len() > tex_size; // TODO: Always support mips?
 
     let img_slice = if use_mips {
