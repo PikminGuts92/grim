@@ -12,6 +12,8 @@ pub enum MeshLoadError {
     MeshVersionNotSupported {
         version: u32
     },
+    #[error("BSP volume geometry is not supported")]
+    BSPVolumeNotSupported,
 }
 
 fn is_version_supported(version: u32) -> bool {
@@ -134,7 +136,8 @@ impl ObjectReadWrite for MeshObject {
             // Ignored but still validated
             let bsp = reader.read_uint8()?;
             if bsp != 0 {
-                panic!("Expected bsp field to be 0, not \"{}\" in Mesh", bsp);
+                //panic!("Expected bsp field to be 0, not \"{}\" in Mesh", bsp);
+                return Err(Box::new(MeshLoadError::BSPVolumeNotSupported));
             }
         }
 
