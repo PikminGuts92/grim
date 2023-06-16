@@ -16,6 +16,7 @@ pub enum MatLoadError {
 fn is_version_supported(version: u32) -> bool {
     match version {
         8 | 9 => true,        // Amp Demo/Amp
+        15 => true,           // AntiGrav
         21 => true,           // GH1
         25 | 27 | 28 => true, // GH2 4-song/GH2/GH2 360
         41 | 47 => true,      // RB1/RB2
@@ -38,7 +39,7 @@ impl ObjectReadWrite for MatObject {
 
         load_object(self, &mut reader, info)?;
 
-        // Amp/GH1 mats can be linked to many textures
+        // Amp/AntiGrav/GH1 mats can be linked to many textures
         if version <= 9 {
             // Read tex entries
             let tex_count = reader.read_uint32()?;
@@ -86,6 +87,11 @@ impl ObjectReadWrite for MatObject {
                     2 => self.environ_map = name,
                     _ => continue,
                 };
+            }
+
+            if version <= 15 {
+                // AntiGrav - Skip remaining unknown crap
+                return Ok(());
             }
         }
 
