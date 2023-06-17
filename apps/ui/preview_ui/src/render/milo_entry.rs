@@ -86,20 +86,22 @@ pub fn render_milo_entry(
 
         let mut bevy_mesh = Mesh::new(bevy::render::render_resource::PrimitiveTopology::TriangleList);
 
-        let mut positions = Vec::new();
-        let mut normals = Vec::new();
-        let mut tangents = Vec::new();
-        let mut uvs = Vec::new();
+        let vert_count = mesh.get_vertices().len();
 
-        for vert in mesh.get_vertices() {
-            positions.push([vert.pos.x, vert.pos.y, vert.pos.z]);
+        let mut positions = vec![Default::default(); vert_count];
+        let mut normals = vec![Default::default(); vert_count];
+        let mut tangents = vec![Default::default(); vert_count];
+        let mut uvs = vec![Default::default(); vert_count];
+
+        for (i, vert) in mesh.get_vertices().iter().enumerate() {
+            positions[i] = [vert.pos.x, vert.pos.y, vert.pos.z];
 
             // TODO: Figure out normals/tangents
             //normals.push([vert.normals.x, vert.normals.y, vert.normals.z]);
-            normals.push([1.0, 1.0, 1.0]);
-            tangents.push([0.0, 0.0, 0.0, 1.0]);
+            normals[i] = [1.0, 1.0, 1.0];
+            tangents[i] = [0.0, 0.0, 0.0, 1.0];
 
-            uvs.push([vert.uv.u, vert.uv.v]);
+            uvs[i] = [vert.uv.u, vert.uv.v];
         }
 
         let indices = bevy::render::mesh::Indices::U16(
@@ -390,30 +392,33 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
 
                     let data = if file_path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("gz")) {
                         // File is gz compressed
+                        let file_size = grim::io::get_file_size(file_path) as usize;
                         let mut file = std::fs::File::open(file_path).unwrap();
 
                         // Read to buffer
-                        let mut file_data = Vec::new();
-                        file.read_to_end(&mut file_data).unwrap();
+                        let mut file_data = vec![0u8; file_size];
+                        file.read_exact(&mut file_data).unwrap();
 
                         // Inflate
                         grim::io::inflate_gzip_block_no_buffer(&file_data).unwrap()
                     } else if file_path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("z")) {
                         // File is zlib compressed
+                        let file_size = grim::io::get_file_size(file_path) as usize;
                         let mut file = std::fs::File::open(file_path).unwrap();
 
                         // Read to buffer
-                        let mut file_data = Vec::new();
-                        file.read_to_end(&mut file_data).unwrap();
+                        let mut file_data = vec![0u8; file_size];
+                        file.read_exact(&mut file_data).unwrap();
 
                         // Inflate
                         grim::io::inflate_deflate_block_no_buffer(&file_data).unwrap()
                     } else {
+                        let file_size = grim::io::get_file_size(file_path) as usize;
                         let mut file = std::fs::File::open(file_path).unwrap();
 
                         // Read to buffer
-                        let mut file_data = Vec::new();
-                        file.read_to_end(&mut file_data).unwrap();
+                        let mut file_data = vec![0u8; file_size];
+                        file.read_exact(&mut file_data).unwrap();
 
                         file_data
                     };

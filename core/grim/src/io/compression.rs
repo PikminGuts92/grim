@@ -60,8 +60,26 @@ pub fn inflate_gzip_block_no_buffer(data: &[u8]) -> Result<Vec<u8>, Box<dyn Erro
         return Ok(Vec::new());
     }
 
-    let mut buffer = Vec::new();
+    let inflate_size = {
+        let mut data_len = [0u8; 4];
+
+        data_len.copy_from_slice(&data[(data.len() - 4)..]);
+        u32::from_le_bytes(data_len) as usize
+    };
+
+    let mut buffer = vec![0u8; inflate_size];
     let mut decoder = GzDecoder::new(data);
+    let mut read_pos = 0;
+
+    loop {
+        let read_size = decoder.read(&mut buffer[read_pos..])?;
+        if read_size == 0 {
+            break;
+        }
+
+        read_pos += read_size;
+    }
+
     decoder.read_to_end(&mut buffer)?;
 
     Ok(buffer)
