@@ -36,8 +36,17 @@ pub fn inflate_gzip_block(data: &[u8], buffer: &mut [u8]) -> Result<Vec<u8>, Box
         return Ok(Vec::new());
     }
 
+    let mut inflate_size = 0;
     let mut decoder = GzDecoder::new(data);
-    let inflate_size = decoder.read(buffer)?;
+
+    loop {
+        let read_size = decoder.read(&mut buffer[inflate_size..])?;
+        if read_size == 0 {
+            break;
+        }
+
+        inflate_size += read_size;
+    }
 
     let mut inflated_data = vec![0u8; inflate_size];
     inflated_data.clone_from_slice(&buffer[..inflate_size]);
@@ -56,6 +65,30 @@ pub fn inflate_gzip_block_no_buffer(data: &[u8]) -> Result<Vec<u8>, Box<dyn Erro
     decoder.read_to_end(&mut buffer)?;
 
     Ok(buffer)
+}
+
+pub fn inflate_deflate_block(data: &[u8], buffer: &mut [u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    if data.is_empty() {
+        // Fast exit
+        return Ok(Vec::new());
+    }
+
+    let mut inflate_size = 0;
+    let mut decoder = DeflateDecoder::new(data);
+
+    loop {
+        let read_size = decoder.read(&mut buffer[inflate_size..])?;
+        if read_size == 0 {
+            break;
+        }
+
+        inflate_size += read_size;
+    }
+
+    let mut inflated_data = vec![0u8; inflate_size];
+    inflated_data.clone_from_slice(&buffer[..inflate_size]);
+
+    Ok(inflated_data)
 }
 
 pub fn inflate_deflate_block_no_buffer(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
