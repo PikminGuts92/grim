@@ -44,6 +44,8 @@ impl ObjectReadWrite for MatObject {
             // Read tex entries
             let tex_count = reader.read_uint32()?;
 
+            let mut max_order = 0;
+
             for _ in 0..tex_count {
                 let map_type = reader.read_uint32()?;
 
@@ -52,12 +54,17 @@ impl ObjectReadWrite for MatObject {
 
                 // Set name
                 let name = reader.read_prefixed_string()?;
-                match map_type {
+                if map_type >= max_order {
+                    max_order = map_type;
+                    self.diffuse_tex = name;
+                }
+
+                /*match map_type {
                     2 => self.emissive_map = name,
-                    4 => self.diffuse_tex = name,
+                    3 | 4 => self.diffuse_tex = name,
                     5 => self.environ_map = name,
                     _ => continue,
-                };
+                };*/
             }
 
             // Skip remaining unknown crap
