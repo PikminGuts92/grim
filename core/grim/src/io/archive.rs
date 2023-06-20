@@ -102,7 +102,7 @@ impl MiloArchive {
                     (BlockType::TypeA, _)
                         | (BlockType::TypeD, false) => bytes, // No compression
                     (BlockType::TypeB, _) => inflate_zlib_block(&bytes, &mut buffer[..])?,
-                    (BlockType::TypeC, _) => todo!("Gzip compression not supported!"), // TODO: Support gzip
+                    (BlockType::TypeC, _) => inflate_gzip_block(&bytes, &mut buffer[..])?,
                     (BlockType::TypeD, true) => inflate_zlib_block(&bytes[4..], &mut buffer[..])?, // Skip 4-byte inflated size prefix
                 };
 

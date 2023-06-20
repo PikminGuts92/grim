@@ -8,12 +8,13 @@ use std::collections::HashMap;
 
 pub struct MiloLoader<'a> {
     milo: &'a ObjectDir,
+    milo_path: &'a std::path::Path,
     objects: HashMap<&'a str, &'a Object>,
     groups: HashMap<&'a str, &'a GroupObject>,
     mats: HashMap<&'a str, &'a MatObject>,
     meshes: HashMap<&'a str, &'a MeshObject>,
     textures: HashMap<&'a str, &'a Tex>,
-    cached_textures: HashMap<&'a str, (&'a Tex, Vec<u8>, TextureEncoding)>,
+    cached_textures: HashMap<&'a str, (&'a Tex, Vec<u8>, ImageInfo)>,
     transforms: HashMap<&'a str, &'a dyn Trans>,
 }
 
@@ -24,8 +25,26 @@ pub enum TextureEncoding {
     ATI2
 }
 
+pub struct ImageInfo {
+    pub width: u32,
+    pub height: u32,
+    pub mips: u32,
+    pub encoding: TextureEncoding,
+}
+
+impl From<&grim::texture::Bitmap> for ImageInfo {
+    fn from(b: &grim::texture::Bitmap) -> Self {
+        Self {
+            width: b.width as u32,
+            height: b.height as u32,
+            mips: b.mip_maps as u32,
+            encoding: TextureEncoding::RGBA, // Actually set elsewhere
+        }
+    }
+}
+
 impl<'a> MiloLoader<'a> {
-    pub fn new(milo: &ObjectDir) -> MiloLoader {
+    pub fn new(milo: &'a ObjectDir, milo_path: &'a std::path::Path) -> MiloLoader<'a> {
         let entries = milo.get_entries();
 
         let objects = entries
@@ -74,6 +93,7 @@ impl<'a> MiloLoader<'a> {
 
         MiloLoader {
             milo,
+            milo_path,
             objects,
             groups,
             mats,
@@ -114,20 +134,24 @@ impl<'a> MiloLoader<'a> {
             .and_then(|o| Some(*o))
     }
 
-    pub fn get_cached_texture(&self, name: &str) -> Option<&(&'a Tex, Vec<u8>, TextureEncoding)> {
+    pub fn get_cached_texture(&self, name: &str) -> Option<&(&'a Tex, Vec<u8>, ImageInfo)> {
         self.cached_textures.get(name)
     }
 
-    pub fn set_cached_texture(&mut self, name: &str, rgba: Vec<u8>, encoding: TextureEncoding) {
+    pub fn set_cached_texture(&mut self, name: &str, rgba: Vec<u8>, image_info: ImageInfo) {
         let tex = self.get_texture(name).unwrap();
 
-        self.cached_textures.insert(tex.get_name().as_str(), (tex, rgba, encoding));
+        self.cached_textures.insert(tex.get_name().as_str(), (tex, rgba, image_info));
     }
 
     pub fn get_transform(&self, name: &str) -> Option<&'a dyn Trans> {
         self.transforms
             .get(name)
             .and_then(|o| Some(*o))
+    }
+
+    pub fn get_milo_path(&self) -> &std::path::Path {
+        self.milo_path
     }
 }
 

@@ -119,6 +119,7 @@ impl Bitmap {
             // Decode PS2 bitmap
             let mut rgba = vec![0u8; self.calc_rgba_size()];
             decode_from_bitmap(self, info, &mut rgba[..])?;
+
             return Ok(rgba);
         } else if info.platform == Platform::PS3 || info.platform == Platform::X360 {
             // Decode next gen texture
@@ -231,17 +232,32 @@ impl ObjectReadWrite for Bitmap {
     fn load(&mut self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
         let mut reader = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
 
-        let _byte_1 = reader.read_uint8()?; // TODO: Verify always 1
+        // 0 = 16-byte header (Amp), 1 = 32-byte header
+        // TODO: Validate as 0 or 1
+        let byte_1 = reader.read_uint8()?;
 
-        self.bpp = reader.read_uint8()?;
-        self.encoding = reader.read_uint32()?;
-        self.mip_maps = reader.read_uint8()?;
+        if byte_1 == 0 {
+            // Load as amp texture (no mip maps)
+            self.bpp = reader.read_uint8()?;
+            self.encoding = reader.read_uint16()? as u32;
+            self.mip_maps = 0u8;
 
-        self.width = reader.read_uint16()?;
-        self.height = reader.read_uint16()?;
-        self.bpl = reader.read_uint16()?;
+            self.width = reader.read_uint16()?;
+            self.height = reader.read_uint16()?;
+            self.bpl = reader.read_uint16()?;
 
-        reader.seek(SeekFrom::Current(19))?; // Skip empty bytes
+            reader.seek(SeekFrom::Current(6))?; // Skip empty bytes
+        } else {
+            self.bpp = reader.read_uint8()?;
+            self.encoding = reader.read_uint32()?;
+            self.mip_maps = reader.read_uint8()?;
+
+            self.width = reader.read_uint16()?;
+            self.height = reader.read_uint16()?;
+            self.bpl = reader.read_uint16()?;
+
+            reader.seek(SeekFrom::Current(19))?; // Skip empty bytes
+        }
 
         // TODO: Calculate expected data size and verify against actual
         let current_pos = reader.pos();

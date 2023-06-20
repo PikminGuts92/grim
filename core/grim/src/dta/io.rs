@@ -3,6 +3,7 @@ use crate::dta::*;
 use itertools::Itertools;
 use thiserror::Error as ThisError;
 use std::error::Error;
+use std::hint::unreachable_unchecked;
 
 #[derive(Debug, ThisError)]
 pub enum DtaLoadError {
@@ -10,6 +11,17 @@ pub enum DtaLoadError {
     UnknownNodeType {
         node_type: u32
     },
+    #[error("Unknown dtb version: {version:#02X}")]
+    UnknownVersion {
+        version: u32
+    },
+}
+
+#[derive(Debug)]
+pub enum DataArrayIOSettings {
+    Milo,
+    Forge,
+    Amplitude,
 }
 
 impl DataArray {
@@ -39,9 +51,40 @@ impl RootData {
         let has_data = stream.read_boolean()?;
         if has_data {
             self.data = load_array(stream)?;
-        }
+        };
 
         Ok(())
+    }
+
+    pub fn load_with_settings(&mut self, stream: &mut Box<BinaryStream>, settings: DataArrayIOSettings) -> Result<(), Box<dyn Error>> {
+        match settings {
+            DataArrayIOSettings::Milo => {
+                return self.load(stream);
+            },
+            DataArrayIOSettings::Forge => todo!("Can't read Forge dtb"),
+            DataArrayIOSettings::Amplitude => {
+                // Clear data
+                self.data.clear();
+
+                // Read data
+                let data_version = stream.read_uint8()?;
+
+                if data_version != 2 {
+                    return Err(Box::new(DtaLoadError::UnknownVersion {
+                        version: data_version as u32
+                    }));
+                }
+
+                // Read original file names (ignore for now)
+                let name_count = stream.read_uint32()?;
+                for _ in 0..name_count {
+                    stream.read_prefixed_string()?;
+                }
+
+                self.data = load_array_amp(stream)?;
+                Ok(())
+            }
+        }
     }
 }
 
@@ -57,6 +100,37 @@ pub(crate) fn save_array(data: &Vec<DataArray>, stream: &mut Box<BinaryStream>, 
     }
 
     Ok(())
+}
+
+pub(crate) fn load_array_amp(stream: &mut Box<BinaryStream>) -> Result<Vec<DataArray>, Box<dyn Error>> {
+    let count = stream.read_uint16()? as usize;
+    let _id_1 = stream.read_uint32()?;
+    let _id_2 = stream.read_uint32()?;
+
+    // Types are packed in 2-bits, so 16 types per 32-bit word
+    let mut type_count = count / 16;
+    if (count % 16) > 0 {
+        type_count += 1;
+    }
+
+    let mut types = vec![0u32; type_count];
+
+    for typ in types.iter_mut() {
+        *typ = stream.read_uint32()?;
+    }
+
+    let mut nodes = Vec::new();
+
+    for i in 0..count {
+        // Interpret type
+        let div = i / 16;
+        let rem = i % 16;
+        let typ = (types[div] >> (rem * 2)) & 0x03;
+
+        nodes.push(load_node_amp(stream, typ)?);
+    }
+
+    Ok(nodes)
 }
 
 pub(crate) fn load_array(stream: &mut Box<BinaryStream>) -> Result<Vec<DataArray>, Box<dyn Error>> {
@@ -142,6 +216,18 @@ fn load_node(stream: &mut Box<BinaryStream>) -> Result<DataArray, Box<dyn Error>
         _ => return Err(Box::new(DtaLoadError::UnknownNodeType {
             node_type
         }))
+    };
+
+    Ok(node)
+}
+
+fn load_node_amp(stream: &mut Box<BinaryStream>, node_type: u32) -> Result<DataArray, Box<dyn Error>> {
+    let node = match node_type {
+        0x00 => DataArray::Integer(stream.read_int32()?),
+        0x01 => DataArray::Symbol(load_string(stream)?),
+        0x02 => DataArray::Float(stream.read_float32()?),
+        0x03 => DataArray::Array(load_array_amp(stream)?),
+        _ => unreachable!("Shouldn't be reached. Node type of \"{node_type}\" is invalid"),
     };
 
     Ok(node)

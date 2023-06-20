@@ -1,5 +1,5 @@
 #[cfg(feature = "python")] use pyo3::prelude::*;
-use std::path::PathBuf;
+use std::{path::PathBuf, todo};
 
 #[derive(Debug, Default)]
 #[cfg_attr(feature = "python", pyclass)]
@@ -29,6 +29,25 @@ pub struct ArkOffsetEntry {
     #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub inflated_size: usize
 }
 
+impl ArkOffsetEntry {
+    pub fn is_gen_file(&self) -> bool {
+        if !self.path.contains('/') {
+            return false;
+        }
+
+        // Check last directory name for "gen" (there's gotta be a cleaner way to do this)
+        self.path
+            .split("/")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .skip(1) // Skip file name
+            .next()
+            .map(|d| d.eq_ignore_ascii_case("gen"))
+            .unwrap_or_default()
+    }
+}
+
 impl Default for ArkEncryption {
     fn default() -> Self {
         ArkEncryption::None
@@ -54,5 +73,25 @@ impl Ark {
         };
 
         Ok(key)
+    }
+}
+
+impl Ark {
+    pub fn get_stream(&self, id: u32) -> Result<Vec<u8>, std::io::Error> {
+        use std::io::{Read, Seek, SeekFrom};
+
+        let entry = self
+            .entries
+            .iter()
+            .find(|e| e.id == id)
+            .expect("Invalid id");
+
+        // TODO: Support reading from ark parts
+        let mut file = std::fs::File::open(&self.path)?;
+        file.seek(SeekFrom::Start(entry.offset))?;
+
+        let mut buffer = vec![0u8; entry.size];
+        file.read_exact(&mut buffer)?;
+        Ok(buffer)
     }
 }

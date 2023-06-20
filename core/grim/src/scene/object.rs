@@ -100,19 +100,19 @@ impl MiloObject {
         }
 
         let obj: &dyn ObjectReadWrite  = match &self {
-            MiloObject::Anim(obj) => obj,
-            MiloObject::Cam(obj) => obj,
-            MiloObject::CubeTex(obj) => obj,
-            MiloObject::Draw(obj) => obj,
-            MiloObject::Group(obj) => obj,
-            MiloObject::Mat(obj) => obj,
-            MiloObject::Mesh(obj) => obj,
-            MiloObject::Morph(obj) => obj,
-            MiloObject::P9SongPref(obj) => obj,
-            MiloObject::PropAnim(obj) => obj,
-            MiloObject::Tex(obj) => obj,
-            MiloObject::Trans(obj) => obj,
-            MiloObject::TransAnim(obj) => obj,
+            Object::Anim(obj) => obj,
+            Object::Cam(obj) => obj,
+            Object::CubeTex(obj) => obj,
+            Object::Draw(obj) => obj,
+            Object::Group(obj) => obj,
+            Object::Mat(obj) => obj,
+            Object::Mesh(obj) => obj,
+            Object::Morph(obj) => obj,
+            Object::P9SongPref(obj) => obj,
+            Object::PropAnim(obj) => obj,
+            Object::Tex(obj) => obj,
+            Object::Trans(obj) => obj,
+            Object::TransAnim(obj) => obj,
             _ => todo!("Test"),
         };
 

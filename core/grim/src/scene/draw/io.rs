@@ -3,9 +3,19 @@ use crate::scene::*;
 use crate::SystemInfo;
 use grim_traits::scene::*;
 use std::error::Error;
+use thiserror::Error as ThisError;
+
+#[derive(Debug, ThisError)]
+pub enum DrawLoadError {
+    #[error("Draw version {version} is not supported")]
+    DrawVersionNotSupported {
+        version: u32
+    },
+}
 
 fn is_version_supported(version: u32) -> bool {
     match version {
+        0 => true,     // Amp Demo/Amp
         1 => true,     // GH1
         3 | 4 => true, // TBRB/GDRB
         _ => false
@@ -29,8 +39,9 @@ impl ObjectReadWrite for DrawObject {
 pub(crate) fn load_draw<T: Draw>(draw: &mut T, reader: &mut Box<BinaryStream>, info: &SystemInfo, read_meta: bool)  -> Result<(), Box<dyn Error>> {
     let version = reader.read_uint32()?;
     if !is_version_supported(version) {
-        // TODO: Switch to custom error
-        panic!("Draw version \"{}\" is not supported!", version);
+        return Err(Box::new(DrawLoadError::DrawVersionNotSupported {
+            version
+        }));
     }
 
     if read_meta {
@@ -39,7 +50,7 @@ pub(crate) fn load_draw<T: Draw>(draw: &mut T, reader: &mut Box<BinaryStream>, i
 
     draw.set_showing(reader.read_boolean()?);
 
-    if version < 3 {
+    if version < 2 {
         let draw_objects = draw.get_draw_objects_mut();
         draw_objects.clear();
 
@@ -50,9 +61,11 @@ pub(crate) fn load_draw<T: Draw>(draw: &mut T, reader: &mut Box<BinaryStream>, i
         }
     }
 
-    load_sphere(draw.get_sphere_mut(), reader)?;
+    if version > 0 {
+        load_sphere(draw.get_sphere_mut(), reader)?;
+    }
 
-    if version >= 3 {
+    if version > 2 {
         draw.set_draw_order(reader.read_float32()?);
     }
 
