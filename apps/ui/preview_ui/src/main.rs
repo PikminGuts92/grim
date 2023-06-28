@@ -323,8 +323,17 @@ fn open_file(
     // Clear file path
     state.open_file_path.take();
 
-    let ext = file_path.extension().unwrap().to_str().unwrap();
+    // Get full file extension
+    let ext = file_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .map(|n| match n.find('.') {
+            Some(i) => &n[i..],
+            _ => n
+        })
+        .unwrap();
 
+    // TODO: Make case-insensitive
     if ext.contains("hdr") {
         // Open ark
         info!("Opening hdr from \"{}\"", file_path.display());
