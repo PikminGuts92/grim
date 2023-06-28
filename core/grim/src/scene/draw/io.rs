@@ -15,7 +15,7 @@ pub enum DrawLoadError {
 
 fn is_version_supported(version: u32) -> bool {
     match version {
-        0 => true,     // Amp Demo/Amp
+        0 => true,     // Freq/Amp Demo/Amp
         1 => true,     // GH1
         3 | 4 => true, // TBRB/GDRB
         _ => false
@@ -44,6 +44,14 @@ pub(crate) fn load_draw<T: Draw>(draw: &mut T, reader: &mut Box<BinaryStream>, i
         }));
     }
 
+    // Read as null-terminated or prefixed string depending on version
+    // Need to check sys_info because freq draw version is same as amp
+    let read_string = if info.version <= 6 {
+        |reader: &mut Box<BinaryStream>| reader.read_null_terminated_string()
+    } else {
+        |reader: &mut Box<BinaryStream>| reader.read_prefixed_string()
+    };
+
     if read_meta {
         load_object(draw, reader, info)?;
     }
@@ -57,7 +65,7 @@ pub(crate) fn load_draw<T: Draw>(draw: &mut T, reader: &mut Box<BinaryStream>, i
         // Reads draw objects
         let draw_count = reader.read_uint32()?;
         for _ in 0..draw_count {
-            draw_objects.push(reader.read_prefixed_string()?);
+            draw_objects.push(read_string(reader)?);
         }
     }
 
