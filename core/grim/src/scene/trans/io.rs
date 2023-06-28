@@ -44,6 +44,14 @@ pub(crate) fn load_trans<T: Trans>(trans: &mut T, reader: &mut Box<BinaryStream>
         }));
     }
 
+    // Read as null-terminated or prefixed string depending on version
+    // Need to check sys_info because freq trans version is same as amp
+    let read_string = if info.version <= 6 {
+        |reader: &mut Box<BinaryStream>| reader.read_null_terminated_string()
+    } else {
+        |reader: &mut Box<BinaryStream>| reader.read_prefixed_string()
+    };
+
     if read_meta {
         load_object(trans, reader, info)?;
     }
@@ -58,7 +66,7 @@ pub(crate) fn load_trans<T: Trans>(trans: &mut T, reader: &mut Box<BinaryStream>
         // Reads trans objects
         let trans_count = reader.read_uint32()?;
         for _ in 0..trans_count {
-            trans_objects.push(reader.read_prefixed_string()?);
+            trans_objects.push(read_string(reader)?);
         }
     }
 
