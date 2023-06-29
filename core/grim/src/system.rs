@@ -37,6 +37,7 @@ impl Platform {
                 Some("rnd") => Platform::PS2,
                 Some("rnd_ps2") => Platform::PS2,
                 Some("gh") => Platform::PS2,
+                Some("gz") => Platform::PS2,
                 _ => Platform::X360,
             },
             None => Platform::X360,
