@@ -72,6 +72,21 @@ impl Ark {
                 None => ArkEncryption::None,
             },
             path: path.to_owned(),
+            part_paths: {
+                let dir_path = path.parent().unwrap();
+                let files = dir_path.find_files_with_depth(FileSearchDepth::Immediate).unwrap();
+
+                let mut ark_parts = files
+                    .into_iter()
+                    .filter(|f| f
+                        .as_os_str()
+                        .to_str()
+                        .is_some_and(|e| e.ends_with(".ARK") || e.ends_with(".ark")))
+                    .collect::<Vec<_>>();
+
+                ark_parts.sort_by(|a, b| a.cmp(b));
+                ark_parts
+            },
             ..Default::default()
         };
 

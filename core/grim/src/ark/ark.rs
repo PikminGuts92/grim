@@ -7,7 +7,8 @@ pub struct Ark {
     #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub version: i32,
     pub encryption: ArkEncryption,
     #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub entries: Vec<ArkOffsetEntry>,
-    pub path: PathBuf, // Hdr/ark path
+    pub path: PathBuf, // Hdr/ark path,
+    pub part_paths: Vec<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -86,8 +87,15 @@ impl Ark {
             .find(|e| e.id == id)
             .expect("Invalid id");
 
-        // TODO: Support reading from ark parts
-        let mut file = std::fs::File::open(&self.path)?;
+        // Open from main ark or ark part
+        let file_path = if self.version >= 3 && self.version <= 10 {
+            &self.part_paths[entry.part as usize]
+        } else {
+            &self.path
+        };
+
+        // TODO: Support reading from non-first ark part?
+        let mut file = std::fs::File::open(file_path)?;
         file.seek(SeekFrom::Start(entry.offset))?;
 
         let mut buffer = vec![0u8; entry.size];
