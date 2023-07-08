@@ -22,7 +22,7 @@ use grim::scene::{RndMesh, Matrix, MeshObject, MiloObject, Object, ObjectDir, Pa
 pub fn open_and_unpack_milo<T: AsRef<Path>>(milo_path: T) -> Result<(ObjectDir, SystemInfo), Box<dyn Error>> {
     let milo_path = milo_path.as_ref();
 
-    let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(milo_path)?);
+    let mut stream = FileStream::from_path_as_read_open(milo_path)?;
     let milo = MiloArchive::from_stream(&mut stream)?;
 
     let system_info = SystemInfo::guess_system_info(&milo, &milo_path);

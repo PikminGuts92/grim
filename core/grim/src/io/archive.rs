@@ -70,8 +70,7 @@ pub enum MiloUnpackError {
 }
 
 impl MiloArchive {
-    pub fn from_stream(stream: &mut Box<dyn Stream>) -> Result<MiloArchive, Box<dyn Error>> {
-        let stream = stream.as_mut();
+    pub fn from_stream<T: Stream>(stream: &mut T) -> Result<MiloArchive, Box<dyn Error>> {
         let mut reader = BinaryStream::from_stream(stream); // Should always be little endian
         
         let mut structure: MiloArchiveStructure = MiloArchiveStructure::Uncompressed; // TODO: Handle in else case
