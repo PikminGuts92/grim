@@ -193,14 +193,16 @@ impl Ark {
             part_start += size;
         }
 
-        // TODO: Verify count matches here too
-        let part_name_count = reader.read_uint32()
-            .map_err(|_| ArkReadError::ArkNotSupported)?;
-
-        // Skip part file names
-        for _ in 0..part_name_count {
-            reader.read_prefixed_string()
+        if self.version >= 5 {
+            // TODO: Verify count matches here too
+            let part_name_count = reader.read_uint32()
                 .map_err(|_| ArkReadError::ArkNotSupported)?;
+
+            // Skip part file names
+            for _ in 0..part_name_count {
+                reader.read_prefixed_string()
+                    .map_err(|_| ArkReadError::ArkNotSupported)?;
+            }
         }
 
         // Read string blob
@@ -264,7 +266,7 @@ fn get_version(data: &[u8]) -> i32 {
 
 fn version_is_supported(version: i32) -> bool {
     match version {
-        5 => true,
+        3 | 5 => true,
         _ => false
     }
 }
