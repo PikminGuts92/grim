@@ -4,6 +4,7 @@ use crate::scene::*;
 
 pub enum Object {
     Anim(AnimObject),
+    BandPlacer(BandPlacer),
     Cam(CamObject),
     CharClipSamples(CharClipSamples),
     CharLipSync(CharLipSync),
@@ -34,6 +35,7 @@ impl Object {
     pub fn get_name(&self) -> &str {
         match self {
             Object::Anim(anim) => &anim.name,
+            Object::BandPlacer(band_placer) => &band_placer.name,
             Object::Cam(cam) => &cam.name,
             Object::CharClipSamples(ccs) => &ccs.name,
             Object::CharLipSync(cls) => &cls.name,
@@ -57,6 +59,7 @@ impl Object {
     pub fn get_type(&self) -> &str {
         match self {
             Object::Anim(_) => "Anim",
+            Object::BandPlacer(_) => "BandPlacer",
             Object::Cam(_) => "Cam",
             Object::CharClipSamples(_) => "CharClipSamples",
             Object::CharLipSync(_) => "CharLipSync",
@@ -91,6 +94,7 @@ impl Object {
 
         let obj: &dyn ObjectReadWrite  = match &self {
             Object::Anim(obj) => obj,
+            Object::BandPlacer(obj) => obj,
             Object::Cam(obj) => obj,
             Object::CubeTex(obj) => obj,
             Object::Draw(obj) => obj,
@@ -127,6 +131,7 @@ impl Object {
             Object::Packed(packed) => {
                 match packed.object_type.as_str() {
                     "Anim" => unpack_object(packed, info).map(|o| Object::Anim(o)),
+                    "BandPlacer" => unpack_object(packed, info).map(|o| Object::BandPlacer(o)),
                     "Cam" => unpack_object(packed, info).map(|o| Object::Cam(o)),
                     "CharClipSamples" => unpack_object(packed, info).map(|o| Object::CharClipSamples(o)),
                     "CharLipSync" => unpack_object(packed, info).map(|o| Object::CharLipSync(o)),

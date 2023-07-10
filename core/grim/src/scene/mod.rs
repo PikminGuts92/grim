@@ -1,4 +1,5 @@
 mod anim;
+mod band_placer;
 mod cam;
 mod char_bones_samples;
 mod char_clip;
@@ -25,6 +26,7 @@ mod trans;
 mod trans_anim;
 
 pub use anim::*;
+pub use band_placer::*;
 pub use cam::*;
 pub use char_clip::*;
 pub use char_bones_samples::*;
