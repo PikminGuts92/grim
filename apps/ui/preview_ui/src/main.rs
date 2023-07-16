@@ -46,15 +46,15 @@ fn main() {
         .add_plugin(EguiPlugin)
         .add_plugin(FlyCameraPlugin)
         .add_plugin(InfiniteGridPlugin)
-        .add_system(render_gui_system)
-        .add_system(detect_meshes)
-        .add_system(control_camera)
-        .add_system(drop_files)
-        .add_system(window_resized)
-        .add_system(consume_file_events)
-        .add_system(consume_app_events)
-        .add_startup_system(setup_args)
-        .add_startup_system(setup)
+        .add_systems(Update, render_gui_system)
+        .add_systems(Update, detect_meshes)
+        .add_systems(Update, control_camera)
+        .add_systems(Update, drop_files)
+        .add_systems(Update, window_resized)
+        .add_systems(Update, consume_file_events)
+        .add_systems(Update, consume_app_events)
+        .add_systems(Startup, setup_args)
+        .add_systems(Startup, setup)
         .run();
 }
 
@@ -445,7 +445,7 @@ fn is_camera_button_down(key_input: &Res<Input<KeyCode>>) -> bool {
         KeyCode::S,
         KeyCode::D,
         KeyCode::Space,
-        KeyCode::LShift,
+        KeyCode::ShiftLeft,
     ];
 
     control_keys

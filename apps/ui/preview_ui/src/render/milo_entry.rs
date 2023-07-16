@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::io::Read;
-use std::num::NonZeroU8;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -520,7 +519,7 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, ImageInfo)) -> Image {
     texture.sampler_descriptor = ImageSampler::Descriptor(SamplerDescriptor {
         address_mode_u: AddressMode::Repeat,
         address_mode_v: AddressMode::Repeat,
-        anisotropy_clamp: NonZeroU8::new(16),
+        anisotropy_clamp: 1, // 16
         ..SamplerDescriptor::default()
     });
 

@@ -1,5 +1,7 @@
+use bevy::prelude::*;
 use std::path::PathBuf;
 
+#[derive(Event)]
 pub enum AppEvent {
     Exit,
     SelectMiloEntry(Option<String>),
@@ -7,6 +9,7 @@ pub enum AppEvent {
     ToggleWireframes(bool),
 }
 
+#[derive(Event)]
 pub enum AppFileEvent {
     Open(PathBuf),
 }
