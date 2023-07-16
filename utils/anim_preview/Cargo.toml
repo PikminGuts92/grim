@@ -8,5 +8,5 @@ edition.workspace = true
 grim = { workspace = true }
 keyframe = "1.1.1"
 nalgebra = "0.32.3"
-rerun = "0.4.0"
+rerun = { version = "0.7.0", features = [ "native_viewer" ] }
 shared = { path = "../shared" }
