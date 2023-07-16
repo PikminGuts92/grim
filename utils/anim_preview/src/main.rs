@@ -17,9 +17,10 @@ use nalgebra as na;
 use rerun::external::glam;
 use rerun::{
     coordinates::{Handedness, SignedAxis3},
-    components::{Arrow3D, ColorRGBA, LineStrip3D, MeshId, Point3D, Quaternion, Radius, RawMesh3D, Rigid3, Scalar, TextEntry, Transform, Vec3D, ViewCoordinates},
-    MsgSender, Session, SessionBuilder,
-    time::Timeline
+    components::{Arrow3D, ColorRGBA, LineStrip3D, MeshId, Point3D, Quaternion, Radius, RawMesh3D, Scalar, TextEntry, Transform3D, Vec3D, ViewCoordinates},
+    MsgSender, RecordingStream, RecordingStreamBuilder,
+    time::Timeline,
+    transform::{Transform3DRepr, TranslationRotationScale3D},
 };
 
 use shared::*;
@@ -78,7 +79,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .collect::<Vec<_>>();
 
-    let mut session = SessionBuilder::new("anim_preview").buffered();
+    let (mut rec_stream, storage) = RecordingStreamBuilder::new("anim_preview").memory()?;
 
     MsgSender::new(format!("world"))
         /*.with_component(&[
@@ -91,7 +92,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             SignedAxis3::POSITIVE_Z,
             Handedness::Right))
         .unwrap()
-        /*.with_splat(Transform::Rigid3({
+        /*.with_splat(Transform3D::Rigid3({
             let q = na::UnitQuaternion
                 ::from_axis_angle(
                     &na::Vector3::z_axis(),
@@ -105,7 +106,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }))
         .unwrap()*/
         .with_timeless(true)
-        .send(&mut session)
+        .send(&mut rec_stream)
         .unwrap();
 
     for mesh_anim in mesh_anims {
@@ -162,14 +163,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             MsgSender::new(mesh_anim.get_name().as_str())
                 .with_component(&glam_points)?
                 .with_time(Timeline::new_sequence("frame"), i as i64)
-                .send(&mut session)
+                .send(&mut rec_stream)
                 .unwrap();
 
             // Send line strip to rerun
             /*MsgSender::new(mesh_anim.get_name().as_str())
                 .with_component(&[strip])?
                 .with_time(Timeline::new_sequence("frame"), i as i64)
-                .send(&mut session)
+                .send(&rec_stream)
                 .unwrap();*/
         }
     }
@@ -248,31 +249,31 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // TODO: Iterpolate from frames
 
                 root_bone.recompute_world_anim_transform(na::Matrix4::identity(), &bone_sample_map, i);
-                add_bones_to_session(&root_bone, &mut session, i);
+                add_bones_to_stream(&root_bone, &rec_stream, i);
             }
 
             /*for (char_bone_sample, frames) in bone_samples {
                 //char_bone_sample.
             }*/
         } else {
-            add_bones_to_session(&root_bone, &mut session, 0);
+            add_bones_to_stream(&root_bone, &rec_stream, 0);
 
             // Can probably delete
             /*let (points, lines) = generate_bone_points(&root_bone);
 
             MsgSender::new(root_bone.name)
                 .with_component(&points)?
-                .send(&mut session)
+                .send(&rec_stream)
                 .unwrap();
 
             MsgSender::new(format!("{}_lines", root_bone.name))
                 .with_component(&lines)?
-                .send(&mut session)
+                .send(&rec_stream)
                 .unwrap();*/
         }
     }
 
-    rerun::native_viewer::show(&session).unwrap();
+    rerun::native_viewer::show(storage.take()).unwrap();
 
     Ok(())
 }
@@ -478,7 +479,7 @@ impl<'a> BoneNode<'a> {
     }
 }
 
-fn add_bones_to_session(bone: &BoneNode, session: &mut Session, i: usize) {
+fn add_bones_to_stream(bone: &BoneNode, rec_stream: &RecordingStream, i: usize) {
     let v = bone.get_world_anim_pos();
 
     // Generate line strips
@@ -497,18 +498,21 @@ fn add_bones_to_session(bone: &BoneNode, session: &mut Session, i: usize) {
             Point3D::from([v[0], v[1], v[2]])
         ])
         .unwrap()
-        .with_splat(Transform::Rigid3({
-            let q = na::UnitQuaternion
-                ::from_axis_angle(
-                    &na::Vector3::z_axis(),
-                    std::f32::consts::PI
-                );
+        .with_splat(Transform3D {
+            transform: Transform3DRepr::TranslationRotationScale({
+                let q = na::UnitQuaternion
+                    ::from_axis_angle(
+                        &na::Vector3::z_axis(),
+                        std::f32::consts::PI
+                    );
 
-            Rigid3 {
-                rotation: Quaternion::new(q.i, q.j, q.k, q.w),
-                ..Default::default()
-            }
-        }))
+                TranslationRotationScale3D {
+                    rotation: Some(Quaternion::new(q.i, q.j, q.k, q.w).into()),
+                    ..Default::default()
+                }
+            }),
+            from_parent: true
+        })
         .unwrap()
         /*.with_splat(ViewCoordinates::from_up_and_handedness(
             SignedAxis3::POSITIVE_Z,
@@ -517,7 +521,7 @@ fn add_bones_to_session(bone: &BoneNode, session: &mut Session, i: usize) {
         //.with_splat(Radius(1.0))
         //.unwrap()
         .with_time(Timeline::new_sequence("frame"), i as i64)
-        .send(session)
+        .send(rec_stream)
         .unwrap();
 
     // Add lines from node to children
@@ -529,7 +533,7 @@ fn add_bones_to_session(bone: &BoneNode, session: &mut Session, i: usize) {
             Handedness::Right))
         .unwrap()*/
         .with_time(Timeline::new_sequence("frame"), i as i64)
-        .send(session)
+        .send(rec_stream)
         .unwrap();
 
     // Add direction arrow (not working)
@@ -562,11 +566,11 @@ fn add_bones_to_session(bone: &BoneNode, session: &mut Session, i: usize) {
             Handedness::Right))
         .unwrap()*/
         .with_time(Timeline::new_sequence("frame"), i as i64)
-        .send(session)
+        .send(rec_stream)
         .unwrap();
 
     for ch in bone.children.iter() {
-        add_bones_to_session(ch, session, i);
+        add_bones_to_stream(ch, rec_stream, i);
     }
 }
 
