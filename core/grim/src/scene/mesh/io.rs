@@ -18,6 +18,7 @@ pub enum MeshLoadError {
 
 fn is_version_supported(version: u32) -> bool {
     match version {
+        10 => true,      // Freq
         13 | 14 => true, // Amp Demo/Amp
         22 => true,      // AntiGrav
         25 => true,      // GH1
@@ -40,12 +41,19 @@ impl ObjectReadWrite for MeshObject {
             }));
         }
 
+        // Read as null-terminated or prefixed string depending on version
+        let read_string = if version <= 10 {
+            |reader: &mut Box<BinaryStream>| reader.read_null_terminated_string()
+        } else {
+            |reader: &mut Box<BinaryStream>| reader.read_prefixed_string()
+        };
+
         load_object(self, &mut reader, info)?;
         load_trans(self, &mut reader, info, false)?;
         load_draw(self, &mut reader, info, false)?;
 
         if version < 15 {
-            _ = reader.read_prefixed_string()?; // Some string
+            _ = reader.seek(SeekFrom::Current(4)); // Always 0?
 
             // Read bones
             self.bones.clear();
@@ -54,7 +62,7 @@ impl ObjectReadWrite for MeshObject {
             for _ in 0..bone_count {
                 let mut bone = BoneTrans::default();
 
-                bone.name = reader.read_prefixed_string()?;
+                bone.name = read_string(&mut reader)?;
                 self.bones.push(bone);
             }
         }
@@ -69,28 +77,28 @@ impl ObjectReadWrite for MeshObject {
             reader.seek(SeekFrom::Current(4))?;
         }
 
-        self.mat = reader.read_prefixed_string()?;
+        self.mat = read_string(&mut reader)?;
         if version == 27 {
             // Secondary material?
             _ = reader.read_prefixed_string()?;
         }
 
-        self.geom_owner = reader.read_prefixed_string()?;
+        self.geom_owner = read_string(&mut reader)?;
         if version < 13 {
             // Secondary geom owner?
-            _ = reader.read_prefixed_string()?;
+            _ = read_string(&mut reader)?;
         }
 
         if version < 15 {
             // Set on mesh instead of base trans object
-            let trans_parent = reader.read_prefixed_string()?;
+            let trans_parent = read_string(&mut reader)?;
             self.set_parent(trans_parent);
         }
 
         if version < 14 {
             // Skip empty RndTransformable strings
-            _ = reader.read_prefixed_string()?;
-            _ = reader.read_prefixed_string()?;
+            _ = read_string(&mut reader)?;
+            _ = read_string(&mut reader)?;
         }
 
         if version < 3 {
@@ -110,7 +118,7 @@ impl ObjectReadWrite for MeshObject {
 
         if version < 15 {
             // Skip unknown string + float
-            _ = reader.read_prefixed_string()?;
+            _ = read_string(&mut reader)?;
             reader.seek(SeekFrom::Current(4))?;
         }
 
@@ -169,7 +177,37 @@ impl ObjectReadWrite for MeshObject {
             let mut vec = Vert::default();
 
             // TODO: Should probably clean up this loop
-            if version <= 22 {
+            if version <= 10 {
+                // Freq (56 bytes)
+                // Position
+                vec.pos.x = reader.read_float32()?;
+                vec.pos.y = reader.read_float32()?;
+                vec.pos.z = reader.read_float32()?;
+
+                // Normals
+                vec.normals.x = reader.read_float32()?;
+                vec.normals.y = reader.read_float32()?;
+                vec.normals.z = reader.read_float32()?;
+
+                // UVs
+                vec.uv.u = reader.read_float32()?;
+                vec.uv.v = reader.read_float32()?;
+
+                // Weights
+                vec.weights[0] = reader.read_float32()?;
+                vec.weights[1] = reader.read_float32()?;
+                vec.weights[2] = reader.read_float32()?;
+                vec.weights[3] = reader.read_float32()?;
+
+                // Bone indices
+                vec.bones[0] = reader.read_uint16()?;
+                vec.bones[1] = reader.read_uint16()?;
+                vec.bones[2] = reader.read_uint16()?;
+                vec.bones[3] = reader.read_uint16()?;
+
+                self.vertices.push(vec);
+                continue;
+            } else if version <= 22 {
                 // Amp/AntiGrav (56 bytes)
                 // Position
                 vec.pos.x = reader.read_float32()?;

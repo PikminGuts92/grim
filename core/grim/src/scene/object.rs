@@ -8,9 +8,11 @@ pub struct ObjectInstance {}
 
 pub enum MiloObject {
     Anim(AnimObject),
+    BandPlacer(BandPlacer),
     Cam(CamObject),
     CharClipSamples(CharClipSamples),
     CharLipSync(CharLipSync),
+    ColorPalette(ColorPalette),
     CubeTex(CubeTexObject),
     Draw(DrawObject),
     Group(GroupObject),
@@ -40,9 +42,11 @@ impl MiloObject {
     pub fn get_name(&self) -> &str {
         match self {
             MiloObject::Anim(anim) => &anim.name,
+            MiloObject::BandPlacer(band_placer) => &band_placer.name,
             MiloObject::Cam(cam) => &cam.name,
             MiloObject::CharClipSamples(ccs) => &ccs.name,
             MiloObject::CharLipSync(cls) => &cls.name,
+            MiloObject::ColorPalette(color_palette) => &color_palette.name,
             MiloObject::CubeTex(cube) => &cube.name,
             MiloObject::Draw(draw) => &draw.name,
             MiloObject::Group(grp) => &grp.name,
@@ -65,9 +69,11 @@ impl MiloObject {
     pub fn get_type(&self) -> &str {
         match self {
             MiloObject::Anim(_) => "Anim",
+            MiloObject::BandPlacer(_) => "BandPlacer",
             MiloObject::Cam(_) => "Cam",
             MiloObject::CharClipSamples(_) => "CharClipSamples",
             MiloObject::CharLipSync(_) => "CharLipSync",
+            MiloObject::ColorPalette(_) => "ColorPalette",
             MiloObject::CubeTex(_) => "CubeTex",
             MiloObject::Draw(_) => "Draw",
             MiloObject::Group(_) => "Group",
@@ -101,7 +107,9 @@ impl MiloObject {
 
         let obj: &dyn ObjectReadWrite  = match &self {
             Object::Anim(obj) => obj,
+            Object::BandPlacer(obj) => obj,
             Object::Cam(obj) => obj,
+            Object::ColorPalette(obj) => obj,
             Object::CubeTex(obj) => obj,
             Object::Draw(obj) => obj,
             Object::Group(obj) => obj,
@@ -140,9 +148,11 @@ impl MiloObject {
             Object::Packed(packed) => {
                 match packed.object_type.as_str() {
                     "Anim" => unpack_object(packed, info).map(|o| Object::Anim(o)),
+                    "BandPlacer" => unpack_object(packed, info).map(|o| Object::BandPlacer(o)),
                     "Cam" => unpack_object(packed, info).map(|o| Object::Cam(o)),
                     "CharClipSamples" => unpack_object(packed, info).map(|o| Object::CharClipSamples(o)),
                     "CharLipSync" => unpack_object(packed, info).map(|o| Object::CharLipSync(o)),
+                    "ColorPalette" => unpack_object(packed, info).map(|o| Object::ColorPalette(o)),
                     "CubeTex" => unpack_object(packed, info).map(|o| Object::CubeTex(o)),
                     "Draw" => unpack_object(packed, info).map(|o| Object::Draw(o)),
                     "Group" => unpack_object(packed, info).map(|o| Object::Group(o)),

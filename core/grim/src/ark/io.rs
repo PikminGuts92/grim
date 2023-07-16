@@ -72,6 +72,21 @@ impl Ark {
                 None => ArkEncryption::None,
             },
             path: path.to_owned(),
+            part_paths: {
+                let dir_path = path.parent().unwrap();
+                let files = dir_path.find_files_with_depth(FileSearchDepth::Immediate).unwrap();
+
+                let mut ark_parts = files
+                    .into_iter()
+                    .filter(|f| f
+                        .as_os_str()
+                        .to_str()
+                        .is_some_and(|e| e.ends_with(".ARK") || e.ends_with(".ark")))
+                    .collect::<Vec<_>>();
+
+                ark_parts.sort_by(|a, b| a.cmp(b));
+                ark_parts
+            },
             ..Default::default()
         };
 
@@ -193,14 +208,16 @@ impl Ark {
             part_start += size;
         }
 
-        // TODO: Verify count matches here too
-        let part_name_count = reader.read_uint32()
-            .map_err(|_| ArkReadError::ArkNotSupported)?;
-
-        // Skip part file names
-        for _ in 0..part_name_count {
-            reader.read_prefixed_string()
+        if self.version >= 5 {
+            // TODO: Verify count matches here too
+            let part_name_count = reader.read_uint32()
                 .map_err(|_| ArkReadError::ArkNotSupported)?;
+
+            // Skip part file names
+            for _ in 0..part_name_count {
+                reader.read_prefixed_string()
+                    .map_err(|_| ArkReadError::ArkNotSupported)?;
+            }
         }
 
         // Read string blob
@@ -264,7 +281,7 @@ fn get_version(data: &[u8]) -> i32 {
 
 fn version_is_supported(version: i32) -> bool {
     match version {
-        5 => true,
+        3 | 5 => true,
         _ => false
     }
 }

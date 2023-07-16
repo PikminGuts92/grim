@@ -15,7 +15,7 @@ pub enum TransLoadError {
 
 fn is_version_supported(version: u32) -> bool {
     match version {
-        5 => true, // Amp/Amp Demo
+        5 => true, // Freq/Amp/Amp Demo
         8 => true, // GH1
         9 => true, // GH2/RB1/RB2/TBRB/GDRB
         _ => false
@@ -44,6 +44,14 @@ pub(crate) fn load_trans<T: Trans>(trans: &mut T, reader: &mut Box<BinaryStream>
         }));
     }
 
+    // Read as null-terminated or prefixed string depending on version
+    // Need to check sys_info because freq trans version is same as amp
+    let read_string = if info.version <= 6 {
+        |reader: &mut Box<BinaryStream>| reader.read_null_terminated_string()
+    } else {
+        |reader: &mut Box<BinaryStream>| reader.read_prefixed_string()
+    };
+
     if read_meta {
         load_object(trans, reader, info)?;
     }
@@ -58,7 +66,7 @@ pub(crate) fn load_trans<T: Trans>(trans: &mut T, reader: &mut Box<BinaryStream>
         // Reads trans objects
         let trans_count = reader.read_uint32()?;
         for _ in 0..trans_count {
-            trans_objects.push(reader.read_prefixed_string()?);
+            trans_objects.push(read_string(reader)?);
         }
     }
 

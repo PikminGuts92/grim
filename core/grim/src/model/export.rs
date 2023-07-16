@@ -371,7 +371,7 @@ impl GltfExporter {
         let milo_path: PathBuf = path.into();
 
         // Open milo
-        let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(&milo_path)?);
+        let mut stream = FileStream::from_path_as_read_open(&milo_path)?;
         let milo = MiloArchive::from_stream(&mut stream)?;
 
         // Guess system info and unpack dir + entries

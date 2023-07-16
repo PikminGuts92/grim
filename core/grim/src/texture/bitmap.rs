@@ -2,7 +2,7 @@ use crate::{Platform, SystemInfo};
 use crate::io::IOEndian;
 #[cfg(feature = "python")] use pyo3::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "python", pyclass)]
 pub struct Bitmap {
     #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub bpp: u8,

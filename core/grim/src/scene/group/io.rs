@@ -84,17 +84,15 @@ impl ObjectReadWrite for GroupObject {
 
             // Unknown - Matches group name
             reader.read_prefixed_string()?;
+
+            // Zero'd numbers
+            reader.seek(SeekFrom::Current(8))?;
         } else if version == 7 {
             // Unknown - Matches group name
             reader.read_prefixed_string()?;
         }
 
-        if version == 11 {
-            // Demo doesn't have lod data for some reason
-            return Ok(());
-        }
-
-        if version <= 12 {
+        /*if version <= 12 {
             let lod_width = reader.read_float32()?;
             let lod_height = reader.read_float32()?;
 
@@ -104,7 +102,9 @@ impl ObjectReadWrite for GroupObject {
             } else {
                 self.lod_screen_size = 0.0;
             }
-        } else if version >= 14 {
+        }*/
+
+        if version > 13 {
             self.sort_in_world = reader.read_boolean()?;
         }
 

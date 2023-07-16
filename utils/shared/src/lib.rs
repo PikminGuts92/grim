@@ -14,7 +14,7 @@ pub struct MiloLoader {
 impl MiloLoader {
     pub fn from_path(milo_path: PathBuf) -> Result<Self, Box<dyn Error>> {
         // Open milo
-        let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(&milo_path)?);
+        let mut stream = FileStream::from_path_as_read_open(&milo_path)?;
         let milo = MiloArchive::from_stream(&mut stream)?;
 
         // Unpack milo

@@ -37,7 +37,7 @@ impl SubApp for SaveMiloApp {
         }
 
         // Open milo file
-        let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(in_milo_path)?);
+        let mut stream = FileStream::from_path_as_read_open(in_milo_path)?;
         let milo = MiloArchive::from_stream(&mut stream)?;
 
         // Guess platform info
