@@ -42,10 +42,10 @@ fn main() {
         .add_event::<AppFileEvent>()
         //.insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Msaa::Sample4)
-        .add_plugin(GrimPlugin)
-        .add_plugin(EguiPlugin)
-        .add_plugin(FlyCameraPlugin)
-        .add_plugin(InfiniteGridPlugin)
+        .add_plugins(GrimPlugin)
+        .add_plugins(EguiPlugin)
+        .add_plugins(FlyCameraPlugin)
+        .add_plugins(InfiniteGridPlugin)
         .add_systems(Update, render_gui_system)
         .add_systems(Update, detect_meshes)
         .add_systems(Update, control_camera)
@@ -71,28 +71,14 @@ fn render_gui_system(mut settings: ResMut<AppSettings>, mut state: ResMut<AppSta
 
 fn detect_meshes(
     mut state: ResMut<AppState>,
-    meshes: Res<Assets<Mesh>>,
-    mesh_entities: Query<(&Handle<Mesh>, &WorldMesh, Option<&Visibility>)>,
-    //added_meshes: Query<(&WorldMesh, &Handle<Mesh>), Added<WorldMesh>>,
-    //removed_meshes: RemovedComponents<Mesh>,
+    mesh_entities: Query<&WorldMesh>,
 ) {
     let mut vertex_count = 0;
     let mut face_count = 0;
 
-    for (mesh_id, world_mesh, visibility) in mesh_entities.iter() {
-        if let Some(_mesh) = meshes.get(mesh_id) {
-            let is_visible = visibility
-                .map_or(false, |v| v == Visibility::Visible);
-
-            // Ignore invisible meshes
-            if !is_visible {
-                continue;
-            }
-
-            //vertex_count += mesh.count_vertices();
-            vertex_count += world_mesh.vert_count;
-            face_count += world_mesh.face_count;
-        }
+    for world_mesh in mesh_entities.iter() {
+        vertex_count += world_mesh.vert_count;
+        face_count += world_mesh.face_count;
     }
 
     // Update counts
