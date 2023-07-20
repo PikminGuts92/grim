@@ -28,7 +28,8 @@ pub struct CharHairStrand {
     pub root: String,
     pub angle: f32,
     pub points: Vec<CharHairPoint>,
-    pub unknown_floats: [f32; 18],
+    pub base_mat: Matrix3, // Usually the same
+    pub root_mat: Matrix3,
 }
 
 #[allow(non_camel_case_types)]

@@ -1,7 +1,7 @@
 use crate::dta::*;
 use crate::io::{BinaryStream, FileStream, SeekFrom, Stream};
 use crate::SystemInfo;
-use grim_traits::scene::{Color3, Color4, Matrix, MiloObject, Quat, Rect, Sphere, Vector2, Vector3};
+use grim_traits::scene::{Color3, Color4, Matrix, Matrix3, MiloObject, Quat, Rect, Sphere, Vector2, Vector3};
 use std::error::Error;
 use std::path::Path;
 
@@ -157,6 +157,38 @@ pub (crate) fn save_matrix(mat: &Matrix, writer: &mut Box<BinaryStream>) -> Resu
     writer.write_float32(mat.m41)?;
     writer.write_float32(mat.m42)?;
     writer.write_float32(mat.m43)?;
+
+    Ok(())
+}
+
+pub (crate) fn load_matrix3(mat: &mut Matrix3, reader: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    mat.m11 = reader.read_float32()?;
+    mat.m12 = reader.read_float32()?;
+    mat.m13 = reader.read_float32()?;
+
+    mat.m21 = reader.read_float32()?;
+    mat.m22 = reader.read_float32()?;
+    mat.m23 = reader.read_float32()?;
+
+    mat.m31 = reader.read_float32()?;
+    mat.m32 = reader.read_float32()?;
+    mat.m33 = reader.read_float32()?;
+
+    Ok(())
+}
+
+pub (crate) fn save_matrix3(mat: &Matrix3, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    writer.write_float32(mat.m11)?;
+    writer.write_float32(mat.m12)?;
+    writer.write_float32(mat.m13)?;
+
+    writer.write_float32(mat.m21)?;
+    writer.write_float32(mat.m22)?;
+    writer.write_float32(mat.m23)?;
+
+    writer.write_float32(mat.m31)?;
+    writer.write_float32(mat.m32)?;
+    writer.write_float32(mat.m33)?;
 
     Ok(())
 }

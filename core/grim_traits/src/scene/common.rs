@@ -134,9 +134,43 @@ impl Matrix {
     }
 }
 
-
 impl Default for Matrix {
     fn default() -> Matrix {
         Matrix::identity()
+    }
+}
+
+#[derive(Debug)]
+pub struct Matrix3 {
+    pub m11: f32,
+    pub m12: f32,
+    pub m13: f32,
+    pub m21: f32,
+    pub m22: f32,
+    pub m23: f32,
+    pub m31: f32,
+    pub m32: f32,
+    pub m33: f32,
+}
+
+impl Matrix3 {
+    pub fn identity() -> Matrix3 {
+        Matrix3 {
+            m11: 1.0,
+            m12: 0.0,
+            m13: 0.0,
+            m21: 0.0,
+            m22: 1.0,
+            m23: 0.0,
+            m31: 0.0,
+            m32: 0.0,
+            m33: 1.0,
+        }
+    }
+}
+
+impl Default for Matrix3 {
+    fn default() -> Matrix3 {
+        Matrix3::identity()
     }
 }

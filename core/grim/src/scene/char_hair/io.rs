@@ -73,10 +73,9 @@ impl ObjectReadWrite for CharHair {
                 strand.points.push(point);
             }
 
-            // Read unknown floats
-            for f in strand.unknown_floats.iter_mut() {
-                *f = reader.read_float32()?;
-            }
+            // Read rotation + scale matrices
+            load_matrix3(&mut strand.base_mat, &mut reader)?;
+            load_matrix3(&mut strand.root_mat, &mut reader)?;
 
             self.strands.push(strand);
         }
