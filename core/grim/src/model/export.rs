@@ -127,7 +127,7 @@ fn populate_child_nodes(nodes: &mut Vec<gltf_json::Node>, bones: &Vec<BoneNode>)
         let child_indices = populate_child_nodes(nodes, &bone.children);
 
         let m = bone.object.get_local_xfm();
-        //let m = Matrix::indentity();
+        //let m = Matrix::identity();
 
         let mat = na::Matrix4::new(
             // Column-major order...

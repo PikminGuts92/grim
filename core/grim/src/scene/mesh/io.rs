@@ -594,7 +594,7 @@ impl ObjectReadWrite for MeshObject {
                     } else {
                         // Write empty bone
                         stream.write_uint32(0)?;
-                        save_matrix(&Matrix::indentity(), &mut stream)?;
+                        save_matrix(&Matrix::identity(), &mut stream)?;
                     }
                 }
 

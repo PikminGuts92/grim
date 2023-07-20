@@ -641,7 +641,7 @@ fn create_object_dir_entry(name: &str, obj_type: &str, subdir_paths: &[&str], in
 
     // Viewports
     const VIEWPORT_COUNT: i32 = 7;
-    let mat = Matrix::indentity();
+    let mat = Matrix::identity();
     writer.write_int32(VIEWPORT_COUNT)?;
 
     for _ in 0..VIEWPORT_COUNT {

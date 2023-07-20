@@ -112,7 +112,7 @@ pub struct Matrix {
 }
 
 impl Matrix {
-    pub fn indentity() -> Matrix {
+    pub fn identity() -> Matrix {
         Matrix {
             m11: 1.0,
             m12: 0.0,
@@ -137,6 +137,6 @@ impl Matrix {
 
 impl Default for Matrix {
     fn default() -> Matrix {
-        Matrix::indentity()
+        Matrix::identity()
     }
 }
