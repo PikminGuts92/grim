@@ -175,6 +175,10 @@ impl MiloArchive {
 
             reader.seek(SeekFrom::Current(8))?; // Skip extra nums
 
+            if version >= 32 {
+                reader.seek(SeekFrom::Current(1))?; // Skip unknown bool
+            }
+
             // Update class name
             ObjectDir::fix_class_name(version, &mut dir_type);
         } else {
