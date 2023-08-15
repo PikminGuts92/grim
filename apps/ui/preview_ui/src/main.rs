@@ -22,6 +22,7 @@ use bevy_infinite_grid::{GridShadowCamera, InfiniteGridBundle, InfiniteGrid, Inf
 use grim::*;
 use grim::ark::{Ark, ArkOffsetEntry};
 use grim::scene::*;
+use log::{debug, info, warn};
 use plugins::*;
 use state::*;
 use std::{env::args, path::{Path, PathBuf}};
@@ -41,19 +42,19 @@ fn main() {
         .add_event::<AppFileEvent>()
         //.insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Msaa::Sample4)
-        .add_plugin(GrimPlugin)
-        .add_plugin(EguiPlugin)
-        .add_plugin(FlyCameraPlugin)
-        .add_plugin(InfiniteGridPlugin)
-        .add_system(render_gui_system)
-        .add_system(detect_meshes)
-        .add_system(control_camera)
-        .add_system(drop_files)
-        .add_system(window_resized)
-        .add_system(consume_file_events)
-        .add_system(consume_app_events)
-        .add_startup_system(setup_args)
-        .add_startup_system(setup)
+        .add_plugins(GrimPlugin)
+        .add_plugins(EguiPlugin)
+        .add_plugins(FlyCameraPlugin)
+        .add_plugins(InfiniteGridPlugin)
+        .add_systems(Update, render_gui_system)
+        .add_systems(Update, detect_meshes)
+        .add_systems(Update, control_camera)
+        .add_systems(Update, drop_files)
+        .add_systems(Update, window_resized)
+        .add_systems(Update, consume_file_events)
+        .add_systems(Update, consume_app_events)
+        .add_systems(Startup, setup_args)
+        .add_systems(Startup, setup)
         .run();
 }
 
@@ -70,28 +71,14 @@ fn render_gui_system(mut settings: ResMut<AppSettings>, mut state: ResMut<AppSta
 
 fn detect_meshes(
     mut state: ResMut<AppState>,
-    meshes: Res<Assets<Mesh>>,
-    mesh_entities: Query<(&Handle<Mesh>, &WorldMesh, Option<&Visibility>)>,
-    //added_meshes: Query<(&WorldMesh, &Handle<Mesh>), Added<WorldMesh>>,
-    //removed_meshes: RemovedComponents<Mesh>,
+    mesh_entities: Query<&WorldMesh>,
 ) {
     let mut vertex_count = 0;
     let mut face_count = 0;
 
-    for (mesh_id, world_mesh, visibility) in mesh_entities.iter() {
-        if let Some(_mesh) = meshes.get(mesh_id) {
-            let is_visible = visibility
-                .map_or(false, |v| v == Visibility::Visible);
-
-            // Ignore invisible meshes
-            if !is_visible {
-                continue;
-            }
-
-            //vertex_count += mesh.count_vertices();
-            vertex_count += world_mesh.vert_count;
-            face_count += world_mesh.face_count;
-        }
+    for world_mesh in mesh_entities.iter() {
+        vertex_count += world_mesh.vert_count;
+        face_count += world_mesh.face_count;
     }
 
     // Update counts
@@ -244,7 +231,7 @@ fn consume_app_events(
                     commands.entity(entity).despawn_recursive();
                 }
                 if i > 0 {
-                    println!("Removed {} meshes in scene", i);
+                    debug!("Removed {} meshes in scene", i);
                 }
 
                 /*if render_entry {
@@ -263,6 +250,7 @@ fn consume_app_events(
                 }*/
 
                 let milo = state.milo.as_ref().unwrap();
+                let milo_path = state.open_file_path.as_ref().unwrap();
                 let info = state.system_info.as_ref().unwrap();
 
                 // Render everything for now
@@ -272,13 +260,14 @@ fn consume_app_events(
                     &mut materials,
                     &mut textures,
                     milo,
+                    milo_path,
                     entry_name.to_owned(),
                     info
                 );
 
                 state.milo_view.selected_entry = entry_name.to_owned();
 
-                println!("Updated milo");
+                debug!("Updated milo");
             },
             AppEvent::ToggleGridLines(show) => {
                 *grid.single_mut() = if *show {
@@ -306,7 +295,7 @@ fn consume_app_events(
                     );
                 }
 
-                println!("Updated milo");
+                debug!("Updated milo");
             },*/
         }
     }
@@ -317,31 +306,45 @@ fn open_file(
     state: &mut ResMut<AppState>,
     app_event_writer: &mut EventWriter<AppEvent>,
 ) {
-    let ext = file_path.extension().unwrap().to_str().unwrap();
+    // Clear file path
+    state.open_file_path.take();
 
+    // Get full file extension
+    let ext = file_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .map(|n| match n.find('.') {
+            Some(i) => &n[i..],
+            _ => n
+        })
+        .unwrap();
+
+    // TODO: Make case-insensitive
     if ext.contains("hdr") {
         // Open ark
-        println!("Opening hdr from \"{}\"", file_path.display());
+        info!("Opening hdr from \"{}\"", file_path.display());
 
         let ark_res = Ark::from_path(file_path);
         if let Ok(ark) = ark_res {
-            println!("Successfully opened ark with {} entries", ark.entries.len());
+            debug!("Successfully opened ark with {} entries", ark.entries.len());
 
             state.root = Some(create_ark_tree(&ark));
             state.ark = Some(ark);
+            state.open_file_path = Some(file_path.to_owned());
         }
     } else if ext.contains("milo")
         || ext.contains("gh")
         || ext.contains("rnd") { // TODO: Break out into static regex
         // Open milo
-        println!("Opening milo from \"{}\"", file_path.display());
+        info!("Opening milo from \"{}\"", file_path.display());
 
         match open_and_unpack_milo(file_path) {
             Ok((milo, info)) => {
-                println!("Successfully opened milo with {} entries", milo.get_entries().len());
+                debug!("Successfully opened milo with {} entries", milo.get_entries().len());
 
                 state.milo = Some(milo);
                 state.system_info = Some(info);
+                state.open_file_path = Some(file_path.to_owned());
 
                 //ev_update_state.send(AppEvent::RefreshMilo);
 
@@ -369,12 +372,12 @@ fn open_file(
 
                 app_event_writer.send(AppEvent::SelectMiloEntry(selected_entry));
             },
-            Err(_err) => {
-                // TODO: Log error
+            Err(err) => {
+                warn!("Unable to unpack milo file:\n\t: {:?}", err);
             }
         }
     } else {
-        println!("Unknown file type \"{}\"", file_path.display());
+        info!("Unknown file type \"{}\"", file_path.display());
     }
 }
 
@@ -428,7 +431,7 @@ fn is_camera_button_down(key_input: &Res<Input<KeyCode>>) -> bool {
         KeyCode::S,
         KeyCode::D,
         KeyCode::Space,
-        KeyCode::LShift,
+        KeyCode::ShiftLeft,
     ];
 
     control_keys
@@ -449,9 +452,9 @@ fn window_resized(
 
     if settings.maximized != maximized {
         if maximized {
-            println!("Window maximized");
+            debug!("Window maximized");
         } else {
-            println!("Window unmaximized");
+            debug!("Window unmaximized");
         }
 
         settings.maximized = maximized;
@@ -465,7 +468,7 @@ fn window_resized(
     }
 
     for e in resize_events.iter() {
-        println!("Window resized: {}x{}", e.width as u32, e.height as u32);
+        debug!("Window resized: {}x{}", e.width as u32, e.height as u32);
 
         settings.window_width = e.width;
         settings.window_height = e.height;
@@ -479,7 +482,7 @@ fn drop_files(
 ) {
     for d in drag_drop_events.iter() {
         if let FileDragAndDrop::DroppedFile { path_buf, .. } = d {
-            println!("Dropped \"{}\"", path_buf.to_str().unwrap());
+            debug!("Dropped \"{}\"", path_buf.to_str().unwrap());
 
             file_event_writer.send(AppFileEvent::Open(path_buf.to_owned()));
         }

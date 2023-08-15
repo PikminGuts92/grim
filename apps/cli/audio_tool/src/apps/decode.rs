@@ -12,12 +12,13 @@ use std::path::{Path, PathBuf};
 
 enum FileType {
     Vgs,
+    Str,
     SynthSample(u32, IOEndian)
 }
 
 #[derive(Parser, Debug)]
 pub struct DecoderApp {
-    #[arg(help = "Path to input audio (.vgs, SynthSample (Xbox 360))", required = true)]
+    #[arg(help = "Path to input audio (.vgs, .str, SynthSample (Xbox 360))", required = true)]
     pub input_path: String,
     #[arg(help = "Path to output audio (.wav, .xma (Only for Xbox 360 samples))", required = true)]
     pub output_path: String,
@@ -29,6 +30,7 @@ impl SubApp for DecoderApp {
         let output_path = Path::new(&self.output_path);
 
         let input_type = match input_path.extension().and_then(|e| e.to_str()) {
+            Some(ext) if "str".eq_ignore_ascii_case(ext) => FileType::Str,
             Some(ext) if "vgs".eq_ignore_ascii_case(ext) => FileType::Vgs,
             Some(ext) => {
                 // Guess file type from binary structure
@@ -51,15 +53,17 @@ impl SubApp for DecoderApp {
         };
 
         let input_type_name = match input_type {
-            FileType::Vgs => "VGS",
+            FileType::Str => "STR",
             FileType::SynthSample(_, _) => "SynthSample",
+            FileType::Vgs => "VGS",
         };
 
         println!("Detected input file type of \"{input_type_name}\"");
 
         let _output_ext = match (&input_type, output_path.extension().and_then(|e| e.to_str())) {
-            (FileType::Vgs, Some(ext)) if "wav".eq_ignore_ascii_case(ext) => ext,
+            (FileType::Str, Some(ext)) if "wav".eq_ignore_ascii_case(ext) => ext,
             (FileType::SynthSample(_, _), Some(ext)) if "xma".eq_ignore_ascii_case(ext) => ext,
+            (FileType::Vgs, Some(ext)) if "wav".eq_ignore_ascii_case(ext) => ext,
             (_, Some(ext)) => {
                 println!("Output audio with extension \".{ext}\" is not supported");
                 return Ok(());
@@ -71,13 +75,13 @@ impl SubApp for DecoderApp {
         };
 
         match input_type {
-            FileType::Vgs => {
+            FileType::Str => {
                 // Decode (returns interleaved audio samples)
                 println!("Decoding...");
-                let (sample_data, channels, sample_rate) = decode_vgs_file(input_path)?;
+                let sample_data = decode_str_file(input_path)?;
 
                 // Encode to wav
-                let encoder = WavEncoder::new(&sample_data, channels, sample_rate);
+                let encoder = WavEncoder::new(&sample_data, 2, 48_000);
                 encoder.encode_to_file(output_path).map_err(|e| Box::new(e) as Box<dyn Error>)?;
             },
             FileType::SynthSample(version, endian) => {
@@ -91,6 +95,15 @@ impl SubApp for DecoderApp {
                 let xma = generate_xma_from_synth_sample(input_path, &sys_info)?;
                 let mut file = grim::io::create_new_file(output_path)?;
                 file.write_all(&xma)?;
+            },
+            FileType::Vgs => {
+                // Decode (returns interleaved audio samples)
+                println!("Decoding...");
+                let (sample_data, channels, sample_rate) = decode_vgs_file(input_path)?;
+
+                // Encode to wav
+                let encoder = WavEncoder::new(&sample_data, channels, sample_rate);
+                encoder.encode_to_file(output_path).map_err(|e| Box::new(e) as Box<dyn Error>)?;
             },
         };
 
@@ -118,6 +131,21 @@ fn decode_vgs_file(file_path: &Path) -> Result<(Vec<i16>, u16, u32), Box<dyn Err
     }
 
     Ok((interleaved_data, channel_count as u16, sample_rate))
+}
+
+fn decode_str_file(file_path: &Path) -> Result<Vec<i16>, std::io::Error> {
+    let mut input_file = std::fs::File::open(file_path)?;
+
+    let mut input_data = Vec::new();
+    input_file.read_to_end(&mut input_data)?;
+
+    deinterleave_str(&mut input_data);
+    let samples = convert_to_samples(input_data);
+
+    //let mut decoder = ADPCMDecoder::new();
+    //let samples = decoder.decode(&input_data);
+
+    Ok(samples)
 }
 
 fn generate_xma_from_synth_sample(file_path: &Path, info: &SystemInfo) -> Result<Vec<u8>, Box<dyn Error>> {

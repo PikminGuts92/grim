@@ -1,0 +1,13 @@
+[package]
+name = "lipsync_preview"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+grim = { workspace = true, features = [ "audio" ] }
+eframe = "0.22.0"
+keyframe = "1.1.1"
+nalgebra = "0.32.3"
+#rerun = "0.2.0"
+shared = { path = "../shared" }

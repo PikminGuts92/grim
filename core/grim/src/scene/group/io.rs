@@ -4,9 +4,19 @@ use crate::SystemInfo;
 use grim_traits::scene::*;
 use std::collections::HashSet;
 use std::error::Error;
+use thiserror::Error as ThisError;
+
+#[derive(Debug, ThisError)]
+pub enum GroupLoadError {
+    #[error("Group version {version} is not supported")]
+    GroupVersionNotSupported {
+        version: u32
+    },
+}
 
 fn is_version_supported(version: u32) -> bool {
     match version {
+         4 => true, // Amp
          7 => true, // GH1
         11 => true, // GH2 4-song
         12 => true, // GH2/GH2 360
@@ -22,8 +32,9 @@ impl ObjectReadWrite for GroupObject {
 
         let version = reader.read_uint32()?;
         if !is_version_supported(version) {
-            // TODO: Switch to custom error
-            panic!("Group version \"{}\" is not supported!", version);
+            return Err(Box::new(GroupLoadError::GroupVersionNotSupported {
+                version
+            }));
         }
 
         load_object(self, &mut reader, info)?;
@@ -32,11 +43,13 @@ impl ObjectReadWrite for GroupObject {
         load_draw(self, &mut reader, info, false)?;
 
         self.objects.clear();
-        if version >= 11 {
+        if version > 10 {
             let object_count = reader.read_uint32()?;
             for _ in 0..object_count {
                 self.objects.push(reader.read_prefixed_string()?);
             }
+
+            self.environ = reader.read_prefixed_string()?;
         } else {
             // Copy anim/draw/trans objects from legacy version
             let mut obj_strings = HashSet::new();
@@ -58,14 +71,28 @@ impl ObjectReadWrite for GroupObject {
             }
         }
 
-        self.environ = reader.read_prefixed_string()?;
+        if version > 11 {
+            self.lod = reader.read_prefixed_string()?;
+            self.lod_screen_size = reader.read_float32()?;
+        } else if version == 4 {
+            reader.seek(SeekFrom::Current(4))?;
 
-        if version == 11 {
-            // Demo doesn't have lod data for some reason
-            return Ok(());
+            let object_count = reader.read_uint32()?;
+            for _ in 0..object_count {
+                self.objects.push(reader.read_prefixed_string()?);
+            }
+
+            // Unknown - Matches group name
+            reader.read_prefixed_string()?;
+
+            // Zero'd numbers
+            reader.seek(SeekFrom::Current(8))?;
+        } else if version == 7 {
+            // Unknown - Matches group name
+            reader.read_prefixed_string()?;
         }
 
-        if version <= 12 {
+        /*if version <= 12 {
             let lod_width = reader.read_float32()?;
             let lod_height = reader.read_float32()?;
 
@@ -75,14 +102,10 @@ impl ObjectReadWrite for GroupObject {
             } else {
                 self.lod_screen_size = 0.0;
             }
-        } else {
-            self.draw_only = reader.read_prefixed_string()?;
-            self.lod = reader.read_prefixed_string()?;
-            self.lod_screen_size = reader.read_float32()?;
+        }*/
 
-            if version >= 14 {
-                self.sort_in_world = reader.read_boolean()?;
-            }
+        if version > 13 {
+            self.sort_in_world = reader.read_boolean()?;
         }
 
         Ok(())

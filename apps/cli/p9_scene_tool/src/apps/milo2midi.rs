@@ -47,7 +47,7 @@ impl SubApp for Milo2MidiApp {
         }
 
         // Open milo
-        let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(&milo_path)?);
+        let mut stream = FileStream::from_path_as_read_open(&milo_path)?;
         let milo = MiloArchive::from_stream(&mut stream)?;
 
         // Unpack dir and entries

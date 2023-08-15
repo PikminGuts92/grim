@@ -18,9 +18,11 @@ impl Tex {
 
     fn is_magic_valid(magic: u32, info: &SystemInfo) -> bool {
         match info.version {
-            // GH1
+            // Amp/GH1
             10 => match magic {
-                8 => true,
+                5 => true, // Amp
+                7 => true, // AntiGrav
+                8 => true, // GH1
                 _ => false
             },
             // GH2
@@ -75,7 +77,13 @@ impl ObjectReadWrite for Tex {
         self.bpp = reader.read_uint32()?;
 
         self.ext_path = reader.read_prefixed_string()?;
-        self.index_f = reader.read_float32()?;
+
+        if magic >= 8 {
+            self.index_f = reader.read_float32()?
+        } else {
+            self.index_f = 0.0
+        }
+
         self.index = reader.read_int32()?;
 
         // RB3 encoding
@@ -84,7 +92,13 @@ impl ObjectReadWrite for Tex {
             reader.read_boolean()?;
         }
 
-        self.use_ext_path = reader.read_boolean()?;
+        self.use_ext_path = if magic != 7 {
+            reader.read_boolean()?
+        } else {
+            // AntiGrav - Interpret 32-bit int as bool 
+            let bool_int = reader.read_uint32()?;
+            bool_int != 0
+        };
 
         if reader.pos() == reader.len()? as u64 {
             return Ok(());

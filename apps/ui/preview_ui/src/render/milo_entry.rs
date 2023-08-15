@@ -3,11 +3,12 @@ use bevy::render::render_resource::{AddressMode, Extent3d, SamplerDescriptor, Te
 use bevy::render::texture::ImageSampler;
 
 use itertools::*;
+use log::warn;
 
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
-use std::num::NonZeroU8;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -17,7 +18,7 @@ use grim::scene::{GroupObject, Matrix, MeshObject, Milo, MiloObject, Object, Obj
 use grim::texture::Bitmap;
 
 use crate::WorldMesh;
-use super::{map_matrix, MiloLoader, TextureEncoding};
+use super::{ImageInfo, map_matrix, MiloLoader, TextureEncoding};
 
 pub fn render_milo_entry(
     commands: &mut Commands,
@@ -25,10 +26,11 @@ pub fn render_milo_entry(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     bevy_textures: &mut ResMut<Assets<Image>>,
     milo: &ObjectDir,
+    milo_path: &Path,
     milo_entry: Option<String>,
     system_info: &SystemInfo,
 ) {
-    let mut loader = MiloLoader::new(milo);
+    let mut loader = MiloLoader::new(milo, milo_path);
 
     // Get meshes for single object or return all meshes
     // TODO: Make less hacky
@@ -83,20 +85,22 @@ pub fn render_milo_entry(
 
         let mut bevy_mesh = Mesh::new(bevy::render::render_resource::PrimitiveTopology::TriangleList);
 
-        let mut positions = Vec::new();
-        let mut normals = Vec::new();
-        let mut tangents = Vec::new();
-        let mut uvs = Vec::new();
+        let vert_count = mesh.get_vertices().len();
 
-        for vert in mesh.get_vertices() {
-            positions.push([vert.pos.x, vert.pos.y, vert.pos.z]);
+        let mut positions = vec![Default::default(); vert_count];
+        let mut normals = vec![Default::default(); vert_count];
+        let mut tangents = vec![Default::default(); vert_count];
+        let mut uvs = vec![Default::default(); vert_count];
+
+        for (i, vert) in mesh.get_vertices().iter().enumerate() {
+            positions[i] = [vert.pos.x, vert.pos.y, vert.pos.z];
 
             // TODO: Figure out normals/tangents
             //normals.push([vert.normals.x, vert.normals.y, vert.normals.z]);
-            normals.push([1.0, 1.0, 1.0]);
-            tangents.push([0.0, 0.0, 0.0, 1.0]);
+            normals[i] = [1.0, 1.0, 1.0];
+            tangents[i] = [0.0, 0.0, 0.0, 1.0];
 
-            uvs.push([vert.uv.u, vert.uv.v]);
+            uvs[i] = [vert.uv.u, vert.uv.v];
         }
 
         let indices = bevy::render::mesh::Indices::U16(
@@ -305,7 +309,7 @@ fn get_computed_mat<'a>(
     }
 
     if !parent_name.is_empty() {
-        println!("Can't find trans for {}", parent_name);
+        warn!("Can't find trans for {}", parent_name);
     }
 
     map_matrix(milo_object.get_world_xfm())
@@ -330,13 +334,13 @@ fn get_product_local_mat<'a>(
     }
 
     if parent_name.is_empty() {
-        println!("Can't find trans for {}", parent_name);
+        warn!("Can't find trans for {}", parent_name);
     }
 
     map_matrix(milo_object.get_local_xfm())
 }
 
-fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_info: &SystemInfo) -> Option<&'b (&'a Tex, Vec<u8>, TextureEncoding)> {
+fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_info: &SystemInfo) -> Option<&'b (&'a Tex, Vec<u8>, ImageInfo)> {
     // Check for cached texture
     if let Some(_cached) = loader.get_cached_texture(tex_name).take() {
         // TODO: Figure out why commented out line doesn't work (stupid lifetimes)
@@ -344,17 +348,103 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
         return loader.get_cached_texture(tex_name);
     }
 
+    let mut ext_tex = None;
+
     // Get bitmap and decode texture
     // TODO: Check for external textures
     loader.get_texture(tex_name)
-        .and_then(|t| t.bitmap.as_ref())
+        .and_then(|t| {
+            if t.bitmap.is_some() {
+                t.bitmap.as_ref()
+            } else {
+                // Load external texture
+                let milo_dir_path = loader.get_milo_path().parent().unwrap();
+
+                // Insert "gen" sub folder
+                // TODO: Support loading from milo gen folder too?
+                let ext_img_path = match t.ext_path.rfind("/") {
+                    Some(last_slash_idx) => {
+                        let (dir_path, file_name) = t.ext_path.split_at(last_slash_idx);
+
+                        milo_dir_path.join(dir_path).join("gen").join(&file_name[1..])
+                    },
+                    None => milo_dir_path.join("gen").join(&t.ext_path),
+                };
+
+                let ext_img_file_stem = ext_img_path.file_stem().and_then(|fs| fs.to_str()).unwrap();
+                let ext_img_path_dir = ext_img_path.parent().unwrap();
+
+                let files = ext_img_path_dir.find_files_with_depth(FileSearchDepth::Immediate).unwrap();
+
+                // TODO: Do case-insensitive compare
+                let matching_file = files
+                    .iter()
+                    .find(|f| f
+                        .file_stem()
+                        //.is_some_and(|fs| fs.eq_ignore_ascii_case(ext_img_file_stem))
+                        .and_then(|fs| fs.to_str())
+                        .is_some_and(|fs| fs.starts_with(ext_img_file_stem))
+                    );
+
+                if let Some(file_path) = matching_file {
+                    log::info!("Found external texture file!\n\t{file_path:?}");
+
+                    let data = if file_path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("gz")) {
+                        // File is gz compressed
+                        let file_size = grim::io::get_file_size(file_path) as usize;
+                        let mut file = std::fs::File::open(file_path).unwrap();
+
+                        // Read to buffer
+                        let mut file_data = vec![0u8; file_size];
+                        file.read_exact(&mut file_data).unwrap();
+
+                        // Inflate
+                        grim::io::inflate_gzip_block_no_buffer(&file_data).unwrap()
+                    } else if file_path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("z")) {
+                        // File is zlib compressed
+                        let file_size = grim::io::get_file_size(file_path) as usize;
+                        let mut file = std::fs::File::open(file_path).unwrap();
+
+                        // Read to buffer
+                        let mut file_data = vec![0u8; file_size];
+                        file.read_exact(&mut file_data).unwrap();
+
+                        // Inflate
+                        grim::io::inflate_deflate_block_no_buffer(&file_data).unwrap()
+                    } else {
+                        let file_size = grim::io::get_file_size(file_path) as usize;
+                        let mut file = std::fs::File::open(file_path).unwrap();
+
+                        // Read to buffer
+                        let mut file_data = vec![0u8; file_size];
+                        file.read_exact(&mut file_data).unwrap();
+
+                        file_data
+                    };
+
+                    let mut stream = grim::io::MemoryStream::from_slice_as_read(&data);
+                    let bitmap = grim::texture::Bitmap::from_stream(&mut stream, system_info);
+
+                    if bitmap.is_ok() {
+                        log::info!("Successfully opened bitmap");
+                    } else {
+                        log::warn!("Error opening bitmap");
+                    }
+
+                    ext_tex = bitmap.ok();
+                    return ext_tex.as_ref();
+                }
+
+                None
+            }
+        })
         .and_then(|b| match (system_info.platform, b.encoding) {
             (Platform::X360 | Platform::PS3, 8 | 24 | 32) => {
                 let enc = match b.encoding {
-                     8 => TextureEncoding::DXT1,
-                    24 => TextureEncoding::DXT5,
-                    32 | _ => TextureEncoding::ATI2,
-                };
+                    8 => TextureEncoding::DXT1,
+                   24 => TextureEncoding::DXT5,
+                   32 | _ => TextureEncoding::ATI2,
+               };
 
                 let mut data = b.raw_data.to_owned();
 
@@ -368,20 +458,26 @@ fn get_texture<'a, 'b>(loader: &'b mut MiloLoader<'a>, tex_name: &str, system_in
                     }
                 }
 
-                Some((data, enc))
+                Some((data, ImageInfo {
+                    encoding: enc,
+                    ..b.into()
+                }))
             },
             _ => b.unpack_rgba(system_info).ok()
-                .and_then(|rgba| Some((rgba, TextureEncoding::RGBA)))
+                .and_then(|rgba| Some((rgba, ImageInfo {
+                    encoding: TextureEncoding::RGBA,
+                    ..b.into()
+                })))
         })
-        .and_then(move |(rgba, enc)| {
+        .and_then(move |(rgba, image_info)| {
             // Cache decoded texture
-            loader.set_cached_texture(tex_name, rgba, enc);
+            loader.set_cached_texture(tex_name, rgba, image_info);
             loader.get_cached_texture(tex_name)
         })
 }
 
-fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
-    let (tex, rgba, enc) = tex;
+fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, ImageInfo)) -> Image {
+    let (tex, rgba, ImageInfo { width, height, mips: _, encoding: enc }) = tex;
 
     let bpp: usize = match enc {
         TextureEncoding::DXT1 => 4,
@@ -389,7 +485,7 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
         TextureEncoding::RGBA => 32,
     };
 
-    let tex_size = ((tex.width as usize) * (tex.height as usize) * bpp) / 8;
+    let tex_size = ((*width as usize) * (*height as usize) * bpp) / 8;
     let use_mips = rgba.len() > tex_size; // TODO: Always support mips?
 
     let img_slice = if use_mips {
@@ -423,7 +519,7 @@ fn map_texture<'a>(tex: &'a (&'a Tex, Vec<u8>, TextureEncoding)) -> Image {
     texture.sampler_descriptor = ImageSampler::Descriptor(SamplerDescriptor {
         address_mode_u: AddressMode::Repeat,
         address_mode_v: AddressMode::Repeat,
-        anisotropy_clamp: NonZeroU8::new(16),
+        anisotropy_clamp: 1, // 16
         ..SamplerDescriptor::default()
     });
 

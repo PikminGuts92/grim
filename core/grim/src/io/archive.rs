@@ -10,6 +10,7 @@ use thiserror::Error as ThisError;
 
 const MAX_BLOCK_SIZE: usize = 0x20000;
 const ADDE_PADDING: [u8; 4] = [0xAD, 0xDE, 0xAD, 0xDE];
+const GZIP_MAGIC: u32 = u32::from_le_bytes([0x1F, 0x8B, 0x08, 0x08]);
 
 #[derive(Copy, Clone, Debug)]
 pub enum BlockType
@@ -40,6 +41,7 @@ impl BlockInfo {
 #[derive(Debug)]
 pub enum MiloArchiveStructure {
     Blocked(BlockInfo),
+    GZIP,
     Uncompressed,
 }
 
@@ -54,7 +56,9 @@ pub enum MiloBlockStructureError {
     #[error("Unsupported compression with magic of 0x{magic:X}")]
     UnsupportedCompression {
         magic: u32
-    }
+    },
+    #[error("UnknownIOError")] // TODO: Enclose IOError
+    IOError
 }
 
 #[derive(Debug, ThisError)]
@@ -66,16 +70,28 @@ pub enum MiloUnpackError {
 }
 
 impl MiloArchive {
-    pub fn from_stream(stream: &mut Box<dyn Stream>) -> Result<MiloArchive, Box<dyn Error>> {
-        let stream = stream.as_mut();
+    pub fn from_stream<T: Stream>(stream: &mut T) -> Result<MiloArchive, Box<dyn Error>> {
         let mut reader = BinaryStream::from_stream(stream); // Should always be little endian
         
         let mut structure: MiloArchiveStructure = MiloArchiveStructure::Uncompressed; // TODO: Handle in else case
         let mut uncompressed: Vec<u8> = Vec::new();
 
-        if let Some(block_type) = MiloArchive::get_block_type_or_none(&mut reader)? {
+        let block_result = MiloArchive::get_block_type_or_none(&mut reader);
+
+        if let Err(MiloBlockStructureError::UnsupportedCompression { magic }) = block_result {
+            reader.seek(SeekFrom::Current(-4))?;
+
+            if magic == GZIP_MAGIC {
+                let mut data = vec![0u8; reader.len()?];
+                reader.read_bytes_into_slice(&mut data)?;
+
+                uncompressed = inflate_gzip_block_no_buffer(&data)?;
+            } else {
+                return Err(Box::new(block_result.unwrap_err()));
+            }
+        } else if let Ok(Some(block_type)) = block_result {
             let mut block_info = BlockInfo::new();
-            
+
             block_info.block_type = block_type;
             block_info.start_offset = reader.read_uint32()?;
 
@@ -102,7 +118,7 @@ impl MiloArchive {
                     (BlockType::TypeA, _)
                         | (BlockType::TypeD, false) => bytes, // No compression
                     (BlockType::TypeB, _) => inflate_zlib_block(&bytes, &mut buffer[..])?,
-                    (BlockType::TypeC, _) => todo!("Gzip compression not supported!"), // TODO: Support gzip
+                    (BlockType::TypeC, _) => inflate_gzip_block(&bytes, &mut buffer[..])?,
                     (BlockType::TypeD, true) => inflate_zlib_block(&bytes[4..], &mut buffer[..])?, // Skip 4-byte inflated size prefix
                 };
 
@@ -119,8 +135,9 @@ impl MiloArchive {
         })
     }
 
-    fn get_block_type_or_none(reader: &mut BinaryStream) -> Result<Option<BlockType>, Box<dyn Error>> {
-        let magic = reader.read_uint32()?;
+    fn get_block_type_or_none(reader: &mut BinaryStream) -> Result<Option<BlockType>, MiloBlockStructureError> {
+        let magic = reader.read_uint32()
+            .map_err(|_| MiloBlockStructureError::IOError)?;
 
         match magic {
             0xCABEDEAF => Ok(Some(BlockType::TypeA)),
@@ -128,7 +145,7 @@ impl MiloArchive {
             0xCCBEDEAF => Ok(Some(BlockType::TypeC)),
             0xCDBEDEAF => Ok(Some(BlockType::TypeD)),
             // TODO: Assume uncompressed archive, or gzip then check version
-            _ => Err(Box::new(MiloBlockStructureError::UnsupportedCompression { magic }))
+            _ => Err(MiloBlockStructureError::UnsupportedCompression { magic })
         }
     }
 
@@ -158,6 +175,10 @@ impl MiloArchive {
 
             reader.seek(SeekFrom::Current(8))?; // Skip extra nums
 
+            if version >= 32 {
+                reader.seek(SeekFrom::Current(1))?; // Skip unknown bool
+            }
+
             // Update class name
             ObjectDir::fix_class_name(version, &mut dir_type);
         } else {
@@ -169,18 +190,38 @@ impl MiloArchive {
         let mut packed_entries: Vec<PackedObject> = Vec::new();
 
         // Parse entry types + names
-        for _ in 0..entry_count {
-            let mut entry_type = reader.read_prefixed_string()?;
-            let entry_name = reader.read_prefixed_string()?;
+        if version <= 6 {
+            // Read as null-terminated strings
+            for _ in 0..entry_count {
+                let mut entry_type = reader.read_null_terminated_string()?;
+                let entry_name = reader.read_null_terminated_string()?;
 
-            // Update class name
-            ObjectDir::fix_class_name(version, &mut entry_type);
+                reader.seek(SeekFrom::Current(1))?; // Unknown, always 1?
 
-            packed_entries.push(PackedObject {
-                name: entry_name,
-                object_type: entry_type,
-                data: Vec::new()
-            })
+                // Update class name
+                ObjectDir::fix_class_name(version, &mut entry_type);
+
+                packed_entries.push(PackedObject {
+                    name: entry_name,
+                    object_type: entry_type,
+                    data: Vec::new()
+                })
+            }
+        } else {
+            // Read as size-prefixed strings
+            for _ in 0..entry_count {
+                let mut entry_type = reader.read_prefixed_string()?;
+                let entry_name = reader.read_prefixed_string()?;
+
+                // Update class name
+                ObjectDir::fix_class_name(version, &mut entry_type);
+
+                packed_entries.push(PackedObject {
+                    name: entry_name,
+                    object_type: entry_type,
+                    data: Vec::new()
+                })
+            }
         }
 
         if version == 10 {
@@ -191,7 +232,7 @@ impl MiloArchive {
             for _ in 0..ext_count {
                 reader.read_prefixed_string()?;
             }
-        } else {
+        } else if version > 10 {
             // TODO: Parse directory info (entry)
             /*let entry_size = self.guess_entry_size(&mut reader)?.unwrap();
             reader.seek(SeekFrom::Current((entry_size + 4) as i64))?;*/
@@ -503,7 +544,10 @@ impl MiloArchive {
                     writer.write_uint32(*size as u32)?;
                 }
             },
-            MiloArchiveStructure::Uncompressed  => {
+            MiloArchiveStructure::GZIP => {
+                todo!("Gzip compression for milo archive not supported")
+            }
+            MiloArchiveStructure::Uncompressed => {
                 // Write uncompressed data
                 writer.write_bytes(&self.data[..])?;
             }

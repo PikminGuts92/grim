@@ -75,7 +75,7 @@ impl SubApp for Milo2DirApp {
             println!("Opening {}", file_name);
         }
 
-        let mut stream: Box<dyn Stream> = Box::new(FileStream::from_path_as_read_open(milo_path)?);
+        let mut stream = FileStream::from_path_as_read_open(milo_path)?;
         let milo = MiloArchive::from_stream(&mut stream)?;
 
         // TODO: First get system info from args then guess if not supplied

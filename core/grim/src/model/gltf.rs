@@ -1,5 +1,7 @@
 use crate::{SystemInfo, io::*};
 use crate::model::{Draw, GroupObject, MatObject, MeshObject, TexPath, Trans, Vert};
+use crate::scene::{AnimEvent, TransAnim};
+use gltf::animation::util::ReadOutputs;
 use gltf::buffer::Data as BufferData;
 use gltf::{Document, Gltf, Mesh, Primitive, Scene};
 use gltf::image::{Data as ImageData, Source};
@@ -8,10 +10,11 @@ use gltf::mesh::util::*;
 use gltf::json::extensions::scene::*;
 use gltf::json::extensions::mesh::*;
 use gltf::scene::Node;
-use grim_traits::scene::{Color3, UV, Vector4};
+use grim_traits::scene::{Blend, Color3, MiloObject, Quat, UV, Vector3, Vector4, ZMode};
 use itertools::{Itertools, izip};
 use nalgebra as na;
-use std::{borrow::Borrow, error::Error};
+use std::collections::HashMap;
+use std::error::Error;
 use std::path::{Path, PathBuf};
 
 use crate::model::AssetManagager;
@@ -22,6 +25,7 @@ pub struct GLTFImporter {
     buffers: Vec<BufferData>,
     images: Vec<ImageData>,
     mats: Vec<MatObject>,
+    node_names: HashMap<usize, String>,
 }
 
 impl GLTFImporter {
@@ -34,6 +38,7 @@ impl GLTFImporter {
             buffers,
             images,
             mats: Vec::new(),
+            node_names: HashMap::new(),
         })
     }
 
@@ -48,7 +53,7 @@ impl GLTFImporter {
         for scene in document.scenes() {
             // Create group name
             let group_name = match scene.name() {
-                Some(name) => format!("{}.grp", name),
+                Some(name) => format!("{}.grp", name.to_ascii_lowercase()),
                 None => format!("group_{}.grp", scene.index()),
             };
 
@@ -77,6 +82,103 @@ impl GLTFImporter {
             asset_manager.add_group(group);
         }
 
+        let all_node_names = document
+            .nodes()
+            .map(|n| n.name())
+            .collect::<Vec<_>>();
+
+        // Process anims
+        for anim in document.animations() {
+            let name = anim // .tnm
+                .name()
+                .map(|n| n.to_owned()).unwrap_or_else(|| format!("anim_{}", anim.index()));
+
+            // Group channels by target
+            let channels = anim.channels().collect::<Vec<_>>();
+            let group_channels = channels
+                .iter()
+                .fold(HashMap::new(), |mut acc, ch| {
+                    let key = ch.target().node().index();
+
+                    acc
+                        .entry(key)
+                        .and_modify(|e: &mut Vec<_>| e.push(ch))
+                        .or_insert_with(|| vec![ch]);
+
+                    acc
+                });
+
+            let mut anim_count = 0;
+
+            for (node_idx, channels) in group_channels {
+                // Ignore if node doesn't have associated name
+                /*let Some(target_name) = self.node_names.get(&node_idx) else {
+                    continue;
+                };*/
+
+                // Fallback on actual node name if mesh not found
+                let Some(target_name) = self.node_names.get(&node_idx).map(|n| n.as_str()).or_else(|| *all_node_names.get(node_idx).unwrap()) else {
+                    continue;
+                };
+
+                let anim_name = if anim_count == 0 {
+                    format!("{name}.tnm")
+                } else {
+                    format!("{name}_{anim_count}.tnm")
+                };
+                anim_count += 1;
+
+                //println!("Found {} anim channels for {}", channels.len(), target_name);
+
+                let mut trans_anim = TransAnim {
+                    name: anim_name.to_owned(),
+                    trans_object: target_name.to_owned(),
+                    trans_anim_owner: anim_name,
+                    //trans_spline: true,
+                    //repeat_trans: true,
+                    //scale_spline: true,
+                    //rot_slerp: true,
+                    ..Default::default()
+                };
+
+                for channel in channels {
+                    let reader = channel.reader(|buffer| Some(&self.buffers[buffer.index()]));
+                    let inputs = reader.read_inputs().unwrap().collect::<Vec<_>>();
+
+                    match reader.read_outputs().unwrap() {
+                        ReadOutputs::Translations(trans) => {
+                            trans_anim.trans_keys = izip!(inputs.iter(), trans)
+                                .map(|(t, [x, z, y])| AnimEvent {
+                                    pos: (*t * 30.) - 1.0,
+                                    value: Vector3 { x, y, z }
+                                })
+                                .collect();
+                        },
+                        ReadOutputs::Rotations(rots) => {
+                            trans_anim.rot_keys = izip!(inputs.iter(), rots.into_f32())
+                                .map(|(t, [x, z, y, w])| AnimEvent {
+                                    pos: (*t * 30.) - 1.0,
+                                    value: Quat { x, y, z, w }
+                                })
+                                .collect();
+                        },
+                        ReadOutputs::Scales(scales) => {
+                            trans_anim.scale_keys = izip!(inputs.iter(), scales)
+                                .map(|(t, [x, z, y])| AnimEvent {
+                                    pos: (*t * 30.) - 1.0,
+                                    value: Vector3 { x, y, z }
+                                })
+                                .collect();
+                        }
+                        _ => continue
+                    }
+                }
+
+                // Add anim
+                asset_manager.add_trans_anim(trans_anim);
+            }
+        }
+
         // Add materials to asset manager
         while !self.mats.is_empty() {
             asset_manager.add_material(self.mats.remove(0));
@@ -90,12 +192,20 @@ impl GLTFImporter {
         for doc_mat in document.materials() {
             // Create mat name
             let mat_name = match doc_mat.name() {
-                Some(name) => format!("{}.mat", name),
+                Some(name) => match name.to_ascii_lowercase() {
+                    // Append .mat if not already present
+                    n if n.ends_with(".mat") => n,
+                    n => format!("{n}.mat")
+                },
                 None => format!("mat_{}.mat", doc_mat.index().unwrap()),
             };
 
-            let mut mat = MatObject::default();
-            mat.name = mat_name;
+            let mut mat = MatObject {
+                name: mat_name,
+                blend: Blend::kBlendSrcAlpha,
+                z_mode: ZMode::kZModeNormal,
+                ..Default::default()
+            };
 
             // Get base color
             let [r, g, b, a] = doc_mat.pbr_metallic_roughness().base_color_factor();
@@ -161,6 +271,15 @@ impl GLTFImporter {
         if let Some(mesh) = node.mesh() {
             let mut milo_meshes = self.read_mesh(&mesh);
             meshes.append(&mut milo_meshes);
+
+            // Track mesh name for node
+            if !meshes.is_empty() && self.node_names.get(&node.index()).is_none() {
+                self.node_names
+                    .insert(
+                        node.index(),
+                        meshes.first().map(|m| m.get_name().to_owned()).unwrap()
+                    );
+            }
         }
 
         // Process children
@@ -182,7 +301,11 @@ impl GLTFImporter {
 
     fn read_mesh(&mut self, mesh: &Mesh) -> Vec<MeshObject> {
         let mesh_name_prefix = match mesh.name() {
-            Some(name) => name.to_string(),
+            Some(name) => match name.to_ascii_lowercase() {
+                // Remove .mesh ext if present (added back later)
+                n if n.ends_with(".mesh") => n[..(n.len() - 5)].to_string(),
+                n => n
+            },
             None => format!("mesh_{}", mesh.index()),
         };
 
@@ -210,9 +333,9 @@ impl GLTFImporter {
 
         let faces: Vec<[u16; 3]> = faces_chunked
             .map(|f| [
-                *f.get(2).unwrap(), // Clockwise -> Anti
-                *f.get(1).unwrap(),
                 *f.get(0).unwrap(),
+                *f.get(1).unwrap(),
+                *f.get(2).unwrap(),
             ])
             .collect();
 
@@ -220,7 +343,11 @@ impl GLTFImporter {
             reader.read_positions().unwrap(),
             reader.read_normals().unwrap(),
             //reader.read_colors(0).unwrap().into_rgb_f32().into_iter(),
-            reader.read_tex_coords(0).unwrap().into_f32(),
+            //reader.read_tex_coords(0).unwrap().into_f32(),
+            reader.read_tex_coords(0) // Hacky way to get tex coords or default if none found
+                .map(|tc| tc.into_f32()
+                .collect::<Vec<_>>())
+                .unwrap_or_default()
         );
 
         let verts = verts_interleaved
@@ -300,11 +427,17 @@ impl GLTFImporter {
 }
 
 pub(crate) fn transform_verts(verts: &mut Vec<Vert>) {
+    let rotate_on_z = na::Matrix4::from_axis_angle(&na::Vector3::z_axis(), std::f32::consts::PI);
+
     for vert in verts.iter_mut() {
         let Vector4 { x, y, z, .. } = &mut vert.pos;
 
         // Update position
         let pos = super::MILOSPACE_TO_GLSPACE.transform_vector(&na::Vector3::new(*x, *y, *z));
+
+        // Rotate
+        let pos = rotate_on_z.transform_vector(&pos);
+
         *x = *pos.get(0).unwrap();
         *y = *pos.get(1).unwrap();
         *z = *pos.get(2).unwrap();

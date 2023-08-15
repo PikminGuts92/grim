@@ -5,15 +5,17 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
-bevy = { version = "0.10.1", default-features = false, features = [ "bevy_core_pipeline", "bevy_pbr", "bevy_render", "bevy_winit", "x11" ] }
-bevy_egui = { version = "0.20.2", features = [ "immutable_ctx" ] }
-bevy_fly_camera = "0.10.0"
-bevy_infinite_grid = "0.7.0"
-egui_extras = { version = "0.21.0", features = [ "svg" ] }
+bevy = { version = "0.11.0", default-features = false, features = [ "bevy_core_pipeline", "bevy_pbr", "bevy_render", "bevy_winit", "x11" ] }
+bevy_egui = { version = "0.21.0", features = [ "immutable_ctx" ] }
+#bevy_fly_camera = "0.10.0"
+bevy_fly_camera = { git = "https://github.com/zachbateman/bevy_fly_camera.git", branch = "bevy_0.11.0" }
+bevy_infinite_grid = "0.8.0"
+egui_extras = { version = "0.22.0", features = [ "svg" ] }
 font-awesome-as-a-crate = "0.3.0"
 grim = { workspace = true }
 itertools = { workspace = true }
 lazy_static = { workspace = true }
+log = { workspace = true }
 # native-dialog = "0.6.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
