@@ -93,7 +93,7 @@ impl AccessorBuilder {
         // Create accessor
         let accessor = json::Accessor {
             buffer_view: Some(json::Index::new(buff_idx as u32)),
-            byte_offset: buff_off as u32,
+            byte_offset: Some(buff_off as u32),
             count: count as u32,
             component_type: json::validation::Checked::Valid(json::accessor::GenericComponentType(comp_type)),
             extensions: None,
