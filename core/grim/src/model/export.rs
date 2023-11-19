@@ -90,7 +90,7 @@ fn map_bones_to_nodes(dir_name: &str, bones: &Vec<BoneNode>) -> Vec<gltf_json::N
         camera: None,
         children: None,
         extensions: None,
-        extras: None,
+        extras: Default::default(),
         matrix: Some([
             -1.0,  0.0,  0.0, 0.0,
             0.0,  0.0,  1.0, 0.0,
@@ -177,7 +177,7 @@ fn populate_child_nodes(nodes: &mut Vec<gltf_json::Node>, bones: &Vec<BoneNode>)
                 None
             },
             extensions: None,
-            extras: None,
+            extras: Default::default(),
             matrix: if mat.is_identity(f32::EPSILON) {
                 // Don't add identities
                 None
@@ -255,7 +255,7 @@ pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path, sys_in
                 Some(str_data)
             },
             extensions: None,
-            extras: None
+            extras: Default::default()
         })
         .collect();
 
@@ -279,7 +279,7 @@ pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path, sys_in
         scenes: vec![
             json::Scene {
                 extensions: None,
-                extras: None,
+                extras: Default::default(),
                 name: None,
                 nodes: vec![json::Index::new(0)],
             }
@@ -287,7 +287,7 @@ pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path, sys_in
         skins: vec![
             json::Skin {
                 extensions: None,
-                extras: None,
+                extras: Default::default(),
                 inverse_bind_matrices: None,
                 joints: joints,
                 name: None,
@@ -630,7 +630,7 @@ impl GltfExporter {
             camera: None,
             children: None,
             extensions: None,
-            extras: None,
+            extras: Default::default(),
             matrix: None,
             mesh: None,
             name: Some(name.to_owned()),
@@ -838,7 +838,7 @@ impl GltfExporter {
                         }
                     },
                     extensions: None,
-                    extras: None
+                    extras: Default::default()
                 };
 
                 let texture = json::Texture {
@@ -846,7 +846,7 @@ impl GltfExporter {
                     sampler: Some(json::Index::new(0u32)),
                     source: json::Index::new(i as u32), // Image index
                     extensions: None,
-                    extras: None
+                    extras: Default::default()
                 };
 
                 (image, texture)
@@ -883,7 +883,7 @@ impl GltfExporter {
                                 index: json::Index::new(*d as u32),
                                 tex_coord: 0,
                                 extensions: None,
-                                extras: None
+                                extras: Default::default()
                             }),
                         //base_color_factor:
                         ..Default::default()
@@ -938,7 +938,7 @@ impl GltfExporter {
 
                 skins.push(json::Skin {
                     extensions: None,
-                    extras: None,
+                    extras: Default::default(),
                     inverse_bind_matrices: ibm_idx
                         .map(|i| json::Index::new(i as u32)),
                     joints: joints
@@ -1068,7 +1068,7 @@ impl GltfExporter {
                 byte_length: total_size as u32,
                 uri: Some(str_data),
                 extensions: None,
-                extras: None
+                extras: Default::default()
             }
         }];
 
@@ -1081,7 +1081,7 @@ impl GltfExporter {
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             },
             json::buffer::View {
                 name:  Some(String::from("uvs")),
@@ -1091,7 +1091,7 @@ impl GltfExporter {
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             },
             json::buffer::View {
                 name:  Some(String::from("weights_tans")),
@@ -1101,7 +1101,7 @@ impl GltfExporter {
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             },
             json::buffer::View {
                 name:  Some(String::from("faces")),
@@ -1111,7 +1111,7 @@ impl GltfExporter {
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             }
         ];
     }
@@ -1374,12 +1374,12 @@ impl GltfExporter {
                             .map(|idx| json::Index::new(*idx as u32)),
                         mode: json::validation::Checked::Valid(gltf::mesh::Mode::Triangles),
                         targets: None,
-                        extras: None,
+                        extras: Default::default(),
                         extensions: None
                     },
                 ],
                 weights: None,
-                extras: None,
+                extras: Default::default(),
                 extensions: None
             });
 
@@ -1492,7 +1492,7 @@ impl GltfExporter {
         gltf.scenes = vec![
             json::Scene {
                 extensions: None,
-                extras: None,
+                extras: Default::default(),
                 name: None,
                 nodes: scene_nodes
                     .into_iter()
@@ -1523,7 +1523,7 @@ impl GltfExporter {
             scenes: vec![
                 json::Scene {
                     extensions: None,
-                    extras: None,
+                    extras: Default::default(),
                     name: None,
                     nodes: vec![json::Index::new(0)],
                 }
@@ -1531,7 +1531,7 @@ impl GltfExporter {
             skins: vec![
                 json::Skin {
                     extensions: None,
-                    extras: None,
+                    extras: Default::default(),
                     inverse_bind_matrices: None,
                     joints: joints,
                     name: None,
@@ -1722,10 +1722,10 @@ impl GltfExporter {
                                 node: json::Index::new(node_idx as u32),
                                 path: json::validation::Checked::Valid(json::animation::Property::Translation),
                                 extensions: None,
-                                extras: None
+                                extras: Default::default()
                             },
                             extensions: None,
-                                extras: None
+                                extras: Default::default()
                         });
 
                         samplers.push(json::animation::Sampler {
@@ -1733,7 +1733,7 @@ impl GltfExporter {
                             output: json::Index::new(output_idx as u32),
                             interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                             extensions: None,
-                            extras: None
+                            extras: Default::default()
                         });
                     }
 
@@ -1755,10 +1755,10 @@ impl GltfExporter {
                                 node: json::Index::new(node_idx as u32),
                                 path: json::validation::Checked::Valid(json::animation::Property::Rotation),
                                 extensions: None,
-                                extras: None
+                                extras: Default::default()
                             },
                             extensions: None,
-                                extras: None
+                                extras: Default::default()
                         });
 
                         samplers.push(json::animation::Sampler {
@@ -1766,7 +1766,7 @@ impl GltfExporter {
                             output: json::Index::new(output_idx as u32),
                             interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                             extensions: None,
-                            extras: None
+                            extras: Default::default()
                         });
                     }
 
@@ -1788,10 +1788,10 @@ impl GltfExporter {
                                 node: json::Index::new(node_idx as u32),
                                 path: json::validation::Checked::Valid(json::animation::Property::Scale),
                                 extensions: None,
-                                extras: None
+                                extras: Default::default()
                             },
                             extensions: None,
-                                extras: None
+                                extras: Default::default()
                         });
 
                         samplers.push(json::animation::Sampler {
@@ -1799,7 +1799,7 @@ impl GltfExporter {
                             output: json::Index::new(output_idx as u32),
                             interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                             extensions: None,
-                            extras: None
+                            extras: Default::default()
                         });
                     }
                 }
@@ -1815,7 +1815,7 @@ impl GltfExporter {
                 channels,
                 samplers,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             });
         }
 
@@ -1952,10 +1952,10 @@ impl GltfExporter {
                         node: json::Index::new(node_idx as u32),
                         path: json::validation::Checked::Valid(json::animation::Property::Translation),
                         extensions: None,
-                        extras: None
+                        extras: Default::default()
                     },
                     extensions: None,
-                        extras: None
+                        extras: Default::default()
                 });
 
                 samplers.push(json::animation::Sampler {
@@ -1963,7 +1963,7 @@ impl GltfExporter {
                     output: json::Index::new(output_idx as u32),
                     interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                     extensions: None,
-                    extras: None
+                    extras: Default::default()
                 });*/
 
                 const FPS: f32 = 1. / 30.;
@@ -1991,10 +1991,10 @@ impl GltfExporter {
                             node: json::Index::new(node_idx as u32),
                             path: json::validation::Checked::Valid(json::animation::Property::Translation),
                             extensions: None,
-                            extras: None
+                            extras: Default::default()
                         },
                         extensions: None,
-                            extras: None
+                            extras: Default::default()
                     });
     
                     samplers.push(json::animation::Sampler {
@@ -2002,7 +2002,7 @@ impl GltfExporter {
                         output: json::Index::new(output_idx as u32),
                         interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                         extensions: None,
-                        extras: None
+                        extras: Default::default()
                     });
                 } else {
                     // Add empty pos sample
@@ -2026,10 +2026,10 @@ impl GltfExporter {
                             node: json::Index::new(node_idx as u32),
                             path: json::validation::Checked::Valid(json::animation::Property::Translation),
                             extensions: None,
-                            extras: None
+                            extras: Default::default()
                         },
                         extensions: None,
-                            extras: None
+                            extras: Default::default()
                     });
     
                     samplers.push(json::animation::Sampler {
@@ -2037,7 +2037,7 @@ impl GltfExporter {
                         output: json::Index::new(output_idx as u32),
                         interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                         extensions: None,
-                        extras: None
+                        extras: Default::default()
                     });
                 }
 
@@ -2151,10 +2151,10 @@ impl GltfExporter {
                             node: json::Index::new(node_idx as u32),
                             path: json::validation::Checked::Valid(json::animation::Property::Rotation),
                             extensions: None,
-                            extras: None
+                            extras: Default::default()
                         },
                         extensions: None,
-                            extras: None
+                            extras: Default::default()
                     });
 
                     samplers.push(json::animation::Sampler {
@@ -2162,7 +2162,7 @@ impl GltfExporter {
                         output: json::Index::new(output_idx as u32),
                         interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                         extensions: None,
-                        extras: None
+                        extras: Default::default()
                     });
                 }
 
@@ -2179,7 +2179,7 @@ impl GltfExporter {
                 channels,
                 samplers,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             });
         }
 

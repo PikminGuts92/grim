@@ -97,7 +97,7 @@ impl AccessorBuilder {
             count: count as u32,
             component_type: json::validation::Checked::Valid(json::accessor::GenericComponentType(comp_type)),
             extensions: None,
-            extras: None,
+            extras: Default::default(),
             type_: json::validation::Checked::Valid(acc_type),
             min: Some(min_value),
             max: Some(max_value),
@@ -149,7 +149,7 @@ impl AccessorBuilder {
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             });
         }
 
@@ -169,7 +169,7 @@ impl AccessorBuilder {
                 _ => None
             },
             extensions: None,
-            extras: None
+            extras: Default::default()
         };
 
         // Return everything
