@@ -105,10 +105,10 @@ impl eframe::App for LipsyncApp {
             .inner_margin(egui::Vec2::ZERO);
 
         egui::CentralPanel::default().frame(frame).show(ctx, |ui| {
-            let x_grid_spacer = egui::plot::uniform_grid_spacer(|_g| [60. * 60., 60., 20.]);
-            let y_grid_spacer = egui::plot::uniform_grid_spacer(|_g| [0.5, 0.1, 0.05]);
+            let x_grid_spacer = egui_plot::uniform_grid_spacer(|_g| [60. * 60., 60., 20.]);
+            let y_grid_spacer = egui_plot::uniform_grid_spacer(|_g| [0.5, 0.1, 0.05]);
 
-            egui::plot::Plot::new("main_plot")
+            egui_plot::Plot::new("main_plot")
                 .center_y_axis(false)
                 .min_size(egui::Vec2::new(0., 1.))
                 .x_grid_spacer(x_grid_spacer)
@@ -120,20 +120,20 @@ impl eframe::App for LipsyncApp {
                         let sample_points = convert_to_egui_points(channel_samples, 1, false);
                         //plot_ui.points(sample_points.name("audio").color(Color32::BLUE));
 
-                        plot_ui.line(egui::plot::Line::new(sample_points).name("audio").color(Color32::BLUE));
+                        plot_ui.line(egui_plot::Line::new(sample_points).name("audio").color(Color32::BLUE));
                     }
 
                     // Draw weights
                     let weight_points = convert_to_egui_points(&self.weight_points, 1, false);
                     //plot_ui.points(egui::plot::Points::new(weight_points).name("weights").color(Color32::GREEN));
 
-                    plot_ui.line(egui::plot::Line::new(weight_points).name("weights").color(Color32::GREEN));
+                    plot_ui.line(egui_plot::Line::new(weight_points).name("weights").color(Color32::GREEN));
                 });
         });
     }
 }
 
-fn convert_to_egui_points(points: &Vec<f64>, step: usize, hide_zero: bool) -> egui::plot::PlotPoints {
+fn convert_to_egui_points(points: &Vec<f64>, step: usize, hide_zero: bool) -> egui_plot::PlotPoints {
     let series = points
         .iter()
         .enumerate()
