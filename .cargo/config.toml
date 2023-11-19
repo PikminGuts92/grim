@@ -2,4 +2,4 @@
 # https://github.com/bevyengine/bevy/issues/1126
 [target.x86_64-pc-windows-msvc]
 linker = "rust-lld.exe"
-rustflags = ["-Zshare-generics=off", "-Zmacro-backtrace=on"]
+rustflags = ["-Zshare-generics=off", "-Zmacro-backtrace=on", "-Zthreads=20"]
