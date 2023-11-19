@@ -16,7 +16,7 @@ grim_gltf = { path = "../grim_gltf", optional = true }
 grim_macros = { path = "../grim_macros" }
 grim_traits = { path = "../grim_traits" }
 half = { version = "2.3.1", default-features = false }
-image = { version = "0.24.7", default-features = false, features = [ "dxt", "jpeg", "png" ] }
+image = { version = "0.24.7", default-features = false, features = [ "dxt", "png" ] }
 itertools = { workspace = true }
 lazy_static = { workspace = true }
 log = { workspace = true }
