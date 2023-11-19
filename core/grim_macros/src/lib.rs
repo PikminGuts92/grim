@@ -4,7 +4,7 @@
 use crate::scene::get_object_tokens;
 use crate::scene::get_milo_object_tokens;
 use proc_macro::TokenStream;
-use syn::{AttributeArgs, DeriveInput, Meta, MetaList, NestedMeta, parse::Parser, parse_macro_input};
+use syn::{AttributeArgs, DeriveInput, parse::Parser, parse_macro_input};
 use quote::quote;
 
 mod common;

@@ -12,7 +12,7 @@ pub use milo_object::*;
 use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::HashMap;
-use syn::{AttributeArgs, DeriveInput, Meta, MetaList, NestedMeta, Path, parse::Parser, parse_macro_input};
+use syn::{Path, parse_macro_input};
 
 type GetObjectTokensFn = fn() -> ObjectTokens;
 

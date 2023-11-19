@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{AttributeArgs, DeriveInput, Meta, MetaList, NestedMeta, Path, parse::Parser, parse_macro_input};
+use syn::{DeriveInput, Meta, NestedMeta, Path, parse::Parser};
 
 pub fn get_meta_list(args: &Vec<NestedMeta>) -> Vec<String> {
     let mut metas = Vec::new();
