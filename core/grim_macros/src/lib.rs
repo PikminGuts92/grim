@@ -4,7 +4,7 @@
 use crate::scene::get_object_tokens;
 use crate::scene::get_milo_object_tokens;
 use proc_macro::TokenStream;
-use syn::{AttributeArgs, DeriveInput, parse::Parser, parse_macro_input};
+use syn::{DeriveInput, Meta, parse::Parser, parse_macro_input, punctuated::Punctuated, Token};
 use quote::quote;
 
 mod common;
@@ -75,8 +75,33 @@ pub fn version(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn milo(args: TokenStream, input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(args as AttributeArgs);
-    let paths = get_meta_paths(&args);
+    //let args = parse_macro_input!(args as AttributeArgs);
+
+    //syn::Attribute::parse_outer();
+    //let args = parse_macro_input!(args with syn::Attribute::parse_outer);
+
+    //Punctuated<Meta, Token![,]>
+
+    // TODO: Move to struct (Replaces get_meta_paths)
+    // https://docs.rs/syn/latest/syn/meta/fn.parser.html#example
+    // https://docs.rs/syn/latest/syn/meta/struct.ParseNestedMeta.html
+    let mut paths = Vec::new();
+    let meta_path_parser = syn::meta::parser(|m| {
+        paths.push(m.path);
+        Ok(())
+    });
+
+    //let args = syn::Attribute::parse_outer.parse(args);
+    parse_macro_input!(args with meta_path_parser);
+    /*let Ok(args) = args else {
+        println!("Failed to parse args");
+        return input;
+    };*/
+
+
+    //let paths = syn::Attribute::parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated);
+
+    //let paths = get_meta_paths(&args);
 
     let mut input = parse_macro_input!(input as DeriveInput);
     let mut transformed_input = proc_macro2::TokenStream::new();
@@ -108,8 +133,13 @@ pub fn milo(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn milo_super(args: TokenStream, input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(args as AttributeArgs);
-    let paths = get_meta_paths(&args);
+    let mut paths = Vec::new();
+    let meta_path_parser = syn::meta::parser(|m| {
+        paths.push(m.path);
+        Ok(())
+    });
+
+    parse_macro_input!(args with meta_path_parser);
 
     let mut input = parse_macro_input!(input as DeriveInput);
     let mut transformed_input = proc_macro2::TokenStream::new();

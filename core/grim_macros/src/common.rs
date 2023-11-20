@@ -1,6 +1,9 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Meta, NestedMeta, Path, parse::Parser};
+use syn::{Attribute, DeriveInput, Meta, Path, parse::Parser, punctuated::Punctuated, Token};
+
+/*
+TODO: Finish migrating from v1
 
 pub fn get_meta_list(args: &Vec<NestedMeta>) -> Vec<String> {
     let mut metas = Vec::new();
@@ -17,18 +20,23 @@ pub fn get_meta_list(args: &Vec<NestedMeta>) -> Vec<String> {
     }
 
     metas
-}
+} */
 
-pub fn get_meta_paths(args: &Vec<NestedMeta>) -> Vec<Path> {
+pub fn get_meta_paths(args: &Vec<Attribute>) -> Vec<Path> {
     let mut paths = Vec::new();
 
     for arg in args {
-        if let NestedMeta::Meta(meta) = arg {
-            if let Meta::Path(path) = meta {
-                paths.push(path.to_owned());
-            } else {
-                panic!()
-            }
+        //arg.parse_nested_meta(logic)
+        let nested_meta = arg.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated);
+
+        let Ok(nested_meta) = nested_meta else {
+            continue;
+        };
+
+        //let nested = arg.parse_nested_meta(|_| Ok(())).unwrap(); // Accept all meta attributes
+
+        for meta in nested_meta {
+            paths.push(meta.path().clone());
         }
     }
 
