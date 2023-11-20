@@ -68,6 +68,30 @@ impl GLTFImporter {
                 for mesh in meshes.iter_mut() {
                     mesh.parent = group.name.to_owned();
                     group.objects.push(mesh.name.to_owned());
+
+                    // Add empty material for mesh
+                    if mesh.mat.is_empty() {
+                        let mesh_base_name = &mesh
+                            .name
+                            .to_lowercase()
+                            .replace(".mesh", "");
+
+                        let mat_name = format!("{mesh_base_name}_material.mat");
+
+                        // Update mat name in mesh
+                        mesh.mat = mat_name.to_owned();
+
+                        // Use default material
+                        let mat = MatObject {
+                            name: mat_name,
+                            blend: Blend::kBlendSrcAlpha,
+                            z_mode: ZMode::kZModeNormal,
+                            prelit: false,
+                            ..Default::default()
+                        };
+
+                        self.mats.push(mat);
+                    }
                 }
 
                 // Add meshes to asset manager
@@ -204,6 +228,7 @@ impl GLTFImporter {
                 name: mat_name,
                 blend: Blend::kBlendSrcAlpha,
                 z_mode: ZMode::kZModeNormal,
+                prelit: false,
                 ..Default::default()
             };
 
