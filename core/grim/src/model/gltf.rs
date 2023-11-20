@@ -364,16 +364,21 @@ impl GLTFImporter {
             ])
             .collect();
 
+        // TODO: Figure out what happens if normals are missing...
+        let positions = reader.read_positions().unwrap();
+        let normals = reader.read_normals().unwrap();
+        let uvs = reader.read_tex_coords(0)
+            .map(|tc| tc.into_f32()
+            .collect::<Vec<_>>())
+            .unwrap_or_else(|| (0..positions.len()).map(|_| Default::default()).collect::<Vec<_>>());
+
         let verts_interleaved = izip!(
-            reader.read_positions().unwrap(),
-            reader.read_normals().unwrap(),
-            //reader.read_colors(0).unwrap().into_rgb_f32().into_iter(),
-            //reader.read_tex_coords(0).unwrap().into_f32(),
-            reader.read_tex_coords(0) // Hacky way to get tex coords or default if none found
-                .map(|tc| tc.into_f32()
-                .collect::<Vec<_>>())
-                .unwrap_or_default()
+            positions,
+            normals,
+            uvs,
         );
+
+        println!("Found {} verts!", verts_interleaved.len());
 
         let verts = verts_interleaved
             .map(|(pos, norm, uv)| Vert {
