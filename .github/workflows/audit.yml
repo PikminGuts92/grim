@@ -34,11 +34,6 @@ jobs:
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
-      - name: Remove cargo and toolchain configurations
-        shell: bash
-        run: |
-          rm -rf .cargo
-          rm rust-toolchain.toml
       - uses: actions/cache@v3
         with:
           path: |
