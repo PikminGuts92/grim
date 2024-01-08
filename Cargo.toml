@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "apps/cli/*",
-    "apps/ui/*",
+    #"apps/ui/*",
     "core/*",
     "utils/*"
 ]
