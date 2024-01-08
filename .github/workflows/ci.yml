@@ -165,7 +165,6 @@ jobs:
             cp -f $exe $OUTPUT_PATH/$(basename $exe)
           done
       - uses: actions/upload-artifact@v3
-        if: ${{ false }} # Skip for now
         with:
           name: ${{ env.ZIP_NAME }}
           path: ${{ env.OUTPUT_PATH }}/*
