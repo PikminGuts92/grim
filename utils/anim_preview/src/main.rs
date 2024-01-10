@@ -17,11 +17,12 @@ use nalgebra as na;
 use rerun::external::glam;
 use rerun::{
     coordinates::{Handedness, SignedAxis3},
-    components::{Arrow3D, ColorRGBA, LineStrip3D, MeshId, Point3D, Quaternion, Radius, RawMesh3D, Scalar, TextEntry, Transform3D, Vec3D, ViewCoordinates},
-    MsgSender, RecordingStream, RecordingStreamBuilder,
+    components::{LineStrip3D, Position3D, Radius, Scalar, Transform3D, ViewCoordinates},
+    RecordingStream, RecordingStreamBuilder,
     time::Timeline,
-    transform::{Transform3DRepr, TranslationRotationScale3D},
+    transform::{TranslationRotationScale3D},
 };
+use rerun::{Arrows3D, Points3D};
 
 use shared::*;
 
@@ -81,33 +82,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let (mut rec_stream, storage) = RecordingStreamBuilder::new("anim_preview").memory()?;
 
-    MsgSender::new(format!("world"))
-        /*.with_component(&[
+    rec_stream.log_timeless(
+        "world",
+        &rerun::ViewCoordinates::new(
             ViewCoordinates::from_up_and_handedness(
                 SignedAxis3::POSITIVE_Z,
-                Handedness::Right)
-        ])
-        .unwrap()*/
-        .with_splat(ViewCoordinates::from_up_and_handedness(
-            SignedAxis3::POSITIVE_Z,
-            Handedness::Right))
-        .unwrap()
-        /*.with_splat(Transform3D::Rigid3({
-            let q = na::UnitQuaternion
-                ::from_axis_angle(
-                    &na::Vector3::z_axis(),
-                    std::f32::consts::PI
-                );
-
-            Rigid3 {
-                rotation: Quaternion::new(q.i, q.j, q.k, q.w),
-                ..Default::default()
-            }
-        }))
-        .unwrap()*/
-        .with_timeless(true)
-        .send(&mut rec_stream)
-        .unwrap();
+                Handedness::Right))
+    );
 
     for mesh_anim in mesh_anims {
         println!("{}", mesh_anim.get_name());
@@ -156,15 +137,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             let glam_points = points
                 .into_iter()
-                .map(|Vector3 { x, y, z }| Point3D::new(x, y, z))
+                .map(|Vector3 { x, y, z }| Position3D::new(x, y, z))
                 .collect::<Vec<_>>();
 
             // Send points to rerun
-            MsgSender::new(mesh_anim.get_name().as_str())
-                .with_component(&glam_points)?
-                .with_time(Timeline::new_sequence("frame"), i as i64)
-                .send(&mut rec_stream)
-                .unwrap();
+            rec_stream.set_time_sequence("frame", i as i64);
+            rec_stream.log(
+                mesh_anim.get_name().as_str(),
+                &Points3D::new(glam_points)
+            );
 
             // Send line strip to rerun
             /*MsgSender::new(mesh_anim.get_name().as_str())
@@ -493,51 +474,41 @@ fn add_bones_to_stream(bone: &BoneNode, rec_stream: &RecordingStream, i: usize) 
         .collect::<Vec<LineStrip3D>>();
 
     // Add vertex
-    MsgSender::new(format!("world/{}", bone.name))
-        .with_component(&[
-            Point3D::from([v[0], v[1], v[2]])
-        ])
-        .unwrap()
-        .with_splat(Transform3D {
-            transform: Transform3DRepr::TranslationRotationScale({
-                let q = na::UnitQuaternion
-                    ::from_axis_angle(
-                        &na::Vector3::z_axis(),
-                        std::f32::consts::PI
-                    );
+    /*rec_stream.set_time_sequence("frame", i as i64);
+    rec_stream.log_component_batches(
+        format!("world/{}", bone.name),
+        false,
+        [
+            &Points3D::new([Position3D::from([v[0], v[1], v[2]])]),
+            /*
+            .with_splat(Transform3D {
+                transform: Transform3DRepr::TranslationRotationScale({
+                    let q = na::UnitQuaternion
+                        ::from_axis_angle(
+                            &na::Vector3::z_axis(),
+                            std::f32::consts::PI
+                        );
 
-                TranslationRotationScale3D {
-                    rotation: Some(Quaternion::new(q.i, q.j, q.k, q.w).into()),
-                    ..Default::default()
-                }
-            }),
-            from_parent: true
-        })
-        .unwrap()
-        /*.with_splat(ViewCoordinates::from_up_and_handedness(
-            SignedAxis3::POSITIVE_Z,
-            Handedness::Right))
-        .unwrap()*/
-        //.with_splat(Radius(1.0))
-        //.unwrap()
-        .with_time(Timeline::new_sequence("frame"), i as i64)
-        .send(rec_stream)
-        .unwrap();
+                    TranslationRotationScale3D {
+                        rotation: Some(Quaternion::new(q.i, q.j, q.k, q.w).into()),
+                        ..Default::default()
+                    }
+                }),
+                from_parent: true
+            })
+            */
+        ]
+    );*/
 
     // Add lines from node to children
-    MsgSender::new(format!("world/{}/lines", bone.name))
-        .with_component(&strips)
-        .unwrap()
-        /*.with_splat(ViewCoordinates::from_up_and_handedness(
-            SignedAxis3::POSITIVE_Z,
-            Handedness::Right))
-        .unwrap()*/
-        .with_time(Timeline::new_sequence("frame"), i as i64)
-        .send(rec_stream)
-        .unwrap();
+    rec_stream.set_time_sequence("frame", i as i64);
+    rec_stream.log(
+        format!("world/{}/lines", bone.name),
+        &rerun::LineStrips3D::new(strips)
+    );
 
     // Add direction arrow (not working)
-    MsgSender::new(format!("world/{}/arrows", bone.name))
+    /*MsgSender::new(format!("world/{}/arrows", bone.name))
         .with_component(&[
             Arrow3D {
                 origin: Vec3D([v[0], v[1], v[2]]),
@@ -567,7 +538,7 @@ fn add_bones_to_stream(bone: &BoneNode, rec_stream: &RecordingStream, i: usize) 
         .unwrap()*/
         .with_time(Timeline::new_sequence("frame"), i as i64)
         .send(rec_stream)
-        .unwrap();
+        .unwrap();*/
 
     for ch in bone.children.iter() {
         add_bones_to_stream(ch, rec_stream, i);

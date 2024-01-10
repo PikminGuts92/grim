@@ -68,6 +68,30 @@ impl GLTFImporter {
                 for mesh in meshes.iter_mut() {
                     mesh.parent = group.name.to_owned();
                     group.objects.push(mesh.name.to_owned());
+
+                    // Add empty material for mesh
+                    if mesh.mat.is_empty() {
+                        let mesh_base_name = &mesh
+                            .name
+                            .to_lowercase()
+                            .replace(".mesh", "");
+
+                        let mat_name = format!("{mesh_base_name}_material.mat");
+
+                        // Update mat name in mesh
+                        mesh.mat = mat_name.to_owned();
+
+                        // Use default material
+                        let mat = MatObject {
+                            name: mat_name,
+                            blend: Blend::kBlendSrcAlpha,
+                            z_mode: ZMode::kZModeNormal,
+                            prelit: false,
+                            ..Default::default()
+                        };
+
+                        self.mats.push(mat);
+                    }
                 }
 
                 // Add meshes to asset manager
@@ -204,6 +228,7 @@ impl GLTFImporter {
                 name: mat_name,
                 blend: Blend::kBlendSrcAlpha,
                 z_mode: ZMode::kZModeNormal,
+                prelit: false,
                 ..Default::default()
             };
 
@@ -339,16 +364,21 @@ impl GLTFImporter {
             ])
             .collect();
 
+        // TODO: Figure out what happens if normals are missing...
+        let positions = reader.read_positions().unwrap();
+        let normals = reader.read_normals().unwrap();
+        let uvs = reader.read_tex_coords(0)
+            .map(|tc| tc.into_f32()
+            .collect::<Vec<_>>())
+            .unwrap_or_else(|| (0..positions.len()).map(|_| Default::default()).collect::<Vec<_>>());
+
         let verts_interleaved = izip!(
-            reader.read_positions().unwrap(),
-            reader.read_normals().unwrap(),
-            //reader.read_colors(0).unwrap().into_rgb_f32().into_iter(),
-            //reader.read_tex_coords(0).unwrap().into_f32(),
-            reader.read_tex_coords(0) // Hacky way to get tex coords or default if none found
-                .map(|tc| tc.into_f32()
-                .collect::<Vec<_>>())
-                .unwrap_or_default()
+            positions,
+            normals,
+            uvs,
         );
+
+        println!("Found {} verts!", verts_interleaved.len());
 
         let verts = verts_interleaved
             .map(|(pos, norm, uv)| Vert {

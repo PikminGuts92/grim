@@ -1,4 +1,5 @@
 .env
+.rust-analyzer
 .vscode
 /target
 Cargo.lock

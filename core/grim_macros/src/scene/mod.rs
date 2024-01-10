@@ -12,7 +12,7 @@ pub use object::*;
 use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::HashMap;
-use syn::{AttributeArgs, DeriveInput, Meta, MetaList, NestedMeta, Path, parse::Parser, parse_macro_input};
+use syn::{Path, parse_macro_input};
 
 pub fn get_object_tokens(obj_type: &str) -> Option<ObjectTokens> {
     let get_tokens: fn() -> ObjectTokens = match obj_type {

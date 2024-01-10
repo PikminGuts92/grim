@@ -20,11 +20,6 @@ jobs:
             ~/.cargo/
             target/
           key: ${{ runner.os }}-cargo-check-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
-      - name: Remove cargo and toolchain configurations
-        shell: bash
-        run: |
-          rm -rf .cargo
-          rm rust-toolchain.toml
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -45,11 +40,6 @@ jobs:
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
-      - name: Remove cargo and toolchain configurations
-        shell: bash
-        run: |
-          rm -rf .cargo
-          rm rust-toolchain.toml
       - uses: actions/cache@v3
         with:
           path: |
@@ -77,11 +67,6 @@ jobs:
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
-      - name: Remove cargo and toolchain configurations
-        shell: bash
-        run: |
-          rm -rf .cargo
-          rm rust-toolchain.toml
       - uses: actions/cache@v3
         with:
           path: |
@@ -132,11 +117,6 @@ jobs:
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
       - uses: actions/checkout@v2
-      - name: Remove cargo and toolchain configurations
-        shell: bash
-        run: |
-          rm -rf .cargo
-          rm rust-toolchain.toml
       - uses: actions/cache@v3
         with:
           path: |
@@ -165,7 +145,6 @@ jobs:
             cp -f $exe $OUTPUT_PATH/$(basename $exe)
           done
       - uses: actions/upload-artifact@v3
-        if: ${{ false }} # Skip for now
         with:
           name: ${{ env.ZIP_NAME }}
           path: ${{ env.OUTPUT_PATH }}/*
