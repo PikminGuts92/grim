@@ -23,9 +23,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     app.load_args(&args)?;
 
     let ops = NativeOptions {
-        drag_and_drop_support: true,
+        viewport: eframe::egui::ViewportBuilder::default()
+            .with_min_inner_size([320.0, 240.0])
+            .with_drag_and_drop(true),
         // icon_data: Some(icon),
-        min_window_size: Some([1000., 600.].into()),
+        // min_window_size: Some([1000., 600.].into()),
         follow_system_theme: false, // Always dark by default
         default_theme: eframe::Theme::Dark,
         ..NativeOptions::default()
