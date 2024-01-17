@@ -5,6 +5,7 @@ use crate::{Platform, SystemInfo};
 use grim_traits::scene::Group;
 use itertools::*;
 use gltf_json as json;
+use grim_gltf::*;
 use nalgebra as na;
 use serde::ser::Serialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -89,7 +90,7 @@ fn map_bones_to_nodes(dir_name: &str, bones: &Vec<BoneNode>) -> Vec<gltf_json::N
         camera: None,
         children: None,
         extensions: None,
-        extras: None,
+        extras: Default::default(),
         matrix: Some([
             -1.0,  0.0,  0.0, 0.0,
             0.0,  0.0,  1.0, 0.0,
@@ -176,7 +177,7 @@ fn populate_child_nodes(nodes: &mut Vec<gltf_json::Node>, bones: &Vec<BoneNode>)
                 None
             },
             extensions: None,
-            extras: None,
+            extras: Default::default(),
             matrix: if mat.is_identity(f32::EPSILON) {
                 // Don't add identities
                 None
@@ -254,7 +255,7 @@ pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path, sys_in
                 Some(str_data)
             },
             extensions: None,
-            extras: None
+            extras: Default::default()
         })
         .collect();
 
@@ -278,7 +279,7 @@ pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path, sys_in
         scenes: vec![
             json::Scene {
                 extensions: None,
-                extras: None,
+                extras: Default::default(),
                 name: None,
                 nodes: vec![json::Index::new(0)],
             }
@@ -286,7 +287,7 @@ pub fn export_object_dir_to_gltf(obj_dir: &ObjectDir, output_path: &Path, sys_in
         skins: vec![
             json::Skin {
                 extensions: None,
-                extras: None,
+                extras: Default::default(),
                 inverse_bind_matrices: None,
                 joints: joints,
                 name: None,
@@ -629,7 +630,7 @@ impl GltfExporter {
             camera: None,
             children: None,
             extensions: None,
-            extras: None,
+            extras: Default::default(),
             matrix: None,
             mesh: None,
             name: Some(name.to_owned()),
@@ -837,7 +838,7 @@ impl GltfExporter {
                         }
                     },
                     extensions: None,
-                    extras: None
+                    extras: Default::default()
                 };
 
                 let texture = json::Texture {
@@ -845,7 +846,7 @@ impl GltfExporter {
                     sampler: Some(json::Index::new(0u32)),
                     source: json::Index::new(i as u32), // Image index
                     extensions: None,
-                    extras: None
+                    extras: Default::default()
                 };
 
                 (image, texture)
@@ -882,7 +883,7 @@ impl GltfExporter {
                                 index: json::Index::new(*d as u32),
                                 tex_coord: 0,
                                 extensions: None,
-                                extras: None
+                                extras: Default::default()
                             }),
                         //base_color_factor:
                         ..Default::default()
@@ -937,7 +938,7 @@ impl GltfExporter {
 
                 skins.push(json::Skin {
                     extensions: None,
-                    extras: None,
+                    extras: Default::default(),
                     inverse_bind_matrices: ibm_idx
                         .map(|i| json::Index::new(i as u32)),
                     joints: joints
@@ -1067,7 +1068,7 @@ impl GltfExporter {
                 byte_length: total_size as u32,
                 uri: Some(str_data),
                 extensions: None,
-                extras: None
+                extras: Default::default()
             }
         }];
 
@@ -1080,7 +1081,7 @@ impl GltfExporter {
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             },
             json::buffer::View {
                 name:  Some(String::from("uvs")),
@@ -1090,7 +1091,7 @@ impl GltfExporter {
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             },
             json::buffer::View {
                 name:  Some(String::from("weights_tans")),
@@ -1100,7 +1101,7 @@ impl GltfExporter {
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             },
             json::buffer::View {
                 name:  Some(String::from("faces")),
@@ -1110,7 +1111,7 @@ impl GltfExporter {
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             }
         ];
     }
@@ -1373,12 +1374,12 @@ impl GltfExporter {
                             .map(|idx| json::Index::new(*idx as u32)),
                         mode: json::validation::Checked::Valid(gltf::mesh::Mode::Triangles),
                         targets: None,
-                        extras: None,
+                        extras: Default::default(),
                         extensions: None
                     },
                 ],
                 weights: None,
-                extras: None,
+                extras: Default::default(),
                 extensions: None
             });
 
@@ -1491,7 +1492,7 @@ impl GltfExporter {
         gltf.scenes = vec![
             json::Scene {
                 extensions: None,
-                extras: None,
+                extras: Default::default(),
                 name: None,
                 nodes: scene_nodes
                     .into_iter()
@@ -1522,7 +1523,7 @@ impl GltfExporter {
             scenes: vec![
                 json::Scene {
                     extensions: None,
-                    extras: None,
+                    extras: Default::default(),
                     name: None,
                     nodes: vec![json::Index::new(0)],
                 }
@@ -1530,7 +1531,7 @@ impl GltfExporter {
             skins: vec![
                 json::Skin {
                     extensions: None,
-                    extras: None,
+                    extras: Default::default(),
                     inverse_bind_matrices: None,
                     joints: joints,
                     name: None,
@@ -1721,10 +1722,10 @@ impl GltfExporter {
                                 node: json::Index::new(node_idx as u32),
                                 path: json::validation::Checked::Valid(json::animation::Property::Translation),
                                 extensions: None,
-                                extras: None
+                                extras: Default::default()
                             },
                             extensions: None,
-                                extras: None
+                                extras: Default::default()
                         });
 
                         samplers.push(json::animation::Sampler {
@@ -1732,7 +1733,7 @@ impl GltfExporter {
                             output: json::Index::new(output_idx as u32),
                             interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                             extensions: None,
-                            extras: None
+                            extras: Default::default()
                         });
                     }
 
@@ -1754,10 +1755,10 @@ impl GltfExporter {
                                 node: json::Index::new(node_idx as u32),
                                 path: json::validation::Checked::Valid(json::animation::Property::Rotation),
                                 extensions: None,
-                                extras: None
+                                extras: Default::default()
                             },
                             extensions: None,
-                                extras: None
+                                extras: Default::default()
                         });
 
                         samplers.push(json::animation::Sampler {
@@ -1765,7 +1766,7 @@ impl GltfExporter {
                             output: json::Index::new(output_idx as u32),
                             interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                             extensions: None,
-                            extras: None
+                            extras: Default::default()
                         });
                     }
 
@@ -1787,10 +1788,10 @@ impl GltfExporter {
                                 node: json::Index::new(node_idx as u32),
                                 path: json::validation::Checked::Valid(json::animation::Property::Scale),
                                 extensions: None,
-                                extras: None
+                                extras: Default::default()
                             },
                             extensions: None,
-                                extras: None
+                                extras: Default::default()
                         });
 
                         samplers.push(json::animation::Sampler {
@@ -1798,7 +1799,7 @@ impl GltfExporter {
                             output: json::Index::new(output_idx as u32),
                             interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                             extensions: None,
-                            extras: None
+                            extras: Default::default()
                         });
                     }
                 }
@@ -1814,7 +1815,7 @@ impl GltfExporter {
                 channels,
                 samplers,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             });
         }
 
@@ -1951,10 +1952,10 @@ impl GltfExporter {
                         node: json::Index::new(node_idx as u32),
                         path: json::validation::Checked::Valid(json::animation::Property::Translation),
                         extensions: None,
-                        extras: None
+                        extras: Default::default()
                     },
                     extensions: None,
-                        extras: None
+                        extras: Default::default()
                 });
 
                 samplers.push(json::animation::Sampler {
@@ -1962,7 +1963,7 @@ impl GltfExporter {
                     output: json::Index::new(output_idx as u32),
                     interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                     extensions: None,
-                    extras: None
+                    extras: Default::default()
                 });*/
 
                 const FPS: f32 = 1. / 30.;
@@ -1990,10 +1991,10 @@ impl GltfExporter {
                             node: json::Index::new(node_idx as u32),
                             path: json::validation::Checked::Valid(json::animation::Property::Translation),
                             extensions: None,
-                            extras: None
+                            extras: Default::default()
                         },
                         extensions: None,
-                            extras: None
+                            extras: Default::default()
                     });
     
                     samplers.push(json::animation::Sampler {
@@ -2001,7 +2002,7 @@ impl GltfExporter {
                         output: json::Index::new(output_idx as u32),
                         interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                         extensions: None,
-                        extras: None
+                        extras: Default::default()
                     });
                 } else {
                     // Add empty pos sample
@@ -2025,10 +2026,10 @@ impl GltfExporter {
                             node: json::Index::new(node_idx as u32),
                             path: json::validation::Checked::Valid(json::animation::Property::Translation),
                             extensions: None,
-                            extras: None
+                            extras: Default::default()
                         },
                         extensions: None,
-                            extras: None
+                            extras: Default::default()
                     });
     
                     samplers.push(json::animation::Sampler {
@@ -2036,7 +2037,7 @@ impl GltfExporter {
                         output: json::Index::new(output_idx as u32),
                         interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                         extensions: None,
-                        extras: None
+                        extras: Default::default()
                     });
                 }
 
@@ -2150,10 +2151,10 @@ impl GltfExporter {
                             node: json::Index::new(node_idx as u32),
                             path: json::validation::Checked::Valid(json::animation::Property::Rotation),
                             extensions: None,
-                            extras: None
+                            extras: Default::default()
                         },
                         extensions: None,
-                            extras: None
+                            extras: Default::default()
                     });
 
                     samplers.push(json::animation::Sampler {
@@ -2161,7 +2162,7 @@ impl GltfExporter {
                         output: json::Index::new(output_idx as u32),
                         interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
                         extensions: None,
-                        extras: None
+                        extras: Default::default()
                     });
                 }
 
@@ -2178,16 +2179,12 @@ impl GltfExporter {
                 channels,
                 samplers,
                 extensions: None,
-                extras: None
+                extras: Default::default()
             });
         }
 
         gltf.animations = animations;
     }
-}
-
-fn align_to_multiple_of_four(n: usize) -> usize {
-    (n + 3) & !3
 }
 
 fn decompose_trs(mat: na::Matrix4<f32>) -> (na::Vector3<f32>, na::UnitQuaternion<f32>, na::Vector3<f32>) {
@@ -2232,268 +2229,6 @@ fn decompose_trs_with_milo_coords(mut mat: na::Matrix4<f32>) -> (na::Vector3<f32
         q,
         super::MILOSPACE_TO_GLSPACE.transform_vector(&scale)
     )
-}
-
-struct AccessorBuilder {
-    // Key = stride, Value = (idx, data)
-    working_data: HashMap<usize, (usize, Vec<u8>)>,
-    accessors: Vec<json::Accessor>,
-}
-
-impl AccessorBuilder {
-    fn new() -> AccessorBuilder {
-        AccessorBuilder {
-            working_data: Default::default(),
-            accessors: Vec::new()
-        }
-    }
-
-    fn calc_stride<const N: usize, T: ComponentValue>(&self) -> usize {
-        N * T::size()
-    }
-
-    fn update_buffer_view<const N: usize, T: ComponentValue>(&mut self, mut data: Vec<u8>) -> (usize, usize) {
-        let stride = self.calc_stride::<N, T>();
-        let data_size = data.len();
-        let next_idx = self.working_data.len();
-
-        // Upsert buffer data
-        let (idx, buff) = self.working_data
-            .entry(stride)
-            .and_modify(|(_, b)| b.append(&mut data))
-            .or_insert_with(|| (next_idx, data));
-
-        // Return index of updated buffer view + insert offset
-        (*idx, buff.len() - data_size)
-    }
-
-    pub fn add_scalar<S: Into<String>, T: ComponentValue, U: IntoIterator<Item = T>>(&mut self, name: S, data: U) -> Option<usize> {
-        // Map to iter of single-item arrays (definitely hacky)
-        self.add_array(name, data.into_iter().map(|d| [d]))
-    }
-
-    pub fn add_array<const N: usize, S: Into<String>, T: ComponentValue, U: IntoIterator<Item = V>, V: Into<[T; N]>>(&mut self, name: S, data: U) -> Option<usize> {
-        let comp_type = T::get_component_type();
-
-        let acc_type = match N {
-            1 => json::accessor::Type::Scalar,
-            2 => json::accessor::Type::Vec2,
-            3 => json::accessor::Type::Vec3,
-            4 => json::accessor::Type::Vec4,
-            9 => json::accessor::Type::Mat3,
-            16 => json::accessor::Type::Mat4,
-            _ => unimplemented!()
-        };
-
-        // Write to stream and find min/max values
-        let mut data_stream = Vec::new();
-        let (count, min, max) = data
-            .into_iter()
-            .fold((0usize, [T::max(); N], [T::min(); N]), |(count, mut min, mut max), item| {
-                let mut i = 0;
-                for v in item.into() {
-                    // Encode + append each value to master buffer
-                    data_stream.append(&mut v.encode());
-
-                    // Calc min + max values
-                    min[i] = min[i].get_min(v);
-                    max[i] = max[i].get_max(v);
-
-                    i += 1;
-                }
-
-                (count + 1, min, max)
-            });
-
-        if count == 0 {
-            // If count is 0, don't bother adding
-            return None;
-        }
-
-        // Update buffer views
-        let (buff_idx, buff_off) = self.update_buffer_view::<N, T>(data_stream);
-
-        let acc_index = self.accessors.len();
-
-        let (min_value, max_value) = Self::get_min_max_values(
-            &acc_type,
-            min,
-            max
-        ).unwrap();
-
-        // Create accessor
-        let accessor = json::Accessor {
-            buffer_view: Some(json::Index::new(buff_idx as u32)),
-            byte_offset: buff_off as u32,
-            count: count as u32,
-            component_type: json::validation::Checked::Valid(json::accessor::GenericComponentType(comp_type)),
-            extensions: None,
-            extras: None,
-            type_: json::validation::Checked::Valid(acc_type),
-            min: Some(min_value),
-            max: Some(max_value),
-            name: match name.into() {
-                s if !s.is_empty() => Some(s),
-                _ => None
-            },
-            normalized: false,
-            sparse: None
-        };
-
-        self.accessors.push(accessor);
-        Some(acc_index)
-    }
-
-    fn generate_buffer_views(&mut self) -> (Vec<json::buffer::View>, Vec<u8>) {
-        // Get view info and sort by assigned index
-        let view_data = self.working_data
-            .drain()
-            .map(|(k, (idx, data))| (idx, k, data)) // (idx, stride, data)
-            .sorted_by(|(a, ..), (b, ..)| a.cmp(b));
-
-        let mut views = Vec::new();
-        let mut all_data = Vec::new();
-
-        for (_idx, stride, mut data) in view_data {
-            // Pad buffer view if required
-            let padded_size = align_to_multiple_of_four(data.len());
-            if padded_size > data.len() {
-                let diff_size = padded_size - data.len();
-                data.append(&mut vec![0u8; diff_size]);
-            }
-
-            let data_size = data.len();
-            let data_offset = all_data.len();
-
-            // Move data from view to full buffer
-            all_data.append(&mut data);
-
-            views.push(json::buffer::View {
-                name: None,
-                byte_length: data_size as u32,
-                byte_offset: Some(data_offset as u32),
-                byte_stride: match stride {
-                    64 => None, // Hacky way to disable writing stride for inverse bind transforms
-                    s if s % 4 == 0 => Some(stride as u32),
-                    _ => None // Don't encode if not multiple
-                },
-                buffer: json::Index::new(0),
-                target: None,
-                extensions: None,
-                extras: None
-            });
-        }
-
-        (views, all_data)
-    }
-
-    fn generate<T: Into<String>>(mut self, name: T) -> (Vec<json::Accessor>, Vec<json::buffer::View>, json::Buffer, Vec<u8>) {
-        // Generate buffer views + final buffer blob
-        let (views, buffer_data) = self.generate_buffer_views();
-
-        // Create buffer json
-        let buffer = json::Buffer {
-            name: None,
-            byte_length: buffer_data.len() as u32,
-            uri: match name.into() {
-                s if !s.is_empty() => Some(s),
-                _ => None
-            },
-            extensions: None,
-            extras: None
-        };
-
-        // Return everything
-        (self.accessors,
-            views,
-            buffer,
-            buffer_data)
-    }
-
-    fn get_min_max_values<const N: usize, T: ComponentValue>(acc_type: &json::accessor::Type, min: [T; N], max: [T; N]) -> Option<(json::Value, json::Value)> {
-        let result = match acc_type {
-            json::accessor::Type::Scalar => (
-                json::serialize::to_value([min.iter().fold(T::max(), |acc, m| acc.get_min(*m))]),
-                json::serialize::to_value([max.iter().fold(T::min(), |acc, m| acc.get_max(*m))]),
-            ),
-            _ => (
-                json::serialize::to_value(min.to_vec()),
-                json::serialize::to_value(max.to_vec()),
-            ),
-        };
-
-        match result {
-            (Ok(min), Ok(max)) => Some((min, max)),
-            _ => None
-        }
-    }
-}
-
-trait ComponentValue : Copy + Serialize {
-    fn min() -> Self;
-    fn max() -> Self;
-
-    fn get_min(self, other: Self) -> Self;
-    fn get_max(self, other: Self) -> Self;
-
-    fn encode(self) -> Vec<u8>;
-    fn get_component_type() -> json::accessor::ComponentType;
-
-    fn size() -> usize {
-        std::mem::size_of::<Self>()
-    }
-}
-
-impl ComponentValue for u16 {
-    fn min() -> Self {
-        u16::MIN
-    }
-
-    fn max() -> Self {
-        u16::MAX
-    }
-
-    fn get_min(self, other: Self) -> Self {
-        std::cmp::min(self, other)
-    }
-
-    fn get_max(self, other: Self) -> Self {
-        std::cmp::max(self, other)
-    }
-
-    fn encode(self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
-    }
-
-    fn get_component_type() -> json::accessor::ComponentType {
-        json::accessor::ComponentType::U16
-    }
-}
-
-impl ComponentValue for f32 {
-    fn min() -> Self {
-        f32::MIN
-    }
-
-    fn max() -> Self {
-        f32::MAX
-    }
-
-    fn get_min(self, other: Self) -> Self {
-        f32::min(self, other)
-    }
-
-    fn get_max(self, other: Self) -> Self {
-        f32::max(self, other)
-    }
-
-    fn encode(self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
-    }
-
-    fn get_component_type() -> json::accessor::ComponentType {
-        json::accessor::ComponentType::F32
-    }
 }
 
 #[cfg(test)]
