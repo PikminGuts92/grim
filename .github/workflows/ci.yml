@@ -133,7 +133,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --bins --all-features
+          args: --release --bins
       - name: Create output directory and copy licenses
         shell: bash
         run: |
