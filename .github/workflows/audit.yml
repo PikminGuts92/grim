@@ -53,7 +53,7 @@ jobs:
       - name: Build audit binaries
         shell: bash
         run: |
-          cargo auditable build --release --bins
+          cargo auditable build --release --bins --all-features
       - name: Audit binaries
         shell: bash
         run: |
