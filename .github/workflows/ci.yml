@@ -103,9 +103,6 @@ jobs:
             osname: "linux-x64"
           - os: windows-latest
             osname: "win-x64"
-          - os: windows-latest
-            osname: "win-x86"
-            toolchain: "stable-i686-pc-windows-msvc"
     env:
       ZIP_NAME: ${{ github.event.repository.name }}-ci-${{ github.sha }}-${{ matrix.osname }}
       BIN_PATH: ./target/release
@@ -128,7 +125,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: ${{ matrix.toolchain || 'stable' }}
+          toolchain: stable
           override: true
       - uses: actions-rs/cargo@v1
         with:

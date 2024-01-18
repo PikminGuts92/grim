@@ -20,9 +20,6 @@ jobs:
             osname: "linux-x64"
           - os: windows-latest
             osname: "win-x64"
-          - os: windows-latest
-            osname: "win-x86"
-            toolchain: "stable-i686-pc-windows-msvc"
     env:
       BIN_PATH: ./target/release
     steps:
@@ -43,7 +40,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: ${{ matrix.toolchain || 'stable' }}
+          toolchain: stable
           override: true
       - name: Install audit dependencies
         shell: bash
