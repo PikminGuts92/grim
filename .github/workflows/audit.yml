@@ -37,11 +37,6 @@ jobs:
             ~/.cargo/
             target/
           key: ${{ matrix.osname }}-cargo-audit-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
       - name: Install audit dependencies
         shell: bash
         run: |

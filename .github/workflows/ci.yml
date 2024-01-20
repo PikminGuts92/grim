@@ -20,15 +20,10 @@ jobs:
             ~/.cargo/
             target/
           key: ${{ runner.os }}-cargo-check-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-features
+      - name: Cargo check
+        shell: bash
+        run: |
+          cargo check --all-features
 
   test:
     name: Test
@@ -47,48 +42,10 @@ jobs:
             ~/.cargo/
             target/
           key: ${{ runner.os }}-cargo-test-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features
-
-  clippy:
-    name: Clippy
-    if: ${{ false }} # Always skip job (for now)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install linux dependencies
+      - name: Cargo test
         shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
-          sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/
-            target/
-          key: ${{ runner.os }}-cargo-clippy-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+          cargo test --all-features
 
   build:
     name: Build (${{ matrix.osname }})
@@ -122,15 +79,10 @@ jobs:
             ~/.cargo/
             target/
           key: ${{ matrix.osname }}-cargo-build-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --bins
+      - name: Cargo build
+        shell: bash
+        run: |
+          cargo build --release --bins
       - name: Create output directory and copy licenses
         shell: bash
         run: |
