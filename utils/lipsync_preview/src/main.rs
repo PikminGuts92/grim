@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::io::prelude::*;

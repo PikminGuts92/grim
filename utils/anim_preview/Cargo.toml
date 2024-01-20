@@ -10,3 +10,6 @@ keyframe = "1.1.1"
 nalgebra = "0.32.3"
 rerun = { version = "0.12.0", features = [ "native_viewer" ] }
 shared = { path = "../shared" }
+
+[lints]
+workspace = true

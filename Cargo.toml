@@ -30,6 +30,11 @@ serde_json = "1.0.111"
 simplelog = "0.12.1"
 thiserror = "1.0.56"
 
+[workspace.lints.rust]
+dead_code = "allow"
+deprecated = "allow"
+unused_imports = "allow"
+
 [profile.dev.package."*"]
 opt-level = 3
 

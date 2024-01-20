@@ -11,3 +11,6 @@ thiserror = { workspace = true }
 
 [features]
 encode = [ "grim/audio_experimental" ]
+
+[lints]
+workspace = true

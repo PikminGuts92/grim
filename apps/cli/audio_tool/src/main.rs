@@ -1,5 +1,3 @@
-#![allow(unused_imports)]
-
 mod apps;
 use apps::AudioTool;
 

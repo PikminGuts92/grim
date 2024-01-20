@@ -12,3 +12,6 @@ thiserror = { workspace = true }
 [features]
 default = [ "experimental" ]
 experimental = []
+
+[lints]
+workspace = true
