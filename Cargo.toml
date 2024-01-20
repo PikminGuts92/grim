@@ -33,6 +33,7 @@ thiserror = "1.0.56"
 [workspace.lints.rust]
 dead_code = "allow"
 deprecated = "allow"
+unused_assignments = "allow"
 unused_imports = "allow"
 
 [profile.dev.package."*"]

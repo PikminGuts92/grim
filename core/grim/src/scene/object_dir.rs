@@ -1,4 +1,4 @@
-use crate::{SystemInfo};
+use crate::SystemInfo;
 use crate::io::{BinaryStream, FileSearchDepth, FileStream, MemoryStream, PathFinder, SeekFrom, Stream};
 use crate::scene::*;
 use lazy_static::lazy_static;

@@ -17,7 +17,7 @@ use rerun::{
     components::{LineStrip3D, Position3D, Radius, Scalar, Transform3D, ViewCoordinates},
     RecordingStream, RecordingStreamBuilder,
     time::Timeline,
-    transform::{TranslationRotationScale3D},
+    transform::TranslationRotationScale3D,
 };
 use rerun::{Arrows3D, Points3D};
 
@@ -419,7 +419,7 @@ impl<'a> BoneNode<'a> {
             }
 
             if let Some(rotz) = rotz {
-                let (roll, pitch, yaw) = rotate.euler_angles();
+                let (_roll, _pitch, _yaw) = rotate.euler_angles();
                 //println!("({}, {}, {})", roll, pitch, yaw);
 
                 //rotate = na::UnitQuaternion::from_euler_angles(roll, pitch, std::f32::consts::PI * rotz);
