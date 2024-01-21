@@ -9,3 +9,6 @@ gltf = { workspace = true }
 gltf-json = { workspace = true }
 itertools = { workspace = true }
 serde = { workspace = true }
+
+[lints]
+workspace = true

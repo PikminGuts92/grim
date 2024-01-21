@@ -13,21 +13,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/
             target/
           key: ${{ runner.os }}-cargo-check-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
+      - name: Cargo check
+        shell: bash
+        run: |
+          cargo check --all-features
 
   test:
     name: Test
@@ -39,54 +35,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/
             target/
           key: ${{ runner.os }}-cargo-test-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-
-  clippy:
-    name: Clippy
-    if: ${{ false }} # Always skip job (for now)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install linux dependencies
+      - name: Cargo test
         shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
-          sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/
-            target/
-          key: ${{ runner.os }}-cargo-clippy-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+          cargo test --all-features
 
   build:
     name: Build (${{ matrix.osname }})
@@ -101,9 +60,6 @@ jobs:
             osname: "linux-x64"
           - os: windows-latest
             osname: "win-x64"
-          - os: windows-latest
-            osname: "win-x86"
-            toolchain: "stable-i686-pc-windows-msvc"
     env:
       ZIP_NAME: ${{ github.event.repository.name }}-ci-${{ github.sha }}-${{ matrix.osname }}
       BIN_PATH: ./target/release
@@ -116,22 +72,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
           sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/
             target/
           key: ${{ matrix.osname }}-cargo-build-stable-${{ hashFiles('**/Cargo.toml', './Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.toolchain || 'stable' }}
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --bins
+      - name: Cargo build
+        shell: bash
+        run: |
+          cargo build --release --bins
       - name: Create output directory and copy licenses
         shell: bash
         run: |
@@ -144,7 +95,7 @@ jobs:
           for exe in $(find $BIN_PATH -maxdepth 1 -type f ${{ matrix.os == 'macos-latest' && '-perm +0111' || '-executable' }} -print); do
             cp -f $exe $OUTPUT_PATH/$(basename $exe)
           done
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ZIP_NAME }}
           path: ${{ env.OUTPUT_PATH }}/*

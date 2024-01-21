@@ -53,7 +53,7 @@ impl<'a> DTAParser<'a> {
     }
 
     fn parse_array(&mut self) -> Vec<(DataArray, usize)> {
-        let mut data = Vec::new();
+        let data = Vec::new();
 
         self.consume_whitespace();
         // TODO: Consume comments
@@ -346,7 +346,7 @@ fn parse_variable<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
 fn parse_kdata_unhandled<'a>(text: &'a [u8]) -> IResult<&'a [u8], DataArray> {
     map(
         all_consuming(tag("kDataUnhandled")),
-        |data: &'a [u8]| DataArray::KDataUnhandled
+        |_data: &'a [u8]| DataArray::KDataUnhandled
     )(text)
 }
 

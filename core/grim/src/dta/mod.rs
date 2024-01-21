@@ -225,7 +225,7 @@ impl DataArray {
                 stream.write_all(&v.data)?;
             },
             //DataArray::Func(_)        => 0x03,
-            DataArray::Object(o) => {
+            DataArray::Object(_o) => {
                 todo!("Support object dta serialization")
             },
             DataArray::Symbol(s) => {

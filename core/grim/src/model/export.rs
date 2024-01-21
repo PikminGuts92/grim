@@ -426,7 +426,7 @@ impl GltfExporter {
 
         self.dirs_rc.clear();
 
-        for (i, mut dir_entry) in self.object_dirs.drain(..).enumerate() {
+        for (_i, mut dir_entry) in self.object_dirs.drain(..).enumerate() {
             let entries = dir_entry.entries.drain(..).collect::<Vec<_>>();
             let parent = Rc::new(dir_entry);
 
@@ -1849,7 +1849,7 @@ impl GltfExporter {
             let mut samplers = Vec::new();
 
             // TODO: Delete after testing
-            let filtered_bone_names = HashSet::from([
+            let _filtered_bone_names = HashSet::from([
                 //"bone_neck.mesh"
                 "bone_spine1.mesh",
                 "bone_spine2.mesh",
@@ -1865,7 +1865,7 @@ impl GltfExporter {
                 //.filter(|(b, _)| filtered_bone_names.contains(b.symbol.as_str()))
                 .collect::<Vec<_>>();
 
-            for (mut bone, frames) in bone_samples {
+            for (mut bone, _frames) in bone_samples {
                 let bone_name = bone.symbol.as_str();
                 let Some(node_idx) = node_map.get(bone_name).map(|i| *i) else {
                     continue;
@@ -1887,7 +1887,7 @@ impl GltfExporter {
                     .unwrap_or_else(|| na::UnitQuaternion::identity());
 
                 // TODO: Add scaling transform samples...
-                let node_scale = node.scale
+                let _node_scale = node.scale
                     .map(na::Vector3::from)
                     .unwrap_or_else(|| na::Vector3::from_element(1.0));
 

@@ -8,3 +8,6 @@ edition.workspace = true
 clap = { workspace = true }
 grim = { workspace = true, features = [ "midi" ] }
 thiserror = { workspace = true }
+
+[lints]
+workspace = true

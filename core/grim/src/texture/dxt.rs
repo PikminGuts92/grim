@@ -1,5 +1,3 @@
-#![allow(deprecated)]
-
 use image::codecs::dxt::{DxtEncoder, DxtVariant}; // TODO: Remove deprecated types
 use rayon::prelude::*;
 use super::*;

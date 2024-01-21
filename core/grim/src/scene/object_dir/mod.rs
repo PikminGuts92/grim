@@ -1,6 +1,6 @@
 mod io;
 
-use crate::{SystemInfo};
+use crate::SystemInfo;
 use crate::io::{BinaryStream, FileSearchDepth, FileStream, MemoryStream, PathFinder, SeekFrom, Stream};
 use crate::scene::*;
 use grim_macros::*;

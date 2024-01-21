@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-
 use std::env;
 use std::error::Error;
 use std::collections::{HashMap, HashSet};
@@ -20,7 +17,7 @@ use rerun::{
     components::{LineStrip3D, Position3D, Radius, Scalar, Transform3D, ViewCoordinates},
     RecordingStream, RecordingStreamBuilder,
     time::Timeline,
-    transform::{TranslationRotationScale3D},
+    transform::TranslationRotationScale3D,
 };
 use rerun::{Arrows3D, Points3D};
 
@@ -80,7 +77,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .collect::<Vec<_>>();
 
-    let (mut rec_stream, storage) = RecordingStreamBuilder::new("anim_preview").memory()?;
+    let (rec_stream, storage) = RecordingStreamBuilder::new("anim_preview").memory()?;
 
     rec_stream.log_timeless(
         "world",
@@ -88,7 +85,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             ViewCoordinates::from_up_and_handedness(
                 SignedAxis3::POSITIVE_Z,
                 Handedness::Right))
-    );
+    )?;
 
     for mesh_anim in mesh_anims {
         println!("{}", mesh_anim.get_name());
@@ -145,7 +142,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             rec_stream.log(
                 mesh_anim.get_name().as_str(),
                 &Points3D::new(glam_points)
-            );
+            )?;
 
             // Send line strip to rerun
             /*MsgSender::new(mesh_anim.get_name().as_str())
@@ -422,7 +419,7 @@ impl<'a> BoneNode<'a> {
             }
 
             if let Some(rotz) = rotz {
-                let (roll, pitch, yaw) = rotate.euler_angles();
+                let (_roll, _pitch, _yaw) = rotate.euler_angles();
                 //println!("({}, {}, {})", roll, pitch, yaw);
 
                 //rotate = na::UnitQuaternion::from_euler_angles(roll, pitch, std::f32::consts::PI * rotz);
@@ -505,7 +502,7 @@ fn add_bones_to_stream(bone: &BoneNode, rec_stream: &RecordingStream, i: usize) 
     rec_stream.log(
         format!("world/{}/lines", bone.name),
         &rerun::LineStrips3D::new(strips)
-    );
+    ).unwrap();
 
     // Add direction arrow (not working)
     /*MsgSender::new(format!("world/{}/arrows", bone.name))

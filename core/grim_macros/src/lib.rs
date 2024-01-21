@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-
 use crate::scene::get_object_tokens;
 use crate::scene::get_milo_object_tokens;
 use proc_macro::TokenStream;

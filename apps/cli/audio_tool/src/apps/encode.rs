@@ -27,8 +27,8 @@ pub struct EncoderApp {
 
 impl SubApp for EncoderApp {
     fn process(&mut self) -> Result<(), Box<dyn Error>> {
-        let input_path = Path::new(&self.input_path);
-        let output_path = Path::new(&self.output_path);
+        let _input_path = Path::new(&self.input_path);
+        let _output_path = Path::new(&self.output_path);
 
         todo!()
         //Ok(())

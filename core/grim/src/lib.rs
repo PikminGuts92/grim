@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-
 pub mod ark;
 #[cfg(feature = "audio")] pub mod audio;
 pub mod dta;
