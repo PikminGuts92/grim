@@ -174,6 +174,7 @@ impl Bitmap {
             let tpl_enc = match self.encoding {
                  72 => TPLEncoding::CMP,
                 328 => TPLEncoding::CMP_ALPHA,
+                584 => TPLEncoding::CMP, // I think it's the same as 72?
                 _ => {
                     return Err(Box::new(BitmapError::UnsupportedEncoding {
                         version: self.encoding,
