@@ -1,4 +1,4 @@
-use crate::{SystemInfo};
+use crate::SystemInfo;
 use crate::io::compression::*;
 use crate::io::stream::{BinaryStream, IOEndian, MemoryStream, SeekFrom, Stream};
 use crate::scene::{Object, ObjectDir, ObjectDirBase, PackedObject};
@@ -156,6 +156,8 @@ impl MiloArchive {
 
     pub fn unpack_directory(&self, info: &SystemInfo) -> Result<ObjectDir, Box<dyn Error>> {
         let mut stream = self.get_stream();
+        let stream_size = stream.len().unwrap() as u64;
+
         let stream = stream.as_mut();
         let mut reader = BinaryStream::from_stream_with_endian(stream, info.endian);
 
@@ -256,6 +258,10 @@ impl MiloArchive {
                 // TODO: Else throw error?
                 break;
             }
+        }
+
+        if stream.pos() < stream_size {
+            log::warn!("Read less data than length of milo file. Likely not parsed correctly.");
         }
 
         Ok(ObjectDir::ObjectDir(ObjectDirBase {
