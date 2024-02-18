@@ -1,12 +1,12 @@
 #[cfg(feature = "python")] use pyo3::prelude::*;
-use std::{path::PathBuf, todo};
+use std::path::PathBuf;
 
 #[derive(Debug, Default)]
 #[cfg_attr(feature = "python", pyclass)]
 pub struct Ark {
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub version: i32,
+    #[cfg(feature = "python")] #[pyo3(get, set)] pub version: i32,
     pub encryption: ArkEncryption,
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub entries: Vec<ArkOffsetEntry>,
+    #[cfg(feature = "python")] #[pyo3(get, set)] pub entries: Vec<ArkOffsetEntry>,
     pub path: PathBuf, // Hdr/ark path,
     pub part_paths: Vec<PathBuf>,
 }
@@ -20,14 +20,14 @@ pub enum ArkEncryption {
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "python", pyclass(get_all, set_all))]
 pub struct ArkOffsetEntry {
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub id: u32,
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub path: String,
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub offset: u64,
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub part: u32,
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub size: usize,
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub inflated_size: usize
+    pub id: u32,
+    pub path: String,
+    pub offset: u64,
+    pub part: u32,
+    pub size: usize,
+    pub inflated_size: usize
 }
 
 impl ArkOffsetEntry {

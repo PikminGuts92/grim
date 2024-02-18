@@ -3,17 +3,17 @@ use crate::io::IOEndian;
 #[cfg(feature = "python")] use pyo3::prelude::*;
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "python", pyclass(get_all, set_all))]
 pub struct Bitmap {
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub bpp: u8,
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub encoding: u32,
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub mip_maps: u8,
+    pub bpp: u8,
+    pub encoding: u32,
+    pub mip_maps: u8,
 
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub width: u16,
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub height: u16,
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub bpl: u16,
+    pub width: u16,
+    pub height: u16,
+    pub bpl: u16,
 
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))] pub raw_data: Vec<u8>,
+    pub raw_data: Vec<u8>,
 }
 
 impl Bitmap {
