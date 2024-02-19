@@ -22,7 +22,7 @@ log = { workspace = true }
 midly = { version = "0.5.3", optional = true }
 nalgebra = { version = "0.32.3", optional = true }
 nom = "7.1.3"
-pyo3 = { version = "0.20.2", optional = true, features = [ "experimental-inspect", "extension-module" ] }
+pyo3 = { version = "0.20.2", features = [ "experimental-inspect", "extension-module" ] }
 rayon = "1.8.0"
 regex = { version = "1.10.2", default-features = false, features = [ "std" ] }
 serde = { optional = true, workspace = true }
@@ -38,7 +38,7 @@ audio = [ "bitstream-io", "fon", "wav" ]
 audio_experimental = []
 midi = [ "midly" ]
 model = [ "gltf", "gltf-json", "grim_gltf", "nalgebra", "serde" ]
-python = [ "pyo3" ]
+python = [ ]
 
 [[bench]]
 name = "texture_benchmark"

@@ -1,18 +1,21 @@
-#[cfg(feature = "python")] use pyo3::prelude::*;
+use pyo3::prelude::*;
 use std::path::PathBuf;
 
 #[derive(Debug, Default)]
-#[cfg_attr(feature = "python", pyclass)]
+// Disable conditional until this is merged: https://github.com/PyO3/pyo3/pull/2786
+//#[cfg_attr(feature = "python", pyclass)]
+#[pyclass]
 pub struct Ark {
-    #[cfg(feature = "python")] #[pyo3(get, set)] pub version: i32,
+    //#[cfg_attr(feature = "python", pyo3(get, set))]
+    #[pyo3(get, set)] pub version: i32,
     pub encryption: ArkEncryption,
-    #[cfg(feature = "python")] #[pyo3(get, set)] pub entries: Vec<ArkOffsetEntry>,
+    //#[cfg_attr(feature = "python", pyo3(get, set))]
+    #[pyo3(get, set)] pub entries: Vec<ArkOffsetEntry>,
     pub path: PathBuf, // Hdr/ark path,
     pub part_paths: Vec<PathBuf>,
 }
 
 #[derive(Debug)]
-//#[cfg_attr(feature = "python", pyclass)]
 pub enum ArkEncryption {
     None,
     ClassicEncryption(i32),
@@ -20,7 +23,8 @@ pub enum ArkEncryption {
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "python", pyclass(get_all, set_all))]
+//#[cfg_attr(feature = "python", pyclass(get_all, set_all))]
+#[pyclass(get_all, set_all)]
 pub struct ArkOffsetEntry {
     pub id: u32,
     pub path: String,
