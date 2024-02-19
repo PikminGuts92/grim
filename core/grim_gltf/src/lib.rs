@@ -1,7 +1,7 @@
 use gltf_json as json;
 use itertools::*;
 use serde::ser::Serialize;
-use std::collections::{HashMap};
+use std::collections::HashMap;
 
 pub struct AccessorBuilder {
     // Key = stride, Value = (idx, data)
@@ -93,8 +93,8 @@ impl AccessorBuilder {
         // Create accessor
         let accessor = json::Accessor {
             buffer_view: Some(json::Index::new(buff_idx as u32)),
-            byte_offset: Some(buff_off as u32),
-            count: count as u32,
+            byte_offset: Some(buff_off.into()),
+            count: count.into(),
             component_type: json::validation::Checked::Valid(json::accessor::GenericComponentType(comp_type)),
             extensions: None,
             extras: Default::default(),
@@ -139,11 +139,11 @@ impl AccessorBuilder {
 
             views.push(json::buffer::View {
                 name: None,
-                byte_length: data_size as u32,
-                byte_offset: Some(data_offset as u32),
+                byte_length: data_size.into(),
+                byte_offset: Some(data_offset.into()),
                 byte_stride: match stride {
                     64 => None, // Hacky way to disable writing stride for inverse bind transforms
-                    s if s % 4 == 0 => Some(stride as u32),
+                    s if s % 4 == 0 => Some(json::buffer::Stride(stride)),
                     _ => None // Don't encode if not multiple
                 },
                 buffer: json::Index::new(0),
@@ -163,7 +163,7 @@ impl AccessorBuilder {
         // Create buffer json
         let buffer = json::Buffer {
             name: None,
-            byte_length: buffer_data.len() as u32,
+            byte_length: buffer_data.len().into(),
             uri: match name.into() {
                 s if !s.is_empty() => Some(s),
                 _ => None
