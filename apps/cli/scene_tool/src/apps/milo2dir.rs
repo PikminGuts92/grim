@@ -9,7 +9,7 @@ use thiserror::Error;
 use grim::{Platform, SystemInfo};
 use grim::io::*;
 use grim::scene::{Object, ObjectDir, MiloEnvironment, PackedObject, Tex};
-use grim::texture::{write_rgba_to_file};
+use grim::texture::write_rgba_to_file;
 
 // TODO: Use this error somewhere or refactor
 #[derive(Debug, Error)]

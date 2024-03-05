@@ -1,9 +1,9 @@
-use crate::apps::{SubApp};
+use crate::apps::SubApp;
 use clap::Parser;
 
 use std::error::Error;
 
-use std::path::{Path};
+use std::path::Path;
 
 
 use grim::{Platform, SystemInfo};

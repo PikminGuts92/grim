@@ -66,13 +66,6 @@ impl SubApp for Project2MiloApp {
 
         // Create milos files...
 
-        // Write everything?
-        let sys_info = SystemInfo {
-            version: 25,
-            platform: Platform::PS3,
-            endian: IOEndian::Big,
-        };
-
         let output_dir = PathBuf::from(&self.output_path);
         if !output_dir.exists() {
             // Create outout path if it doesn't exist
@@ -80,10 +73,16 @@ impl SubApp for Project2MiloApp {
         }
 
         // Get platform ext
-        let platform_ext = match self.platform.to_ascii_lowercase().as_str() {
-            "ps3" => "ps3",
-            "wii" => "wii",
-            _ => "xbox"
+        let (platform, platform_ext) = match self.platform.to_ascii_lowercase().as_str() {
+            "ps3" => (Platform::PS3, "ps3"),
+            "wii" => (Platform::Wii, "wii"),
+            _ => (Platform::X360, "xbox")
+        };
+
+        let sys_info = SystemInfo {
+            version: 25,
+            platform: platform,
+            endian: IOEndian::Big,
         };
 
         // Name, object dir init

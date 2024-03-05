@@ -18,17 +18,18 @@ authors = ["PikminGuts92"]
 edition = "2021"
 
 [workspace.dependencies]
-clap = { version = "4.4.18", features = ["derive"] }
-gltf = { version = "=1.3.0", default-features = false, features = [ "import", "names", "utils" ] }
-gltf-json = { version = "=1.3.0", features = [ "names" ] }
+clap = { version = "4.5.1", features = ["derive"] }
+gltf = { version = "=1.4.0", default-features = false, features = [ "import", "names", "utils" ] }
+gltf-json = { version = "=1.4.0", features = [ "names" ] }
 grim = { path = "core/grim" }
-itertools = "0.12.0"
+itertools = "0.12.1"
 lazy_static = "1.4.0"
 log = "0.4.20"
-serde = { version = "1.0.195", features = ["derive"] }
-serde_json = "1.0.111"
-simplelog = "0.12.1"
-thiserror = "1.0.56"
+serde = { version = "1.0.196", features = ["derive"] }
+serde_json = "1.0.113"
+# simplelog = "0.12.1"
+simplelog = { git = "https://github.com/Drakulix/simplelog.rs", rev = "4ef071d" }
+thiserror = "1.0.57"
 
 [workspace.lints.rust]
 dead_code = "allow"

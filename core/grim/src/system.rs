@@ -53,7 +53,8 @@ impl SystemInfo {
         let mut endian = IOEndian::Big;
         let mut version = 25;
 
-        if platform == Platform::X360 {
+        // Devkit wii is little endian for some reason
+        if platform == Platform::X360 || platform == Platform::Wii {
             if let Some((end, ver)) = milo.guess_endian_version() {
                 endian = end;
                 version = ver;

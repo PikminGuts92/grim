@@ -1065,7 +1065,7 @@ impl GltfExporter {
             
             json::Buffer {
                 name: None,
-                byte_length: total_size as u32,
+                byte_length: total_size.into(),
                 uri: Some(str_data),
                 extensions: None,
                 extras: Default::default()
@@ -1075,9 +1075,9 @@ impl GltfExporter {
         gltf.buffer_views = vec![
             json::buffer::View {
                 name:  Some(String::from("verts_norms")),
-                byte_length: bv_verts_norms as u32,
-                byte_offset: Some(0),
-                byte_stride: Some(12),
+                byte_length: bv_verts_norms.into(),
+                byte_offset: Some(0u64.into()),
+                byte_stride: Some(json::buffer::Stride(12)),
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
@@ -1085,9 +1085,9 @@ impl GltfExporter {
             },
             json::buffer::View {
                 name:  Some(String::from("uvs")),
-                byte_length: bv_uvs as u32,
-                byte_offset: Some(bv_verts_norms as u32),
-                byte_stride: Some(8),
+                byte_length: bv_uvs.into(),
+                byte_offset: Some(bv_verts_norms.into()),
+                byte_stride: Some(json::buffer::Stride(8)),
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
@@ -1095,9 +1095,9 @@ impl GltfExporter {
             },
             json::buffer::View {
                 name:  Some(String::from("weights_tans")),
-                byte_length: bv_weights_tans as u32,
-                byte_offset: Some((bv_verts_norms + bv_uvs) as u32),
-                byte_stride: Some(16),
+                byte_length: bv_weights_tans.into(),
+                byte_offset: Some((bv_verts_norms + bv_uvs).into()),
+                byte_stride: Some(json::buffer::Stride(16)),
                 buffer: json::Index::new(0),
                 target: None,
                 extensions: None,
@@ -1105,8 +1105,8 @@ impl GltfExporter {
             },
             json::buffer::View {
                 name:  Some(String::from("faces")),
-                byte_length: bv_faces as u32,
-                byte_offset: Some((bv_verts_norms + bv_uvs + bv_weights_tans) as u32),
+                byte_length: bv_faces.into(),
+                byte_offset: Some((bv_verts_norms + bv_uvs + bv_weights_tans).into()),
                 byte_stride: None,
                 buffer: json::Index::new(0),
                 target: None,
