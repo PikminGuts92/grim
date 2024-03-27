@@ -2,7 +2,9 @@ pub mod ark;
 #[cfg(feature = "audio")] pub mod audio;
 pub mod dta;
 pub mod io;
-#[cfg(feature = "midi")] pub mod midi;
+#[cfg(feature = "midi")] pub mod midi {
+    pub use grim_midi::*;
+}
 #[cfg(feature = "model")] pub mod model;
 pub mod scene;
 mod system;

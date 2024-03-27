@@ -13,13 +13,13 @@ gltf = { workspace = true, optional = true }
 gltf-json = { workspace = true, optional = true }
 grim_gltf = { path = "../grim_gltf", optional = true }
 grim_macros = { path = "../grim_macros" }
+grim_midi = {path = "../grim_midi", optional = true }
 grim_traits = { path = "../grim_traits" }
 half = { version = "2.3.1", default-features = false }
 image = { version = "0.24.8", default-features = false, features = [ "dxt", "png" ] }
 itertools = { workspace = true }
 lazy_static = { workspace = true }
 log = { workspace = true }
-midly = { version = "0.5.3", optional = true }
 nalgebra = { version = "0.32.3", optional = true }
 nom = "7.1.3"
 # pyo3 = { version = "0.17.3", optional = true, features = [ "extension-module" ] }
@@ -37,7 +37,7 @@ rstest = "0.18.2"
 [features]
 audio = [ "bitstream-io", "fon", "wav" ]
 audio_experimental = []
-midi = [ "midly" ]
+midi = [ "grim_midi" ]
 model = [ "gltf", "gltf-json", "grim_gltf", "nalgebra", "serde" ]
 python = [ "pyo3" ]
 
