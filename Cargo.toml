@@ -31,6 +31,10 @@ serde_json = "1.0.113"
 simplelog = { git = "https://github.com/Drakulix/simplelog.rs", rev = "4ef071d" }
 thiserror = "1.0.57"
 
+# dev-dependencies
+criterion = "0.5.1"
+rstest = "0.18.2"
+
 [workspace.lints.rust]
 dead_code = "allow"
 deprecated = "allow"

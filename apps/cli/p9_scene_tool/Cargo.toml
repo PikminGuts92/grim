@@ -16,8 +16,7 @@ simplelog = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-criterion = "0.5.1"
-rstest = "0.18.2"
+rstest = { workspace = true }
 
 [lints]
 workspace = true
