@@ -7,6 +7,20 @@ use super::*;
 
 const MAX_DELTA: u64 = 1 << 27;
 
+enum TempoTS<'a> {
+    Tempo(&'a MidiTempo),
+    TS(&'a MidiTimeSignature)
+}
+
+impl<'a> TempoTS<'a> {
+    fn get_pos(&'a self) -> u64 {
+        match self {
+            TempoTS::Tempo(t) => t.pos,
+            TempoTS::TS(ts) => ts.pos,
+        }
+    }
+}
+
 impl MidiFile {
     pub fn from_path<T: AsRef<Path>>(path: T) -> Option<MidiFile> {
         let mid_file = fs::File::open(path).ok()?;
@@ -54,9 +68,16 @@ impl MidiFile {
                             mpq: tempo.as_int()
                         });
                     },
-                    /*TrackEventKind::Meta(MetaMessage::TimeSignature(num, dem, clocks_per_click, notes_per_quarter_32)) => {
-                        // TODO: Save time sig changes
-                    },*/
+                    TrackEventKind::Meta(MetaMessage::TimeSignature(num, dem, clocks_per_click, notes_per_quarter_32)) => {
+                        mid.time_signature.push(MidiTimeSignature {
+                            pos: abs_pos,
+                            pos_realtime: None,
+                            numerator: num,
+                            denominator_power: dem,
+                            clocks_per_click,
+                            notes_per_quarter_32
+                        });
+                    },
                     _ => continue
                 }
             }
@@ -209,23 +230,37 @@ impl MidiFile {
 
         // Add change events
         let mut current_pos: u64 = 0;
-        for tempo_ev in self.tempo.iter() {
-            let delta = tempo_ev.pos - current_pos;
+        let tempo_track_evs = {
+            let mut evs = self
+                .tempo
+                .iter()
+                .map(|t| TempoTS::Tempo(t))
+                .chain(self.time_signature.iter().map(|ts| TempoTS::TS(ts)))
+                .collect::<Vec<_>>();
+            evs.sort_by(|a, b| a.get_pos().cmp(&b.get_pos()));
+            evs
+        };
+        for track_ev in tempo_track_evs {
+            let abs_pos = track_ev.get_pos();
+            let delta = abs_pos - current_pos;
 
             // Super unlikely to occur. It comes out to about 279k beats at 480 resolution
             if delta > MAX_DELTA {
                 panic!("Unsupported: Delta distance of {delta} between {} and {} is larger than max {MAX_DELTA}",
                     current_pos,
-                    tempo_ev.pos
+                    abs_pos
                 );
             }
 
             tempo_track.push(TrackEvent {
                 delta: (delta as u32).into(),
-                kind: TrackEventKind::Meta(midly::MetaMessage::Tempo(tempo_ev.mpq.into()))
+                kind: match track_ev {
+                    TempoTS::Tempo(tempo_ev) => TrackEventKind::Meta(midly::MetaMessage::Tempo(tempo_ev.mpq.into())),
+                    TempoTS::TS(ts_ev) => TrackEventKind::Meta(midly::MetaMessage::TimeSignature(ts_ev.numerator, ts_ev.denominator_power, ts_ev.clocks_per_click, ts_ev.notes_per_quarter_32))
+                }
             });
 
-            current_pos = tempo_ev.pos;
+            current_pos = abs_pos;
         }
 
         // Add end of track event

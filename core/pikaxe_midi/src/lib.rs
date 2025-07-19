@@ -12,7 +12,8 @@ pub struct MidiFile {
     pub format: u16,
     pub ticks_per_quarter: u16,
     pub tracks: Vec<MidiTrack>,
-    pub tempo: Vec<MidiTempo>
+    pub tempo: Vec<MidiTempo>,
+    pub time_signature: Vec<MidiTimeSignature>,
 }
 
 impl Default for MidiFile {
@@ -21,7 +22,32 @@ impl Default for MidiFile {
             format: 1,
             ticks_per_quarter: 480,
             tracks: Vec::new(),
-            tempo: Vec::new()
+            tempo: Vec::new(),
+            time_signature: Vec::new()
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MidiTimeSignature {
+    pub pos: u64,
+    pub pos_realtime: Option<f64>, // Milliseconds
+    pub numerator: u8,
+    pub denominator_power: u8,
+    pub clocks_per_click: u8,
+    pub notes_per_quarter_32: u8,
+}
+
+impl Default for MidiTimeSignature {
+    // 4/4 ts
+    fn default() -> Self {
+        Self {
+            pos: 0,
+            pos_realtime: None,
+            numerator: 4,
+            denominator_power: 2,
+            clocks_per_click: 24,
+            notes_per_quarter_32: 8
         }
     }
 }
@@ -196,6 +222,7 @@ impl MidiFile {
     pub fn calculate_realtime_pos(&mut self) {
         self.calculate_tempo_realtime();
         self.calculate_tracks_realtime();
+        self.calculate_time_signatures_realtime();
     }
 
     fn calculate_tempo_realtime(&mut self) {
@@ -241,6 +268,14 @@ impl MidiFile {
                     *pos_realtime = Some(tempo_nav.get_realtime_position(*pos));
                 }
             }
+        }
+    }
+
+    fn calculate_time_signatures_realtime(&mut self) {
+        let mut tempo_nav = TempoNavigator::new(&self.tempo, self.ticks_per_quarter);
+
+        for MidiTimeSignature { pos, pos_realtime, .. } in self.time_signature.iter_mut() {
+            *pos_realtime = Some(tempo_nav.get_realtime_position(*pos));
         }
     }
 
