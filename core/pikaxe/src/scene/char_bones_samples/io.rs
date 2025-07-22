@@ -1,5 +1,5 @@
 use crate::io::{BinaryStream, SeekFrom, Stream};
-use crate::model::deg_to_rad;
+use crate::math::deg_to_rad;
 use crate::scene::*;
 use crate::SystemInfo;
 use pikaxe_traits::scene::*;

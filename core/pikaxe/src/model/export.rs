@@ -2412,7 +2412,7 @@ impl GltfExporter {
 
                         //*rot = base_rot * q;
 
-                        let z_rad = super::deg_to_rad(*z) * w;
+                        let z_rad = crate::math::deg_to_rad(*z) * w;
                         //*rot = na::UnitQuaternion::from_euler_angles(roll, pitch, -z);
 
                         let (roll, pitch, _yaw) = rot.euler_angles();

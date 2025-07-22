@@ -2,6 +2,7 @@ pub mod ark;
 #[cfg(feature = "audio")] pub mod audio;
 pub mod dta;
 pub mod io;
+pub(crate) mod math;
 #[cfg(feature = "midi")] pub mod midi {
     pub use pikaxe_midi::*;
 }
