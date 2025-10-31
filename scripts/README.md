@@ -1,7 +1,7 @@
 ## Setup Python Environment
 ```bash
-python -m venv .env
-. .env/Scripts/activate # Using Git Bash on Windows
+python -m venv .venv
+source .venv/bin/activate
 pip install maturin
 ```
 
