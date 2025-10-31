@@ -17,7 +17,7 @@ pub use system::*;
 
 #[cfg(feature = "python")]
 #[pymodule]
-fn pikaxe(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
+fn pikaxe(m: &Bound<'_, PyModule>) -> PyResult<()> {
     #[cfg(feature = "model")] m.add_function(wrap_pyfunction!(model::print_test, m)?)?;
 
     m.add_class::<ark::Ark>()?;
