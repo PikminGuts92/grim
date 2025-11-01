@@ -4,9 +4,9 @@ use std::{path::PathBuf, todo};
 #[derive(Debug, Default)]
 #[cfg_attr(feature = "python", pyclass)]
 pub struct Ark {
-    #[cfg(feature = "python")] #[pyo3(get, set)] pub version: i32,
+    pub version: i32,
     pub encryption: ArkEncryption,
-    #[cfg(feature = "python")] #[pyo3(get, set)] pub entries: Vec<ArkOffsetEntry>,
+    pub entries: Vec<ArkOffsetEntry>,
     pub path: PathBuf, // Hdr/ark path,
     pub part_paths: Vec<PathBuf>,
 }
@@ -20,14 +20,14 @@ pub enum ArkEncryption {
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "python", pyclass(get_all, set_all))]
 pub struct ArkOffsetEntry {
-    #[cfg(feature = "python")] #[pyo3(get, set)] pub id: u32,
-    #[cfg(feature = "python")] #[pyo3(get, set)] pub path: String,
-    #[cfg(feature = "python")] #[pyo3(get, set)] pub offset: u64,
-    #[cfg(feature = "python")] #[pyo3(get, set)] pub part: u32,
-    #[cfg(feature = "python")] #[pyo3(get, set)] pub size: usize,
-    #[cfg(feature = "python")] #[pyo3(get, set)] pub inflated_size: usize
+    pub id: u32,
+    pub path: String,
+    pub offset: u64,
+    pub part: u32,
+    pub size: usize,
+    pub inflated_size: usize
 }
 
 impl ArkOffsetEntry {
@@ -74,6 +74,26 @@ impl Ark {
         };
 
         Ok(key)
+    }
+
+    #[getter]
+    fn get_version(&self) -> i32 {
+        self.version
+    }
+
+    #[setter]
+    fn set_version(&mut self, version: i32) {
+        self.version = version;
+    }
+
+    #[getter]
+    fn get_entries(&self) -> Vec<ArkOffsetEntry> {
+        self.entries.clone()
+    }
+
+    #[setter]
+    fn set_entries(&mut self, entries: Vec<ArkOffsetEntry>) {
+        self.entries = entries;
     }
 }
 
