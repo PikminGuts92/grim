@@ -8,6 +8,7 @@ pub(crate) mod math;
 }
 #[cfg(feature = "model")] pub mod model;
 pub mod scene;
+#[cfg(feature = "python")] pub mod scene2;
 mod system;
 pub mod texture;
 
