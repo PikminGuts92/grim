@@ -1,9 +1,8 @@
 ## Setup Python Environment
 ```bash
-python -m venv .venv
-# . .venv/Scripts/activate # Using Git Bash on Windows
-source .venv/bin/activate
-pip install maturin
+uv venv
+source .venv/bin/activate # ". .venv/Scripts/activate" Using Git Bash on Windows
+uv pip install maturin
 ```
 
 ## Run (Development)
@@ -19,5 +18,5 @@ maturin build -m ./core/pikaxe/Cargo.toml --all-features -r
 
 # Use '--force-reinstall' to override pre-existing install
 # Note: File name may be different depending on build target
-pip install ./target/wheels/pikaxe-0.1.0-cp310-none-win_amd64.whl --force-reinstall
+uv pip install ./target/wheels/pikaxe-0.1.0-cp310-none-win_amd64.whl --force-reinstall
 ```
