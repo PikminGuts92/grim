@@ -180,12 +180,3 @@ pub(crate) fn path_as_string<'a, T: AsRef<Path>>(path: &'a T) -> &'a str {
         .to_str()
         .unwrap()
 }
-
-#[pyfunction]
-#[cfg(feature = "python")]
-pub(crate) fn print_test() -> PyResult<()> {
-    Python::with_gil(|_py| {
-        println!("Hello python, again! -Ferris");
-        Ok(())
-    })
-}
