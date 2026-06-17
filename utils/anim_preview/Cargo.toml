@@ -7,8 +7,8 @@ edition.workspace = true
 [dependencies]
 pikaxe = { workspace = true }
 keyframe = "1.1.1"
-nalgebra = "0.33.0"
-rerun = { version = "0.18.0", features = [ "native_viewer" ] }
+nalgebra = "0.33.3"
+rerun = { version = "0.18.2", features = [ "native_viewer" ] }
 shared = { path = "../shared" }
 
 [lints]
