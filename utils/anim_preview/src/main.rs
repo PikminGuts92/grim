@@ -18,7 +18,7 @@ use rerun::{
     RecordingStream, RecordingStreamBuilder,
     time::Timeline,
 };
-use rerun::{Arrows3D, Points3D};
+use rerun::{Arrows3D, MainThreadToken, Points3D};
 
 use shared::*;
 
@@ -78,7 +78,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let (rec_stream, storage) = RecordingStreamBuilder::new("anim_preview").memory()?;
 
-    rec_stream.log_timeless(
+    rec_stream.log_static(
         "world",
         &rerun::ViewCoordinates::new(
             ViewCoordinates::from_up_and_handedness(
@@ -250,7 +250,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    rerun::native_viewer::show(storage.take()).unwrap();
+    let token = MainThreadToken::i_promise_i_am_on_the_main_thread();
+    rerun::native_viewer::show(token, storage.take()).unwrap();
 
     Ok(())
 }
