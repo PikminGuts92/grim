@@ -22,17 +22,17 @@ clap = { version = "4.6.1", features = ["derive"] }
 gltf = { version = "=1.4.1", default-features = false, features = [ "import", "names", "utils" ] }
 gltf-json = { version = "=1.4.1", features = [ "names" ] }
 pikaxe = { path = "core/pikaxe" }
-itertools = "0.13.0"
+itertools = "0.15.0"
 lazy_static = "1.5.0"
 log = "0.4.32"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 simplelog = "0.12.2"
-thiserror = "1.0.69"
+thiserror = "2.0.18"
 
 # dev-dependencies
-criterion = "0.5.1"
-rstest = "0.22.0"
+criterion = "0.8.2"
+rstest = "0.26.1"
 
 [workspace.lints.rust]
 dead_code = "allow"
