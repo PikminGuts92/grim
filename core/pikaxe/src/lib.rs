@@ -8,6 +8,8 @@ pub(crate) mod math;
 }
 #[cfg(feature = "model")] pub mod model;
 pub mod scene;
+
+#[cfg(feature = "python")] pub mod scene2;
 mod system;
 pub mod texture;
 
@@ -21,6 +23,14 @@ fn pikaxe(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<ark::Ark>()?;
     m.add_class::<ark::ArkOffsetEntry>()?;
     m.add_class::<texture::Bitmap>()?;
+
+    // Test python stuff
+    m.add_class::<scene2::Object>()?;
+    //m.add_class::<scene2::ObjectDir>()?;
+    m.add_class::<scene2::RndTex>()?;
+
+    // Milo classes
+    scene2::milo::add_milo_classes(m)?;
 
     Ok(())
 }
