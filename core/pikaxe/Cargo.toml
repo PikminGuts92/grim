@@ -6,7 +6,7 @@ edition.workspace = true
 
 [dependencies]
 base64 = "0.22.1"
-#bevy_ecs = { version = "0.18.1", default-features = false, features = [ "std" ] }
+bevy_ecs = { version = "0.18.1", default-features = false, features = [ "std" ] }
 bitstream-io = { version = "2.6.0", optional = true }
 flate2 = "1.1.9"
 fon = { version = "0.6.0", optional = true }

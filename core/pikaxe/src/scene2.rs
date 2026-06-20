@@ -1,4 +1,5 @@
 pub(crate) mod milo;
+pub(crate) mod milo_ecs;
 
 use pyo3::{prelude::*, types::PyType};
 use std::sync::{Arc, Mutex};
