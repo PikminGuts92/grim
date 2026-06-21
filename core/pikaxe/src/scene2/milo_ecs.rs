@@ -21,15 +21,20 @@ pub struct MiloEngine {
 
 impl MiloEngine {
     fn create_object<T: Object>(&mut self) -> T {
-        let mut obj = T::default();
-
-        let id = self
+        let obj_entity = self
             .world
-            .spawn(obj.clone())
+            .spawn_empty()
             .id();
 
-        obj.set_id(id.index().index());
+        let mut obj = T::default();
+        obj.set_id(obj_entity.index_u32());
 
-        todo!()
+        self
+            .world
+            .commands()
+            .entity(obj_entity)
+            .insert(obj.clone());
+
+        obj
     }
 }
