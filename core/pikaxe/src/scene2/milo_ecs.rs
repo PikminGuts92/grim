@@ -1,7 +1,10 @@
 mod object;
 mod object_dir;
 
-use bevy_ecs::prelude::*;
+use bevy_ecs::{
+    query::{QueryData, QueryFilter},
+    prelude::*,
+};
 use object::*;
 use object_dir::*;
 
@@ -19,7 +22,21 @@ pub struct MiloEngine {
     world: World,
 }
 
+#[derive(QueryData)]
+struct ObjectQuery {
+    entity: Entity,
+    object: &'static ObjectComponent,
+}
+
+#[derive(QueryData)]
+struct ObjectDirQuery {
+    entity: Entity,
+    object: &'static ObjectComponent,
+    object_dir: &'static ObjectDirComponent,
+}
+
 impl MiloEngine {
+    // TODO: Extract query behaviors to another struct
     fn create_object<T: Object>(&mut self) -> T {
         let obj_entity = self
             .world
@@ -36,5 +53,28 @@ impl MiloEngine {
             .insert(obj.clone());
 
         obj
+    }
+
+    fn get_object_by_id(&mut self, id: u32) -> Option<ObjectInstance> {
+        let entity = Entity::from_raw_u32(id).expect("Id is valid");
+        //let entity = self.world.commands().entity(entity);
+
+        let mut query = self.world.query::<ObjectQuery>();
+        let Ok(obj_data) = query.get(&self.world, entity) else {
+            return None;
+        };
+
+        let obj_instance = ObjectInstance {
+            object: obj_data.object.to_owned()
+        };
+
+        //self.world.query()
+        /*for obj_data in self.world.query::<ObjectQuery>().iter(&self.world) {
+            let obj_instance = ObjectInstance {
+                object: obj_data.object.to_owned()
+            };
+        }*/
+
+        Some(obj_instance)
     }
 }
