@@ -1,6 +1,11 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_macro_input, ItemStruct, Fields, Type};
+use syn::{
+    parse::{Parse, ParseStream},
+    parse_macro_input,
+    punctuated::Punctuated,
+    custom_keyword, Fields, ItemStruct, Path, Token, Type,
+};
 
 /*
 milo_component(name="Group", super=Object,Draw,Trans)
@@ -10,17 +15,48 @@ milo(name="Group", components=Object,Draw,Trans)
 - Implements given traits
 */
 
+struct ExtendsArgs {
+    traits: Punctuated<Path, Token![+]>,
+}
+
+impl Parse for ExtendsArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        syn::custom_keyword!(extends);
+
+        // If the macro input is completely empty, return empty traits list
+        if input.is_empty() {
+            return Ok(ExtendsArgs { traits: Punctuated::new() });
+        }
+
+        // Check if the user used the "extends =" syntax
+        let _extends: extends = input.parse()?;
+        let _eq_token: Token![=] = input.parse()?;
+
+        // Parse the remaining comma-separated list of traits
+        let traits = Punctuated::parse_terminated(input)?;
+        Ok(ExtendsArgs { traits })
+    }
+}
+
 #[proc_macro_attribute]
-pub fn autotrait(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn autotrait(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as ExtendsArgs);
     let input_struct = parse_macro_input!(item as ItemStruct);
 
-    let struct_name = &input_struct.ident; 
+    let struct_name = &input_struct.ident;
     let struct_name_str = struct_name.to_string();
 
     let trait_name = if struct_name_str.ends_with("Component") {
         format_ident!("{}", &struct_name_str[..struct_name_str.len() - 9])
     } else {
         format_ident!("{}Object", struct_name_str)
+    };
+
+    let trait_bounds = if !args.traits.is_empty() {
+        let trait_list = &args.traits;
+        quote! { : #trait_list }
+    } else {
+        quote! { }
     };
 
     let fields = match &input_struct.fields {
@@ -30,6 +66,8 @@ pub fn autotrait(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let component_get_fn = format_ident!("get_{}", snake_case(&struct_name_str));
     let component_get_mut_fn = format_ident!("get_{}_mut", snake_case(&struct_name_str));
+
+    println!("HEELLEP: {}", snake_case(&struct_name_str));
 
     // Map over each field
     let methods = fields.iter().map(|field| {
@@ -73,7 +111,7 @@ pub fn autotrait(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let expanded = quote! {
         #input_struct
 
-        pub trait #trait_name: Default + Clone + Bundle {
+        pub trait #trait_name #trait_bounds {
             fn #component_get_fn(&self) -> &#struct_name;
             fn #component_get_mut_fn(&mut self) -> &mut #struct_name;
 
@@ -103,8 +141,10 @@ fn snake_case(s: &str) -> String {
     let mut snake = String::new();
     for (i, ch) in s.chars().enumerate() {
         if ch.is_uppercase() {
-            if i > 0 { snake.push('_'); }
-            snake.to_lowercase().extend(std::iter::once(ch));
+            if i > 0 {
+                snake.push('_');
+            }
+            snake.push(ch.to_ascii_lowercase());
         } else {
             snake.push(ch);
         }

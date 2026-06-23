@@ -1,13 +1,15 @@
 use bevy_ecs::prelude::*;
+use pikaxe_derive::autotrait;
 use pyo3::{prelude::*, types::PyType};
 
 #[derive(Default, Clone, Component)]
+#[autotrait(extends=Default + Clone + Bundle)]
 pub struct ObjectComponent {
     pub id: u32,
     pub note: String,
 }
 
-pub trait Object : Default + Clone + Bundle {
+/*pub trait Object : Default + Clone + Bundle {
     fn get_object_component(&self) -> &ObjectComponent;
     fn get_object_component_mut(&mut self) -> &mut ObjectComponent;
 
@@ -30,7 +32,7 @@ pub trait Object : Default + Clone + Bundle {
     fn set_note(&mut self, value: String) {
         self.get_object_component_mut().note = value;
     }
-}
+}*/
 
 #[derive(Default, Clone, Bundle)]
 //#[pyclass(name="Object", subclass)]
