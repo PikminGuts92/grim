@@ -17,6 +17,14 @@ pub struct ObjectDirInstance {
 }
 
 impl Object for ObjectDirInstance {
+    fn get_class_name() -> &'static str {
+        "ObjectDir"
+    }
+
+    /*fn get_super_classes() -> &'static [&'static str] {
+        &["Object"]
+    }*/
+
     fn get_object_component(&self) -> &ObjectComponent {
         &self.object
     }

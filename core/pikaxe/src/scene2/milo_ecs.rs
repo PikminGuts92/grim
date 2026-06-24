@@ -39,11 +39,6 @@ pub fn add_milo_classes(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-#[derive(Default)]
-pub struct MiloEngine {
-    world: World,
-}
-
 #[derive(QueryData)]
 struct ObjectQuery {
     entity: Entity,
@@ -55,6 +50,11 @@ struct ObjectDirQuery {
     entity: Entity,
     object: &'static ObjectComponent,
     object_dir: &'static ObjectDirComponent,
+}
+
+#[derive(Default)]
+pub struct MiloEngine {
+    world: World,
 }
 
 impl MiloEngine {

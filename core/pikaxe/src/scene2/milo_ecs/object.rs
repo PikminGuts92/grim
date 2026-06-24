@@ -3,15 +3,30 @@ use pikaxe_derive::autotrait;
 use pyo3::{prelude::*, types::PyType};
 
 #[derive(Default, Clone, Component)]
-#[autotrait(extends=Default + Clone + Bundle)]
+//#[autotrait(extends=Default + Clone + Bundle)]
 pub struct ObjectComponent {
     pub id: u32,
     pub note: String,
 }
 
-/*pub trait Object : Default + Clone + Bundle {
+pub trait Object : Default + Clone + Bundle {
+    fn get_class_name() -> &'static str;
+    //fn get_super_classes() -> &'static [&'static str];
+
     fn get_object_component(&self) -> &ObjectComponent;
     fn get_object_component_mut(&mut self) -> &mut ObjectComponent;
+
+    /*fn is_derived_from(&self, class_name: &str) -> bool {
+        let self_class_name = Self::get_class_name();
+        if self_class_name.eq(class_name) {
+            return true;
+        }
+
+        // How to check supers of supers?
+        //let super_class_names = Self::get_super_classes();
+
+        false
+    }*/
 
     fn get_id(&self) -> u32 {
         self.get_object_component().id
@@ -32,7 +47,7 @@ pub struct ObjectComponent {
     fn set_note(&mut self, value: String) {
         self.get_object_component_mut().note = value;
     }
-}*/
+}
 
 #[derive(Default, Clone, Bundle)]
 //#[pyclass(name="Object", subclass)]
@@ -41,6 +56,14 @@ pub struct ObjectInstance {
 }
 
 impl Object for ObjectInstance {
+    fn get_class_name() -> &'static str {
+        "Object"
+    }
+
+    /*fn get_super_classes() -> &'static [&'static str] {
+        &[]
+    }*/
+
     fn get_object_component(&self) -> &ObjectComponent {
         &self.object
     }

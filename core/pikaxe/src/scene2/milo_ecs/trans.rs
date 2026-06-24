@@ -63,6 +63,14 @@ pub struct TransInstance {
 }
 
 impl Object for TransInstance {
+    fn get_class_name() -> &'static str {
+        "Object"
+    }
+
+    /*fn get_super_classes() -> &'static [&'static str] {
+        &["Object"]
+    }*/
+
     fn get_object_component(&self) -> &ObjectComponent {
         &self.object
     }
