@@ -1,19 +1,13 @@
 use bevy_ecs::prelude::*;
 use pikaxe_derive::autotrait;
 use pyo3::{prelude::*, types::PyType};
-use super::{Object, ObjectComponent, ObjectPython};
-
-#[derive(Default, Clone)]
-pub struct ObjectEntry {
-    pub name: String,
-    pub id: Option<u32>,
-}
+use super::{Object, ObjectComponent, ObjectNamedPointer, ObjectPython};
 
 #[derive(Default, Clone, Component)]
 #[require(ObjectComponent)]
 #[autotrait(extends=Object)]
 pub struct ObjectDirComponent {
-    pub entries: Vec<ObjectEntry>,
+    pub entries: Vec<ObjectNamedPointer>,
 }
 
 #[derive(Default, Clone, Bundle)]

@@ -1,5 +1,6 @@
 mod object;
 mod object_dir;
+mod trans;
 
 use bevy_ecs::{
     query::{QueryData, QueryFilter},
@@ -7,8 +8,29 @@ use bevy_ecs::{
 };
 use object::*;
 use object_dir::*;
+use std::marker::PhantomData;
+use trans::*;
 
 use pyo3::{prelude::*, types::PyType};
+
+#[derive(Default, Clone)]
+pub struct ObjectNamedPointer { // TODO: Add generic type constraint?
+    pub name: String,
+    pub id: Option<u32>,
+}
+
+#[derive(Default, Clone)]
+pub struct ObjectNamedPointerTyped<T: Object> {
+    _marker: PhantomData<T>,
+    pub name: String,
+    pub id: Option<u32>,
+}
+
+impl<T: Object> ObjectNamedPointerTyped<T> {
+    fn get_object(&self) -> T {
+        todo!()
+    }
+}
 
 pub fn add_milo_classes(m: &Bound<'_, PyModule>) -> PyResult<()> {
     //m.add_class::<ObjectPython>()?;
