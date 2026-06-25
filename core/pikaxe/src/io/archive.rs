@@ -595,4 +595,8 @@ impl MiloArchive {
 
         Some(version)
     }
+
+    fn get_data(&self) -> &[u8] {
+        &self.data
+    }
 }

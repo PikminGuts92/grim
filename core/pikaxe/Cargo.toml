@@ -41,10 +41,12 @@ rstest = { workspace = true }
 [features]
 audio = [ "bitstream-io", "fon", "wav" ]
 audio_experimental = []
+bitstream-io = ["dep:bitstream-io"]
 midi = [ "pikaxe_midi" ]
 model = [ "gltf", "gltf-json", "pikaxe_gltf", "k", "nalgebra", "serde" ]
 python = [ "pyo3" ]
-bitstream-io = ["dep:bitstream-io"]
+
+all = [ "audio", "audio_experimental", "model", "midi", "python" ]
 
 [[bench]]
 name = "texture_benchmark"

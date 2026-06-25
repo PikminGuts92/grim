@@ -9,7 +9,7 @@ fn main() {
     let args: Vec<_> = env::args().skip(1).collect();
 
     if args.len() < 2 {
-        println!("milo_export.exe [input_game_dir_path] [output_dir_path]");
+        println!("milo_export [input_game_dir_path] [output_dir_path]");
         return;
     }
 

@@ -1,0 +1,21 @@
+[package]
+name = "simple_clis"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "milo_export"
+path = "src/milo_export.rs"
+
+[[bin]]
+name = "object_research"
+path = "src/object_research.rs"
+
+[dependencies]
+pikaxe = { workspace = true, features = [ "all" ] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

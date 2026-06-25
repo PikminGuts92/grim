@@ -67,8 +67,6 @@ pub fn autotrait(attr: TokenStream, item: TokenStream) -> TokenStream {
     let component_get_fn = format_ident!("get_{}", snake_case(&struct_name_str));
     let component_get_mut_fn = format_ident!("get_{}_mut", snake_case(&struct_name_str));
 
-    println!("HEELLEP: {}", snake_case(&struct_name_str));
-
     // Map over each field
     let methods = fields.iter().map(|field| {
         let field_name = field.ident.as_ref().unwrap();
