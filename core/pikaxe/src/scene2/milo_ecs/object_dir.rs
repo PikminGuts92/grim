@@ -17,7 +17,7 @@ pub struct ObjectDirInstance {
 }
 
 impl Object for ObjectDirInstance {
-    fn get_class_name() -> &'static str {
+    fn get_class_name(&self) -> &'static str {
         "ObjectDir"
     }
 

@@ -1,6 +1,7 @@
 use bevy_ecs::prelude::*;
 use pikaxe_derive::autotrait;
 use pyo3::{prelude::*, types::PyType};
+use super::ObjectTyped;
 
 #[derive(Default, Clone, Component)]
 //#[autotrait(extends=Default + Clone + Bundle)]
@@ -9,8 +10,8 @@ pub struct ObjectComponent {
     pub note: String,
 }
 
-pub trait Object : Default + Clone + Bundle {
-    fn get_class_name() -> &'static str;
+pub trait Object { // Default + Clone + Bundle
+    fn get_class_name(&self) -> &'static str;
     //fn get_super_classes() -> &'static [&'static str];
 
     fn get_object_component(&self) -> &ObjectComponent;
@@ -49,14 +50,43 @@ pub trait Object : Default + Clone + Bundle {
     }
 }
 
+/*impl Default for Box<dyn Object> {
+    fn default() -> Self {
+        Box::new(ObjectInstance::default())
+    }
+}*/
+
+pub(crate) trait LoadObjectFromQuery : Object + Sized {
+    fn load_from_query_with_id(world: &mut World, entity: Entity) -> Option<Self>;
+}
+
 #[derive(Default, Clone, Bundle)]
 //#[pyclass(name="Object", subclass)]
 pub struct ObjectInstance {
     pub(crate) object: ObjectComponent,
 }
 
+impl LoadObjectFromQuery for ObjectInstance {
+    fn load_from_query_with_id(world: &mut World, entity: Entity) -> Option<Self> {
+        let mut query = world.query::<super::ObjectQuery>(); // TODO: Move query to same file
+        let Ok(obj_data) = query.get(world, entity) else {
+            return None;
+        };
+
+        let dyn_obj: Box<dyn Object> = Box::new(Self {
+            object: obj_data.object.to_owned()
+        });
+
+        let class_name = dyn_obj.get_class_name();
+
+        Some(Self {
+            object: obj_data.object.to_owned()
+        })
+    }
+}
+
 impl Object for ObjectInstance {
-    fn get_class_name() -> &'static str {
+    fn get_class_name(&self) -> &'static str {
         "Object"
     }
 
@@ -72,6 +102,32 @@ impl Object for ObjectInstance {
         &mut self.object
     }
 }
+
+impl From<ObjectInstance> for Box<dyn Object> {
+    fn from(value: ObjectInstance) -> Self {
+        Box::new(value)
+    }
+}
+
+impl From<ObjectInstance> for ObjectTyped {
+    fn from(value: ObjectInstance) -> Self {
+        ObjectTyped::Object(value.into())
+    }
+}
+
+/*impl Object for Box<dyn Object> {
+    fn get_class_name() -> &'static str {
+        "Object"
+    }
+
+    fn get_object_component(&self) -> &ObjectComponent {
+        todo!()
+    }
+
+    fn get_object_component_mut(&mut self) -> &mut ObjectComponent {
+        todo!()
+    }
+}*/
 
 // Python bindings
 

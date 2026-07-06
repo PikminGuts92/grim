@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use pikaxe_derive::autotrait;
 use pyo3::{prelude::*, types::PyType};
-use super::{Object, ObjectComponent, ObjectNamedPointer, ObjectPython};
+use super::{Object, ObjectComponent, ObjectNamedPointer, ObjectPython, ObjectTyped};
 
 #[derive(Default, Clone)]
 pub struct Transform {
@@ -63,8 +63,8 @@ pub struct TransInstance {
 }
 
 impl Object for TransInstance {
-    fn get_class_name() -> &'static str {
-        "Object"
+    fn get_class_name(&self) -> &'static str {
+        "Trans"
     }
 
     /*fn get_super_classes() -> &'static [&'static str] {
@@ -87,5 +87,17 @@ impl Trans for TransInstance {
 
     fn get_trans_component_mut(&mut self) -> &mut TransComponent {
         &mut self.trans
+    }
+}
+
+impl From<TransInstance> for Box<dyn Trans> {
+    fn from(value: TransInstance) -> Self {
+        Box::new(value)
+    }
+}
+
+impl From<TransInstance> for ObjectTyped {
+    fn from(value: TransInstance) -> Self {
+        ObjectTyped::Trans(value.into())
     }
 }
