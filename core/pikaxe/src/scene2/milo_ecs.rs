@@ -65,6 +65,7 @@ pub enum ObjectDirTyped {
 
 #[derive(Component, Clone)] // TODO: Implement default?
 pub enum ObjectTypeDefinition {
+    // TODO: Should be able to add type definition restriction to ObjectNamedPointer
     Object,
     Trans,
     ObjectDir
@@ -156,7 +157,7 @@ impl MiloEngine {
         obj
     }*/
 
-    fn get_object_by_id(&mut self, id: u32) -> Option<ObjectInstance> {
+    pub fn get_object_by_id(&mut self, id: u32) -> Option<ObjectInstance> {
         let entity = Entity::from_raw_u32(id).expect("Id is valid");
         //let entity = self.world.commands().entity(entity);
 
@@ -179,13 +180,19 @@ impl MiloEngine {
         Some(obj_instance)
     }
 
-    fn get_object_typed_by_id(&mut self, id: u32) -> Option<ObjectTyped> {
+    pub fn get_object_typed_by_id(&mut self, id: u32) -> Option<ObjectTyped> {
         let entity = Entity::from_raw_u32(id).expect("Id is valid");
 
         let mut obj_type_query = self.world.query::<&ObjectTypeDefinition>();
-        let obj_type_definition = obj_type_query.get(&self.world, entity).ok()?;
+        let obj_type_def = obj_type_query.get(&self.world, entity).ok()?;
 
-        let obj_typed: ObjectTyped = match obj_type_definition {
+        self.get_object_typed_by_id_with_type(id, obj_type_def.clone())
+    }
+
+    pub fn get_object_typed_by_id_with_type(&mut self, id: u32, type_def: ObjectTypeDefinition) -> Option<ObjectTyped> {
+        let entity = Entity::from_raw_u32(id).expect("Id is valid");
+
+        let obj_typed: ObjectTyped = match &type_def {
             &ObjectTypeDefinition::Object => self
                 .world.query::<ObjectQuery>()
                 .get(&self.world, entity)
@@ -193,8 +200,7 @@ impl MiloEngine {
                     object: obj.object.clone(),
                 })
                 .map(|t| t.into())
-                .ok()?
-            ,
+                .ok()?,
             &ObjectTypeDefinition::Trans => self
                 .world.query::<TransQuery>()
                 .get(&self.world, entity)
@@ -203,15 +209,14 @@ impl MiloEngine {
                     trans: obj.trans.clone(),
                 })
                 .map(|t| t.into())
-                .ok()?
-            ,
+                .ok()?,
             _ => todo!()
         };
 
         Some(obj_typed)
     }
 
-    fn get_object_dir_typed_by_id(&mut self, id: u32) -> Option<ObjectDirTyped> {
+    pub fn get_object_dir_typed_by_id(&mut self, id: u32) -> Option<ObjectDirTyped> {
         todo!()
     }
 }
