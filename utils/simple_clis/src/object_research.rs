@@ -42,6 +42,8 @@ fn main() {
         let mut stream = milo_archive.get_stream();
 
         let mut reader = BinaryStream::from_stream_with_endian(stream.as_mut(), endian);
+        let uncompressed_file_size = reader.len().unwrap();
+
         reader.seek(SeekFrom::Start(4)).unwrap();
 
         let dir_class = reader.read_prefixed_string().unwrap();
@@ -61,7 +63,7 @@ fn main() {
             dir_classes.insert(dir_class.to_owned(), obj_dir_version);
         }
 
-        milo_files.push((relative_path.to_string_lossy().to_string(), dir_class, obj_dir_version));
+        milo_files.push((relative_path.to_string_lossy().to_string(), dir_class, obj_dir_version, uncompressed_file_size));
     }
 
     println!("Finished processing {} milos", files.len());
@@ -71,8 +73,8 @@ fn main() {
     let file_infos_path = output_dir.join("files.csv");
     write_file_info(&file_infos_path, &milo_files).unwrap();
 
-    let object_dirs_path = output_dir.join("object_dirs.csv");
-    write_object_dirs(&object_dirs_path, &dir_classes).unwrap();
+    //let object_dirs_path = output_dir.join("object_dirs.csv");
+    //write_object_dirs(&object_dirs_path, &dir_classes).unwrap();
 }
 
 fn open_milo_archive(path: &Path) -> MiloArchive {
@@ -80,15 +82,15 @@ fn open_milo_archive(path: &Path) -> MiloArchive {
     MiloArchive::from_stream(&mut fs).unwrap()
 }
 
-fn write_file_info(file_path: &Path, milo_files: &Vec<(String, String, u32)>) -> std::io::Result<()> {
+fn write_file_info(file_path: &Path, milo_files: &Vec<(String, String, u32, usize)>) -> std::io::Result<()> {
     let mut file = std::fs::File::create(file_path)?;
 
-    writeln!(&mut file, "path,object_dir,version");
+    writeln!(&mut file, "path,object_dir,version,size");
 
-    for (milo_path, dir_name, dir_version) in milo_files.iter() {
+    for (milo_path, dir_name, dir_version, file_size) in milo_files.iter() {
         let formatted_path = milo_path.replace("(..)", "..");
 
-        writeln!(&mut file, "{},{},{}", formatted_path, dir_name, dir_version);
+        writeln!(&mut file, "{},{},{},{}", formatted_path, dir_name, dir_version, file_size);
     }
 
     Ok(())
