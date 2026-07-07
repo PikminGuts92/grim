@@ -130,6 +130,13 @@ impl MiloFile {
     pub fn get_directory(&self, milo_engine: &mut MiloEngine) -> ObjectDirTyped {
         todo!()
     }
+
+    pub fn get_entries(&self, milo_engine: &mut MiloEngine) -> impl Iterator<Item = ObjectTyped> {
+        self.entries.iter().map(|entry| {
+            // TODO: Replace unwraps with something...
+            milo_engine.get_object_typed_by_id(entry.id.unwrap()).unwrap()
+        })
+    }
 }
 
 #[derive(Default)]
