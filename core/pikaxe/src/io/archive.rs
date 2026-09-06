@@ -250,7 +250,7 @@ impl MiloArchive {
 
         // Get data for entries
         for entry_obj in packed_entries.iter_mut() {
-            if let Some(size) = self.guess_entry_size(&mut reader)? {
+            if let Some(size) = self.guess_entry_size(&mut reader, &entry_obj.object_type)? {
                 // Read data and skip padding
                 entry_obj.data = reader.read_bytes(size)?;
                 reader.seek(SeekFrom::Current(4))?;
@@ -275,7 +275,16 @@ impl MiloArchive {
         }))
     }
 
-    fn guess_entry_size<'a>(&'a self, reader: &mut BinaryStream) -> Result<Option<usize>, Box<dyn Error>> {
+    fn get_min_entry_revision(entry_type: &str) -> i32 {
+        match entry_type {
+            "Mesh" => 10,
+            _ => 0,
+        }
+    }
+
+    fn guess_entry_size<'a>(&'a self, reader: &mut BinaryStream, entry_type: &str) -> Result<Option<usize>, Box<dyn Error>> {
+        let min_revision = Self::get_min_entry_revision(entry_type);
+
         let start_pos = reader.pos();
         let stream_len = reader.len()?;
 
@@ -301,7 +310,7 @@ impl MiloArchive {
             magic = reader.read_int32()?;
             reader.seek(SeekFrom::Current(-4))?;
 
-            if (0..=0xFF).contains(&magic) {
+            if (min_revision..=0xFF).contains(&magic) {
                 break;
             }
         }
