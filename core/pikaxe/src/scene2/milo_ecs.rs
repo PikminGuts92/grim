@@ -127,11 +127,11 @@ struct MiloFile {
 }
 
 impl MiloFile {
-    pub fn get_directory(&self, milo_engine: &mut MiloEngine) -> ObjectDirTyped {
+    pub fn get_directory(&self, milo_engine: &mut MiloEnvironment) -> ObjectDirTyped {
         todo!()
     }
 
-    pub fn get_entries(&self, milo_engine: &mut MiloEngine) -> impl Iterator<Item = ObjectTyped> {
+    pub fn get_entries(&self, milo_engine: &mut MiloEnvironment) -> impl Iterator<Item = ObjectTyped> {
         self.entries.iter().map(|entry| {
             // TODO: Replace unwraps with something...
             milo_engine.get_object_typed_by_id(entry.id.unwrap()).unwrap()
@@ -140,11 +140,11 @@ impl MiloFile {
 }
 
 #[derive(Default)]
-pub struct MiloEngine {
+pub struct MiloEnvironment {
     world: World,
 }
 
-impl MiloEngine {
+impl MiloEnvironment {
     // TODO: Extract query behaviors to another struct
     /*fn create_object<T: Object>(&mut self) -> T {
         let obj_entity = self
